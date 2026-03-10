@@ -2113,6 +2113,79 @@ def reset_password(
 
 
 # =============================================================================
+# ONBOARDING ENDPOINTS
+# =============================================================================
+
+
+@frappe.whitelist()
+def complete_onboarding() -> Dict[str, Any]:
+    """
+    Mark the current user's onboarding as completed.
+
+    This authenticated endpoint reads the session user, sets
+    has_completed_onboarding=1 on their User DocType, and returns
+    a success response with a redirect URL. The frontend auth
+    middleware uses this flag to decide whether to redirect new
+    users to the welcome/onboarding page.
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str,
+            "redirect_url": str
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.complete_onboarding
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.complete_onboarding
+    """
+    user = frappe.session.user
+
+    if user == "Guest":
+        frappe.throw(
+            _("Authentication required"),
+            exc=frappe.AuthenticationError,
+        )
+
+    # Verify user exists
+    if not frappe.db.exists("User", user):
+        frappe.throw(
+            _("User account not found"),
+            exc=frappe.DoesNotExistError,
+        )
+
+    try:
+        # Set has_completed_onboarding flag on User DocType
+        frappe.db.set_value("User", user, "has_completed_onboarding", 1)
+        frappe.db.commit()
+
+        # Determine redirect URL based on user type
+        user_type = frappe.db.get_value("User", user, "tradehub_user_type")
+        if user_type == "supplier":
+            redirect_path = "/pages/supplier-dashboard.html"
+        else:
+            redirect_path = "/pages/buyer-dashboard.html"
+
+        return {
+            "success": True,
+            "message": _("Onboarding completed successfully"),
+            "redirect_url": redirect_path,
+        }
+
+    except Exception as e:
+        frappe.log_error(
+            f"Complete onboarding error for {user}: {str(e)}",
+            "Auth API Error",
+        )
+        frappe.throw(
+            _("An error occurred while completing onboarding. "
+              "Please try again."),
+            title=_("Onboarding Error"),
+        )
+
+
+# =============================================================================
 # INTERNAL/ADMIN ENDPOINTS
 # =============================================================================
 
