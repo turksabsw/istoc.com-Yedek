@@ -1,0 +1,71 @@
+[
+  {
+    "doctype": "Notification",
+    "name": "Category Proposal Submitted",
+    "enabled": 1,
+    "is_standard": 1,
+    "module": "TradeHub Catalog",
+    "channel": "Email",
+    "send_system_notification": 1,
+    "subject": "New Category Proposal: {{ doc.proposed_name }}",
+    "document_type": "Category Proposal",
+    "event": "Value Change",
+    "value_changed": "workflow_state",
+    "condition": "doc.workflow_state == 'Pending Review'",
+    "message_type": "Markdown",
+    "message": "A new category proposal has been submitted for review.\n\n**Proposal:** {{ doc.proposed_name }}\n**Submitted by:** {{ doc.seller }}\n**Parent Category:** {{ doc.parent_category or 'None' }}\n**Priority:** {{ doc.priority }}\n\n**Justification:**\n{{ doc.justification }}\n\nPlease review this proposal at your earliest convenience.\n\n{{ frappe.utils.get_url_to_form('Category Proposal', doc.name) }}",
+    "attach_print": 0,
+    "recipients": [
+      {
+        "doctype": "Notification Recipient",
+        "receiver_by_role": "System Manager"
+      }
+    ]
+  },
+  {
+    "doctype": "Notification",
+    "name": "Category Proposal Approved",
+    "enabled": 1,
+    "is_standard": 1,
+    "module": "TradeHub Catalog",
+    "channel": "Email",
+    "send_system_notification": 1,
+    "subject": "Category Proposal Approved: {{ doc.proposed_name }}",
+    "document_type": "Category Proposal",
+    "event": "Value Change",
+    "value_changed": "workflow_state",
+    "condition": "doc.workflow_state == 'Approved'",
+    "message_type": "Markdown",
+    "message": "Your category proposal has been approved!\n\n**Proposal:** {{ doc.proposed_name }}\n**Approved by:** {{ doc.reviewer or 'System Manager' }}\n**Review Date:** {{ doc.review_date or '' }}\n\n{% if doc.review_notes %}**Review Notes:**\n{{ doc.review_notes }}\n{% endif %}\n\n{% if doc.created_category %}A new category **{{ doc.created_category }}** has been created from your proposal.\n{% endif %}\n\n{{ frappe.utils.get_url_to_form('Category Proposal', doc.name) }}",
+    "attach_print": 0,
+    "recipients": [
+      {
+        "doctype": "Notification Recipient",
+        "receiver_by_document_field": "owner"
+      }
+    ]
+  },
+  {
+    "doctype": "Notification",
+    "name": "Category Proposal Rejected",
+    "enabled": 1,
+    "is_standard": 1,
+    "module": "TradeHub Catalog",
+    "channel": "Email",
+    "send_system_notification": 1,
+    "subject": "Category Proposal Rejected: {{ doc.proposed_name }}",
+    "document_type": "Category Proposal",
+    "event": "Value Change",
+    "value_changed": "workflow_state",
+    "condition": "doc.workflow_state == 'Rejected'",
+    "message_type": "Markdown",
+    "message": "Your category proposal has been rejected.\n\n**Proposal:** {{ doc.proposed_name }}\n**Rejected by:** {{ doc.reviewer or 'System Manager' }}\n**Review Date:** {{ doc.review_date or '' }}\n\n{% if doc.review_notes %}**Reason:**\n{{ doc.review_notes }}\n{% endif %}\n\nYou can revise and resubmit your proposal if you wish.\n\n{{ frappe.utils.get_url_to_form('Category Proposal', doc.name) }}",
+    "attach_print": 0,
+    "recipients": [
+      {
+        "doctype": "Notification Recipient",
+        "receiver_by_document_field": "owner"
+      }
+    ]
+  }
+]

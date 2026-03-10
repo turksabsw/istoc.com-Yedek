@@ -1,0 +1,71 @@
+{
+ "actions": [],
+ "creation": "2026-02-12 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "seller",
+  "column_break_1",
+  "seller_name",
+  "item_count",
+  "totals_section",
+  "subtotal"
+ ],
+ "fields": [
+  {
+   "fieldname": "seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Seller",
+   "options": "Seller Profile",
+   "description": "Seller profile for this summary group"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seller_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Seller Name",
+   "description": "Display name of the seller"
+  },
+  {
+   "default": "0",
+   "fieldname": "item_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Item Count",
+   "description": "Number of items from this seller"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "default": "0",
+   "fieldname": "subtotal",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Subtotal",
+   "description": "Subtotal for items from this seller"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Commerce",
+ "name": "Cart Seller Summary",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

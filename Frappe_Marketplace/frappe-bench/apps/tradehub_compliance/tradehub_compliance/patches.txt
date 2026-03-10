@@ -1,0 +1,2 @@
+tradehub_compliance.patches.migrate_json_to_child_tables
+tradehub_compliance.patches.convert_review_int_ratings_to_rating

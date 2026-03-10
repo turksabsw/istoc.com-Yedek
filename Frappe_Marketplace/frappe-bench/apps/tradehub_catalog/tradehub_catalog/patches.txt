@@ -1,0 +1,3 @@
+tradehub_catalog.patches.migrate_category_to_product_category
+tradehub_catalog.patches.migrate_attribute_set_to_child_table
+tradehub_catalog.patches.backfill_condition_field
