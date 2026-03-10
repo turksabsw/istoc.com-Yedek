@@ -27,7 +27,7 @@ initFlowbite()
 // Initialize auth layout (back button handler)
 initAuthLayout()
 
-// Initialize login page interactivity (social buttons, links)
+// Initialize login page interactivity (form submission, 2FA, error handling)
 initLoginPage()
 
 // Start Alpine AFTER innerHTML is set so it can find all x-data directives in the DOM
