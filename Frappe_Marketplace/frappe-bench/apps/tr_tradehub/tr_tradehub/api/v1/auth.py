@@ -49,6 +49,7 @@ import urllib.parse
 import frappe
 from frappe import _
 from frappe.utils import cint, get_url, now_datetime
+from frappe.utils.password import update_password as _update_password
 
 
 # =============================================================================
@@ -1848,6 +1849,266 @@ def verify_2fa(
                 getattr(user_doc, "has_completed_onboarding", 0)
             ),
         },
+    }
+
+
+# =============================================================================
+# PASSWORD RESET ENDPOINTS
+# =============================================================================
+
+
+# Reset token expiry in seconds (10 minutes)
+RESET_TOKEN_EXPIRY_SECONDS = 600
+
+
+@frappe.whitelist(allow_guest=True)
+def forgot_password(
+    email: str,
+) -> Dict[str, Any]:
+    """
+    Initiate the password reset flow by sending a reset OTP to the user's email.
+
+    IMPORTANT: Always returns the same success message regardless of whether
+    the email exists in the system. This prevents user enumeration attacks.
+
+    If the email is associated with an account, a 6-digit OTP is generated
+    and sent to the email address. The OTP expires in 15 minutes.
+
+    Args:
+        email: The email address to send the reset OTP to
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.forgot_password
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.forgot_password
+        {
+            "email": "user@example.com"
+        }
+    """
+    # Rate limiting by email to prevent abuse
+    check_rate_limit("password_reset", email)
+
+    # Validate required fields
+    if not email:
+        frappe.throw(_("Email is required"))
+
+    email = email.strip().lower()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Please enter a valid email address"))
+
+    # Anti-enumeration: always return the same success message
+    # Only generate OTP and send email if user actually exists
+    if frappe.db.exists("User", email):
+        # Check that user is enabled
+        user_enabled = frappe.db.get_value("User", email, "enabled")
+        if cint(user_enabled):
+            first_name = frappe.db.get_value("User", email, "first_name")
+            otp = generate_password_reset_otp(email)
+            send_password_reset_email(email, otp, first_name)
+            frappe.db.commit()
+
+    return {
+        "success": True,
+        "message": _(
+            "If an account with this email exists, you will receive "
+            "a password reset code shortly."
+        ),
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def verify_reset_otp(
+    email: str,
+    otp: str,
+) -> Dict[str, Any]:
+    """
+    Verify the password reset OTP and generate a single-use reset token.
+
+    Validates the 6-digit OTP code sent to the user's email during the
+    forgot_password step. On success, invalidates the OTP (single-use)
+    and generates a secure reset_token stored in Redis for 10 minutes.
+
+    The reset_token must be passed to the reset_password endpoint along
+    with the new password.
+
+    Args:
+        email: The email address the OTP was sent to
+        otp: The 6-digit OTP code from the email
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str,
+            "reset_token": str
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.verify_reset_otp
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.verify_reset_otp
+        {
+            "email": "user@example.com",
+            "otp": "123456"
+        }
+    """
+    # Rate limiting by email
+    check_rate_limit("verification", email)
+
+    # Validate required fields
+    if not email or not otp:
+        frappe.throw(_("Email and verification code are required"))
+
+    email = email.strip().lower()
+    otp = otp.strip()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Invalid email format"))
+
+    # Check if user exists
+    if not frappe.db.exists("User", email):
+        frappe.throw(
+            _("Invalid verification code. Please try again."),
+            title=_("Invalid Code"),
+        )
+
+    # Get stored OTP from Redis
+    cache_key = f"trade_hub:reset:otp:{email}"
+    stored_otp = frappe.cache().get_value(cache_key)
+
+    if not stored_otp:
+        frappe.throw(
+            _("Verification code has expired. Please request a new one."),
+            title=_("Code Expired"),
+        )
+
+    if str(stored_otp) != str(otp):
+        frappe.throw(
+            _("Invalid verification code. Please try again."),
+            title=_("Invalid Code"),
+        )
+
+    # Delete OTP after successful verification (single-use)
+    frappe.cache().delete_value(cache_key)
+
+    # Generate a single-use reset token
+    reset_token = secrets.token_urlsafe(32)
+
+    # Store reset token in Redis for 10 minutes, mapping token -> email
+    token_cache_key = f"trade_hub:reset:token:{reset_token}"
+    frappe.cache().set_value(
+        token_cache_key,
+        email,
+        expires_in_sec=RESET_TOKEN_EXPIRY_SECONDS,
+    )
+
+    return {
+        "success": True,
+        "message": _("Verification code accepted"),
+        "reset_token": reset_token,
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def reset_password(
+    reset_token: str,
+    new_password: str,
+) -> Dict[str, Any]:
+    """
+    Reset the user's password using a valid reset token.
+
+    Validates the single-use reset_token from the verify_reset_otp step,
+    validates the new password strength, updates the password via Frappe's
+    update_password(), and invalidates the token.
+
+    After a successful password reset, the user should log in with their
+    new password.
+
+    Args:
+        reset_token: The single-use token from verify_reset_otp
+        new_password: The new password (must meet strength requirements)
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.reset_password
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.reset_password
+        {
+            "reset_token": "abc123...",
+            "new_password": "NewSecurePass1"
+        }
+    """
+    # Validate required fields
+    if not reset_token or not new_password:
+        frappe.throw(_("Reset token and new password are required"))
+
+    # Retrieve email from Redis using reset token
+    token_cache_key = f"trade_hub:reset:token:{reset_token}"
+    email = frappe.cache().get_value(token_cache_key)
+
+    if not email:
+        frappe.throw(
+            _("Password reset link has expired or is invalid. "
+              "Please request a new password reset."),
+            title=_("Invalid Token"),
+        )
+
+    # Invalidate the token immediately (single-use)
+    frappe.cache().delete_value(token_cache_key)
+
+    # Validate the user still exists and is enabled
+    if not frappe.db.exists("User", email):
+        frappe.throw(
+            _("User account not found. Please contact support."),
+            title=_("Account Error"),
+        )
+
+    user_enabled = frappe.db.get_value("User", email, "enabled")
+    if not cint(user_enabled):
+        frappe.throw(
+            _("Your account has been disabled. Please contact support."),
+            title=_("Account Disabled"),
+        )
+
+    # Validate new password strength
+    password_check = validate_password_strength(new_password)
+    if not password_check["is_valid"]:
+        frappe.throw("\n".join(password_check["errors"]))
+
+    # Update the password via Frappe's update_password utility
+    try:
+        _update_password(email, new_password)
+        frappe.db.commit()
+    except Exception as e:
+        frappe.log_error(
+            f"Password reset error for {email}: {str(e)}",
+            "Auth API Error",
+        )
+        frappe.throw(
+            _("An error occurred while resetting your password. "
+              "Please try again."),
+            title=_("Reset Error"),
+        )
+
+    return {
+        "success": True,
+        "message": _(
+            "Password has been reset successfully. "
+            "You can now log in with your new password."
+        ),
     }
 
 
