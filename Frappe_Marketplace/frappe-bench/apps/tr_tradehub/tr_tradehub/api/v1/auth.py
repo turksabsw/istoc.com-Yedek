@@ -1696,6 +1696,161 @@ def login(
     }
 
 
+@frappe.whitelist(allow_guest=True)
+def verify_2fa(
+    session_id: str,
+    otp: str,
+) -> Dict[str, Any]:
+    """
+    Verify a two-factor authentication code to complete login.
+
+    After the login endpoint returns requires_2fa=True with a session_id,
+    the frontend calls this endpoint with the session_id and the user's
+    OTP code. Retrieves the cached tmp_id from Redis, reconstructs a
+    LoginManager, and calls confirm_otp_token to validate the OTP.
+
+    On success, starts a Frappe session and returns an auth token + user
+    profile, identical to a successful login response.
+
+    Args:
+        session_id: The session identifier returned by the login endpoint
+        otp: The OTP code entered by the user
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str,
+            "token": {"api_key": str, "api_secret": str, "token_type": "token"},
+            "user": {email, full_name, first_name, last_name, user_type, ...}
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.verify_2fa
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.verify_2fa
+        {
+            "session_id": "abc123...",
+            "otp": "123456"
+        }
+    """
+    # Validate required fields
+    if not session_id or not otp:
+        frappe.throw(_("Session ID and verification code are required"))
+
+    otp = otp.strip()
+
+    # Retrieve 2FA session data from Redis
+    cache_key = f"trade_hub:2fa:session:{session_id}"
+    session_data = frappe.cache().get_value(cache_key)
+
+    if not session_data:
+        frappe.throw(
+            _("Two-factor session has expired. Please log in again."),
+            title=_("Session Expired"),
+        )
+
+    try:
+        data = json.loads(session_data)
+    except (json.JSONDecodeError, TypeError):
+        frappe.throw(
+            _("Invalid session data. Please log in again."),
+            title=_("Session Error"),
+        )
+
+    tmp_id = data.get("tmp_id")
+    user = data.get("user")
+
+    if not tmp_id or not user:
+        frappe.throw(
+            _("Invalid session data. Please log in again."),
+            title=_("Session Error"),
+        )
+
+    # Rate limiting by email
+    check_rate_limit("2fa_verify", user)
+
+    # Reconstruct LoginManager without calling __init__
+    # (which would attempt to login/resume session)
+    from frappe.auth import LoginManager
+
+    login_manager = object.__new__(LoginManager)
+    login_manager.user = user
+
+    # Validate the OTP using Frappe's built-in confirm_otp_token
+    from frappe.twofactor import confirm_otp_token
+
+    try:
+        result = confirm_otp_token(login_manager, otp=otp, tmp_id=tmp_id)
+    except frappe.AuthenticationError:
+        # confirm_otp_token calls login_manager.fail() which raises
+        # AuthenticationError on incorrect codes
+        frappe.throw(
+            _("Incorrect verification code. Please try again."),
+            exc=frappe.AuthenticationError,
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if "expired" in error_msg.lower():
+            # Delete expired session from Redis
+            frappe.cache().delete_value(cache_key)
+            frappe.throw(
+                _("Login session has expired. Please log in again."),
+                title=_("Session Expired"),
+            )
+        frappe.log_error(
+            f"2FA verification error for {user}: {error_msg}",
+            "Auth API Error",
+        )
+        frappe.throw(
+            _("Verification failed. Please try again."),
+            title=_("Verification Error"),
+        )
+
+    if not result:
+        frappe.throw(
+            _("Incorrect verification code. Please try again."),
+            exc=frappe.AuthenticationError,
+        )
+
+    # OTP verified successfully — delete the 2FA session from Redis
+    frappe.cache().delete_value(cache_key)
+
+    # Start Frappe session
+    frappe.local.login_manager.login_as(user)
+
+    # Generate auth token (reuses existing API key if present)
+    token = generate_auth_token(user)
+    api_key, api_secret = token.split(":")
+
+    # Get user profile
+    user_doc = frappe.get_doc("User", user)
+
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "message": _("Two-factor authentication successful"),
+        "token": {
+            "api_key": api_key,
+            "api_secret": api_secret,
+            "token_type": "token",
+        },
+        "user": {
+            "email": user_doc.email,
+            "full_name": user_doc.full_name,
+            "first_name": user_doc.first_name,
+            "last_name": user_doc.last_name or "",
+            "user_type": getattr(user_doc, "tradehub_user_type", None),
+            "is_email_verified": cint(
+                getattr(user_doc, "is_email_verified", 0)
+            ),
+            "has_completed_onboarding": cint(
+                getattr(user_doc, "has_completed_onboarding", 0)
+            ),
+        },
+    }
+
+
 # =============================================================================
 # INTERNAL/ADMIN ENDPOINTS
 # =============================================================================
