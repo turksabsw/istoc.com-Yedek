@@ -42,6 +42,7 @@ CRITICAL NOTES:
 
 from typing import Any, Dict, List, Optional
 import json
+import re
 import secrets
 import urllib.parse
 
@@ -69,6 +70,30 @@ DEFAULT_ERROR_PATH = "/login?error=sso_failed"
 
 # Session cookie settings
 SESSION_COOKIE_NAME = "sid"
+
+# Rate limiting settings (per user/IP)
+RATE_LIMITS = {
+    "register": {"limit": 5, "window": 3600},  # 5 registrations per hour per IP
+    "login": {"limit": 10, "window": 300},  # 10 login attempts per 5 min
+    "password_reset": {"limit": 3, "window": 3600},  # 3 reset requests per hour
+    "verification": {"limit": 5, "window": 300},  # 5 verification attempts per 5 min
+    "2fa_verify": {"limit": 5, "window": 300},  # 5 2FA attempts per 5 min
+}
+
+# Password requirements
+PASSWORD_MIN_LENGTH = 8
+PASSWORD_REQUIREMENTS = {
+    "min_length": 8,
+    "require_uppercase": True,
+    "require_lowercase": True,
+    "require_digit": True,
+    "require_special": False,  # Optional but recommended
+}
+
+# Verification code settings
+VERIFICATION_CODE_LENGTH = 6
+VERIFICATION_OTP_EXPIRY_SECONDS = 600  # 10 minutes
+PASSWORD_RESET_OTP_EXPIRY_SECONDS = 900  # 15 minutes
 
 
 # =============================================================================
@@ -351,6 +376,265 @@ def build_callback_uri() -> str:
         str: The callback URI
     """
     return f"{get_url()}/api/method/trade_hub.api.v1.auth.sso_callback"
+
+
+# =============================================================================
+# RATE LIMITING
+# =============================================================================
+
+
+def check_rate_limit(
+    action: str,
+    identifier: Optional[str] = None,
+    throw: bool = True,
+) -> bool:
+    """
+    Check if an action is rate limited.
+
+    Args:
+        action: The action to check (e.g., "register", "login")
+        identifier: User/IP identifier (defaults to request IP)
+        throw: If True, raises exception when rate limited
+
+    Returns:
+        bool: True if allowed, False if rate limited
+
+    Raises:
+        frappe.TooManyRequestsError: If throw=True and rate limited
+    """
+    if action not in RATE_LIMITS:
+        return True
+
+    config = RATE_LIMITS[action]
+
+    # Get identifier (use IP address by default)
+    if not identifier:
+        try:
+            identifier = frappe.request.remote_addr if frappe.request else "unknown"
+        except Exception:
+            identifier = "unknown"
+
+    cache_key = f"rate_limit:{action}:{identifier}"
+
+    # Get current count
+    current = frappe.cache().get_value(cache_key)
+    if current is None:
+        # First request
+        frappe.cache().set_value(cache_key, 1, expires_in_sec=config["window"])
+        return True
+
+    current = cint(current)
+    if current >= config["limit"]:
+        if throw:
+            frappe.throw(
+                _("Too many requests. Please try again later."),
+                exc=frappe.TooManyRequestsError,
+            )
+        return False
+
+    # Increment counter
+    frappe.cache().set_value(cache_key, current + 1, expires_in_sec=config["window"])
+    return True
+
+
+# =============================================================================
+# VALIDATION HELPERS
+# =============================================================================
+
+
+def validate_email_format(email: str) -> bool:
+    """Validate email format using regex."""
+    if not email:
+        return False
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, email.strip()))
+
+
+def validate_password_strength(password: str) -> Dict[str, Any]:
+    """
+    Validate password meets security requirements.
+
+    Args:
+        password: Password to validate
+
+    Returns:
+        dict: Validation result with is_valid and errors list
+    """
+    errors = []
+
+    if len(password) < PASSWORD_REQUIREMENTS["min_length"]:
+        errors.append(
+            _("Password must be at least {0} characters").format(
+                PASSWORD_REQUIREMENTS["min_length"]
+            )
+        )
+
+    if PASSWORD_REQUIREMENTS["require_uppercase"] and not re.search(r"[A-Z]", password):
+        errors.append(_("Password must contain at least one uppercase letter"))
+
+    if PASSWORD_REQUIREMENTS["require_lowercase"] and not re.search(r"[a-z]", password):
+        errors.append(_("Password must contain at least one lowercase letter"))
+
+    if PASSWORD_REQUIREMENTS["require_digit"] and not re.search(r"\d", password):
+        errors.append(_("Password must contain at least one number"))
+
+    if PASSWORD_REQUIREMENTS["require_special"] and not re.search(
+        r"[!@#$%^&*(),.?\":{}|<>]", password
+    ):
+        errors.append(_("Password must contain at least one special character"))
+
+    return {"is_valid": len(errors) == 0, "errors": errors}
+
+
+# =============================================================================
+# TOKEN & OTP GENERATION
+# =============================================================================
+
+
+def generate_auth_token(email: str) -> str:
+    """
+    Generate or reuse Frappe API key/secret for a user.
+
+    Checks if the user already has an API key before generating a new one
+    to avoid orphaned API keys accumulating in the database.
+
+    Args:
+        email: The user's email address
+
+    Returns:
+        str: Token string in format 'api_key:api_secret'
+
+    Raises:
+        frappe.DoesNotExistError: If user does not exist
+    """
+    if not frappe.db.exists("User", email):
+        frappe.throw(
+            _("User {0} does not exist").format(email),
+            exc=frappe.DoesNotExistError,
+        )
+
+    user_doc = frappe.get_doc("User", email)
+
+    # Check if user already has an API key — reuse to avoid orphaned keys
+    api_key = user_doc.api_key
+
+    if not api_key:
+        # Generate new API key
+        api_key = frappe.generate_hash(length=15)
+        user_doc.api_key = api_key
+        user_doc.flags.ignore_permissions = True
+        user_doc.save()
+
+    # Always generate a fresh API secret (Frappe stores it hashed)
+    api_secret = frappe.generate_hash(length=15)
+    user_doc.api_secret = api_secret
+    user_doc.flags.ignore_permissions = True
+    user_doc.save()
+
+    frappe.db.commit()
+
+    return f"{api_key}:{api_secret}"
+
+
+def generate_verification_otp(email: str) -> str:
+    """
+    Generate a 6-digit OTP for email verification, stored in Redis for 10 minutes.
+
+    Args:
+        email: The email address to generate OTP for
+
+    Returns:
+        str: The 6-digit OTP code
+    """
+    otp = "".join([str(secrets.randbelow(10)) for _ in range(VERIFICATION_CODE_LENGTH)])
+    cache_key = f"trade_hub:verify:otp:{email}"
+    frappe.cache().set_value(
+        cache_key,
+        otp,
+        expires_in_sec=VERIFICATION_OTP_EXPIRY_SECONDS,
+    )
+    return otp
+
+
+def generate_password_reset_otp(email: str) -> str:
+    """
+    Generate a 6-digit OTP for password reset, stored in Redis for 15 minutes.
+
+    Args:
+        email: The email address to generate OTP for
+
+    Returns:
+        str: The 6-digit OTP code
+    """
+    otp = "".join([str(secrets.randbelow(10)) for _ in range(VERIFICATION_CODE_LENGTH)])
+    cache_key = f"trade_hub:reset:otp:{email}"
+    frappe.cache().set_value(
+        cache_key,
+        otp,
+        expires_in_sec=PASSWORD_RESET_OTP_EXPIRY_SECONDS,
+    )
+    return otp
+
+
+# =============================================================================
+# EMAIL HELPERS
+# =============================================================================
+
+
+def send_verification_email(email: str, otp: str, first_name: str) -> None:
+    """
+    Send email verification OTP to the user.
+
+    Args:
+        email: Recipient email address
+        otp: The 6-digit OTP code
+        first_name: User's first name for personalization
+    """
+    try:
+        frappe.sendmail(
+            recipients=email,
+            subject=_("Verify Your Email - Trade Hub"),
+            template="email_verification",
+            args={
+                "first_name": first_name or _("User"),
+                "otp_code": otp,
+                "valid_minutes": VERIFICATION_OTP_EXPIRY_SECONDS // 60,
+            },
+            now=True,
+        )
+    except Exception as e:
+        frappe.log_error(
+            f"Verification email error for {email}: {str(e)}",
+            "Auth API Error",
+        )
+
+
+def send_password_reset_email(email: str, otp: str, first_name: str) -> None:
+    """
+    Send password reset OTP to the user.
+
+    Args:
+        email: Recipient email address
+        otp: The 6-digit OTP code
+        first_name: User's first name for personalization
+    """
+    try:
+        frappe.sendmail(
+            recipients=email,
+            subject=_("Password Reset Request - Trade Hub"),
+            template="password_reset",
+            args={
+                "first_name": first_name or _("User"),
+                "otp_code": otp,
+                "valid_minutes": PASSWORD_RESET_OTP_EXPIRY_SECONDS // 60,
+            },
+            now=True,
+        )
+    except Exception as e:
+        frappe.log_error(
+            f"Password reset email error for {email}: {str(e)}",
+            "Auth API Error",
+        )
 
 
 # =============================================================================
