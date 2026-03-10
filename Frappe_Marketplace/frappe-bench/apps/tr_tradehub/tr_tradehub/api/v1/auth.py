@@ -1497,6 +1497,206 @@ def resend_verification_otp(
 
 
 # =============================================================================
+# LOGIN ENDPOINTS
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def login(
+    email: str,
+    password: str,
+) -> Dict[str, Any]:
+    """
+    Log in to Trade Hub with email and password.
+
+    Validates credentials via check_password(), checks email verification
+    status, handles 2FA flow when enabled, and on success starts a Frappe
+    session and returns auth token + user profile.
+
+    If email is not verified, a new verification OTP is sent and the request
+    fails with title='email_not_verified'.
+
+    If 2FA is required, returns a session_id that must be passed to
+    verify_2fa() along with the OTP code.
+
+    Args:
+        email: User's email address
+        password: User's password
+
+    Returns:
+        dict: On success (no 2FA):
+            {
+                "success": True,
+                "requires_2fa": False,
+                "token": {"api_key": str, "api_secret": str, "token_type": "token"},
+                "user": {email, full_name, first_name, last_name, user_type, ...}
+            }
+        dict: On 2FA required:
+            {
+                "success": True,
+                "requires_2fa": True,
+                "session_id": str,
+                "method": str,
+                "verification": {...},
+                "message": str
+            }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.login
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.login
+        {
+            "email": "user@example.com",
+            "password": "SecurePass1"
+        }
+    """
+    # Rate limiting by IP and by email
+    check_rate_limit("login")
+    check_rate_limit("login", email)
+
+    # Validate required fields
+    if not email or not password:
+        frappe.throw(_("Email and password are required"))
+
+    email = email.strip().lower()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Invalid email format"))
+
+    # Check if user exists — use generic error to prevent user enumeration
+    if not frappe.db.exists("User", email):
+        frappe.throw(
+            _("Invalid email or password"),
+            exc=frappe.AuthenticationError,
+        )
+
+    # Validate credentials via Frappe's check_password
+    from frappe.utils.password import check_password
+
+    try:
+        check_password(email, password)
+    except frappe.AuthenticationError:
+        frappe.throw(
+            _("Invalid email or password"),
+            exc=frappe.AuthenticationError,
+        )
+
+    # Load user document
+    user_doc = frappe.get_doc("User", email)
+
+    # Check if user is enabled
+    if not user_doc.enabled:
+        frappe.throw(
+            _("Your account has been disabled. Please contact support."),
+            exc=frappe.AuthenticationError,
+        )
+
+    # Check if email is verified
+    is_verified = cint(getattr(user_doc, "is_email_verified", 1))
+    if not is_verified:
+        # Send new verification OTP so user can verify
+        otp = generate_verification_otp(email)
+        send_verification_email(email, otp, user_doc.first_name)
+        frappe.db.commit()
+
+        frappe.throw(
+            _(
+                "Please verify your email before logging in. "
+                "A new verification code has been sent."
+            ),
+            title="email_not_verified",
+        )
+
+    # Check if 2FA is required for this user
+    from frappe.twofactor import (
+        should_run_2fa,
+        authenticate_for_2factor,
+        get_verification_method,
+    )
+
+    if should_run_2fa(email):
+        # Set password in form_dict so authenticate_for_2factor can cache it
+        frappe.form_dict["pwd"] = password
+
+        # authenticate_for_2factor sets tmp_id in frappe.local.response
+        authenticate_for_2factor(email)
+
+        # Extract tmp_id and verification info from frappe.local.response
+        tmp_id = frappe.local.response.get("tmp_id")
+        verification = frappe.local.response.get("verification")
+
+        if not tmp_id:
+            frappe.throw(
+                _(
+                    "Two-factor authentication setup failed. "
+                    "Please try again."
+                ),
+                title=_("2FA Error"),
+            )
+
+        # Generate a session identifier to map to the internal tmp_id
+        session_id = secrets.token_urlsafe(32)
+
+        # Store tmp_id + user in Redis keyed by session_id (5 min expiry)
+        cache_key = f"trade_hub:2fa:session:{session_id}"
+        frappe.cache().set_value(
+            cache_key,
+            json.dumps({"tmp_id": tmp_id, "user": email}),
+            expires_in_sec=300,
+        )
+
+        # Clean up response keys set by authenticate_for_2factor
+        frappe.local.response.pop("tmp_id", None)
+        frappe.local.response.pop("verification", None)
+
+        # Get verification method (system-wide setting)
+        method = get_verification_method()
+
+        return {
+            "success": True,
+            "requires_2fa": True,
+            "session_id": session_id,
+            "method": method,
+            "verification": verification,
+            "message": _("Two-factor authentication required"),
+        }
+
+    # No 2FA — start session directly
+    frappe.local.login_manager.login_as(email)
+
+    # Generate auth token (reuses existing API key if present)
+    token = generate_auth_token(email)
+    api_key, api_secret = token.split(":")
+
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "requires_2fa": False,
+        "message": _("Login successful"),
+        "token": {
+            "api_key": api_key,
+            "api_secret": api_secret,
+            "token_type": "token",
+        },
+        "user": {
+            "email": user_doc.email,
+            "full_name": user_doc.full_name,
+            "first_name": user_doc.first_name,
+            "last_name": user_doc.last_name or "",
+            "user_type": getattr(user_doc, "tradehub_user_type", None),
+            "is_email_verified": cint(
+                getattr(user_doc, "is_email_verified", 0)
+            ),
+            "has_completed_onboarding": cint(
+                getattr(user_doc, "has_completed_onboarding", 0)
+            ),
+        },
+    }
+
+
+# =============================================================================
 # INTERNAL/ADMIN ENDPOINTS
 # =============================================================================
 
