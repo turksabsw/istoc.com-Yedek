@@ -94,6 +94,10 @@ PASSWORD_REQUIREMENTS = {
 VERIFICATION_CODE_LENGTH = 6
 VERIFICATION_OTP_EXPIRY_SECONDS = 600  # 10 minutes
 PASSWORD_RESET_OTP_EXPIRY_SECONDS = 900  # 15 minutes
+RESEND_OTP_COOLDOWN_SECONDS = 60  # 60-second cooldown between OTP resends
+
+# Valid user types for registration
+VALID_USER_TYPES = ("buyer", "supplier")
 
 
 # =============================================================================
@@ -1161,6 +1165,334 @@ def get_social_providers() -> Dict[str, Any]:
     return {
         "success": True,
         "providers": providers
+    }
+
+
+# =============================================================================
+# REGISTRATION & VERIFICATION ENDPOINTS
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def register(
+    email: str,
+    password: str,
+    first_name: str,
+    last_name: str = "",
+    user_type: str = "buyer",
+) -> Dict[str, Any]:
+    """
+    Register a new user account on Trade Hub marketplace.
+
+    Creates a Frappe User with custom Trade Hub fields, generates a 6-digit
+    OTP for email verification, and sends a verification email.
+
+    Args:
+        email: User's email address (used as login identifier)
+        password: User's password (must meet strength requirements)
+        first_name: User's first name
+        last_name: User's last name (optional)
+        user_type: Account type - "buyer" or "supplier" (default: "buyer")
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str,
+            "user": str (email),
+            "requires_verification": True
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.register
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.register
+        {
+            "email": "user@example.com",
+            "password": "SecurePass1",
+            "first_name": "Ali",
+            "last_name": "Yılmaz",
+            "user_type": "buyer"
+        }
+    """
+    # Rate limiting
+    check_rate_limit("register")
+
+    # Validate required fields
+    if not email or not password or not first_name:
+        frappe.throw(_("Email, password, and first name are required"))
+
+    email = email.strip().lower()
+    first_name = first_name.strip()
+    last_name = (last_name or "").strip()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Please enter a valid email address"))
+
+    # Check if email already exists
+    if frappe.db.exists("User", email):
+        frappe.throw(_("An account with this email already exists"))
+
+    # Validate password strength
+    password_check = validate_password_strength(password)
+    if not password_check["is_valid"]:
+        frappe.throw("\n".join(password_check["errors"]))
+
+    # Validate user type
+    if user_type not in VALID_USER_TYPES:
+        frappe.throw(
+            _("Invalid user type. Must be 'buyer' or 'supplier'.")
+        )
+
+    # Create user
+    try:
+        full_name = f"{first_name} {last_name}".strip()
+
+        user_doc = frappe.get_doc({
+            "doctype": "User",
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "full_name": full_name,
+            "enabled": 1,
+            "new_password": password,
+            "user_type": "Website User",
+            "send_welcome_email": 0,
+        })
+        user_doc.flags.ignore_permissions = True
+        user_doc.flags.no_welcome_mail = True
+        user_doc.insert()
+
+        # Set custom Trade Hub fields
+        custom_fields = {
+            "tradehub_user_type": user_type,
+            "is_email_verified": 0,
+            "has_completed_onboarding": 0,
+        }
+        for field, value in custom_fields.items():
+            if hasattr(user_doc, field):
+                frappe.db.set_value("User", email, field, value)
+
+        # Generate OTP and send verification email
+        otp = generate_verification_otp(email)
+        send_verification_email(email, otp, first_name)
+
+        frappe.db.commit()
+
+        return {
+            "success": True,
+            "message": _(
+                "Account created successfully. Please check your email "
+                "to verify your account."
+            ),
+            "user": email,
+            "requires_verification": True,
+        }
+
+    except frappe.DuplicateEntryError:
+        frappe.throw(_("An account with this email already exists"))
+    except Exception as e:
+        # Cleanup on failure — remove partially created user
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+            frappe.db.commit()
+        frappe.log_error(
+            f"Registration error for {email}: {str(e)}",
+            "Auth API Error",
+        )
+        frappe.throw(
+            _("An error occurred during registration. Please try again.")
+        )
+
+
+@frappe.whitelist(allow_guest=True)
+def verify_email(
+    email: str,
+    otp: str,
+) -> Dict[str, Any]:
+    """
+    Verify a user's email address using the 6-digit OTP code.
+
+    Validates the OTP from Redis, marks the user's email as verified,
+    starts a Frappe session, generates an auth token, and returns the
+    user profile.
+
+    Args:
+        email: The email address to verify
+        otp: The 6-digit verification code
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str,
+            "token": {"api_key": str, "api_secret": str, "token_type": "token"},
+            "user": {email, full_name, first_name, last_name, user_type, ...}
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.verify_email
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.verify_email
+        {
+            "email": "user@example.com",
+            "otp": "123456"
+        }
+    """
+    # Rate limiting
+    check_rate_limit("verification", email)
+
+    # Validate required fields
+    if not email or not otp:
+        frappe.throw(_("Email and verification code are required"))
+
+    email = email.strip().lower()
+    otp = otp.strip()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Invalid email format"))
+
+    # Check if user exists
+    if not frappe.db.exists("User", email):
+        frappe.throw(_("No account found with this email"))
+
+    # Get stored OTP from Redis
+    cache_key = f"trade_hub:verify:otp:{email}"
+    stored_otp = frappe.cache().get_value(cache_key)
+
+    if not stored_otp:
+        frappe.throw(
+            _("Verification code has expired. Please request a new one."),
+            title=_("Code Expired"),
+        )
+
+    if str(stored_otp) != str(otp):
+        frappe.throw(
+            _("Invalid verification code. Please try again."),
+            title=_("Invalid Code"),
+        )
+
+    # Delete OTP after successful verification (single-use)
+    frappe.cache().delete_value(cache_key)
+
+    # Also clear any resend cooldown
+    frappe.cache().delete_value(f"trade_hub:verify:cooldown:{email}")
+
+    # Mark email as verified
+    frappe.db.set_value("User", email, "is_email_verified", 1)
+
+    # Start Frappe session
+    frappe.local.login_manager.login_as(email)
+
+    # Generate auth token (reuses existing API key if present)
+    token = generate_auth_token(email)
+    api_key, api_secret = token.split(":")
+
+    # Get user profile
+    user_doc = frappe.get_doc("User", email)
+
+    frappe.db.commit()
+
+    return {
+        "success": True,
+        "message": _("Email verified successfully"),
+        "token": {
+            "api_key": api_key,
+            "api_secret": api_secret,
+            "token_type": "token",
+        },
+        "user": {
+            "email": user_doc.email,
+            "full_name": user_doc.full_name,
+            "first_name": user_doc.first_name,
+            "last_name": user_doc.last_name or "",
+            "user_type": getattr(user_doc, "tradehub_user_type", None),
+            "is_email_verified": 1,
+            "has_completed_onboarding": cint(
+                getattr(user_doc, "has_completed_onboarding", 0)
+            ),
+        },
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def resend_verification_otp(
+    email: str,
+) -> Dict[str, Any]:
+    """
+    Resend the email verification OTP code.
+
+    Rate-limited to one request per 60 seconds per email address
+    to prevent abuse. Generates a fresh OTP (invalidating any previous one)
+    and sends a new verification email.
+
+    Args:
+        email: The email address to resend verification to
+
+    Returns:
+        dict: {
+            "success": True,
+            "message": str
+        }
+
+    API: POST /api/method/tr_tradehub.api.v1.auth.resend_verification_otp
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.auth.resend_verification_otp
+        {
+            "email": "user@example.com"
+        }
+    """
+    # Rate limiting (general verification rate limit)
+    check_rate_limit("verification", email)
+
+    # Validate required fields
+    if not email:
+        frappe.throw(_("Email is required"))
+
+    email = email.strip().lower()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Invalid email format"))
+
+    # Check if user exists
+    if not frappe.db.exists("User", email):
+        frappe.throw(_("No account found with this email"))
+
+    # Check if already verified
+    is_verified = frappe.db.get_value("User", email, "is_email_verified")
+    if cint(is_verified):
+        frappe.throw(_("Email is already verified"))
+
+    # Check 60-second cooldown
+    cooldown_key = f"trade_hub:verify:cooldown:{email}"
+    last_sent = frappe.cache().get_value(cooldown_key)
+    if last_sent:
+        frappe.throw(
+            _("Please wait {0} seconds before requesting a new code.").format(
+                RESEND_OTP_COOLDOWN_SECONDS
+            ),
+            title=_("Too Soon"),
+        )
+
+    # Get user's first name for email personalization
+    first_name = frappe.db.get_value("User", email, "first_name")
+
+    # Generate new OTP (overwrites any previous one in Redis)
+    otp = generate_verification_otp(email)
+    send_verification_email(email, otp, first_name)
+
+    # Set cooldown
+    frappe.cache().set_value(
+        cooldown_key,
+        "1",
+        expires_in_sec=RESEND_OTP_COOLDOWN_SECONDS,
+    )
+
+    return {
+        "success": True,
+        "message": _("Verification code sent successfully"),
     }
 
 
