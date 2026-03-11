@@ -179,12 +179,12 @@ function renderFactoryCard(mfg: Manufacturer, cardIndex: number): string {
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
-          <button type="button" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap" data-auth-action="chat">
+          <a href="${sanitizeHtml(mfg.chat_url || '#')}" data-auth-action="chat" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap inline-flex items-center no-underline">
             ${t('mfr.list.chatNow')}
-          </button>
-          <button type="button" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap">
+          </a>
+          <a href="${sanitizeHtml(mfg.contact_url || '#')}" data-auth-action="contact" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap inline-flex items-center no-underline">
             ${t('mfr.list.contactUs')}
-          </button>
+          </a>
         </div>
       </div>
 
@@ -358,14 +358,14 @@ export function initFactorySliders(): void {
  * instead of performing the action.
  */
 export function wireGuestAuthHandlers(): void {
-  document.querySelectorAll<HTMLButtonElement>('[data-auth-action]').forEach(btn => {
+  document.querySelectorAll<HTMLElement>('[data-auth-action]').forEach(btn => {
     // Skip if already wired
     if (btn.dataset.authWired) return;
     btn.dataset.authWired = '1';
 
     btn.addEventListener('click', (e) => {
       const token = localStorage.getItem('tradehub_auth');
-      if (token) return; // Authenticated — let default behavior proceed
+      if (token) return; // Authenticated — let default behavior proceed (link navigates normally)
 
       e.preventDefault();
       e.stopPropagation();

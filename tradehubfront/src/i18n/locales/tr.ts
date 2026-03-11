@@ -1727,7 +1727,7 @@ const tr = {
         onTimeDeliveryRate: 'Zamanında teslimat oranı',
         orders: 'sipariş',
         supplierCapacity: 'Tedarikçi kapasitesi',
-        verifiedBy: 'Doğrulandı by',
+        verifiedBy: 'Doğrulayan:',
         minorCustomization: 'Küçük özelleştirme',
         drawingCustomization: 'Çizime göre özelleştirme',
         finalProductInspection: 'Nihai ürün denetimi',

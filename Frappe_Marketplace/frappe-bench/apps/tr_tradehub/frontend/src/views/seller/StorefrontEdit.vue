@@ -74,22 +74,27 @@
             <!-- Company Info -->
             <div class="card">
               <h3 class="text-sm font-bold text-gray-900 mb-4"><i class="fas fa-building text-blue-500 mr-2"></i>Şirket Bilgileri</h3>
+              <p class="text-sm text-gray-500 mb-4 flex items-center gap-1.5">
+                <i class="fas fa-info-circle text-blue-400"></i>
+                Bu bilgiler satıcı profilinizden alınır.
+                <a href="/app/settings" class="text-blue-600 underline hover:text-blue-800">Profil ayarlarından düzenleyin</a>
+              </p>
               <div class="space-y-4">
                 <div>
-                  <label class="form-label">Görünen Ad <span class="text-red-500">*</span></label>
-                  <input v-model="form.display_name" type="text" class="form-input" placeholder="Şirket görünen adı">
+                  <label class="form-label">Görünen Ad</label>
+                  <input v-model="form.display_name" type="text" class="form-input bg-gray-50 cursor-not-allowed" placeholder="Şirket görünen adı" disabled>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label class="form-label">Şehir</label>
-                    <select v-model="form.city" class="form-input">
+                    <select v-model="form.city" class="form-input bg-gray-50 cursor-not-allowed" disabled>
                       <option value="">Şehir seçin</option>
                       <option v-for="city in cityOptions" :key="city" :value="city">{{ city }}</option>
                     </select>
                   </div>
                   <div>
                     <label class="form-label">Ülke</label>
-                    <select v-model="form.country" class="form-input">
+                    <select v-model="form.country" class="form-input bg-gray-50 cursor-not-allowed" disabled>
                       <option value="">Ülke seçin</option>
                       <option v-for="country in countryOptions" :key="country" :value="country">{{ country }}</option>
                     </select>
@@ -102,7 +107,7 @@
                   </div>
                   <div>
                     <label class="form-label">Web Sitesi</label>
-                    <input v-model="form.website" type="url" class="form-input" placeholder="https://sirket.com">
+                    <input v-model="form.website" type="url" class="form-input bg-gray-50 cursor-not-allowed" placeholder="https://sirket.com" disabled>
                   </div>
                 </div>
               </div>
@@ -114,9 +119,12 @@
             <!-- Preferred Categories -->
             <div class="card">
               <h3 class="text-sm font-bold text-gray-900 mb-4"><i class="fas fa-folder-tree text-amber-500 mr-2"></i>Tercih Edilen Kategoriler</h3>
+              <p class="text-xs text-gray-400 mb-3">
+                <i class="fas fa-info-circle mr-1"></i>Kategoriler satıcı profilinizden alınır.
+              </p>
               <div class="space-y-2">
-                <label v-for="cat in categoryOptions" :key="cat" class="flex items-center gap-2">
-                  <input type="checkbox" class="form-checkbox rounded text-violet-600" :value="cat" v-model="form.preferred_categories">
+                <label v-for="cat in categoryOptions" :key="cat" class="flex items-center gap-2 opacity-60 cursor-not-allowed">
+                  <input type="checkbox" class="form-checkbox rounded text-violet-600" :value="cat" v-model="form.preferred_categories" disabled>
                   <span class="text-xs text-gray-700">{{ cat }}</span>
                 </label>
               </div>

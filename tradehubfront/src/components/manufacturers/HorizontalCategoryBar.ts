@@ -22,55 +22,60 @@ function getTabCategories(): TabCategory[] {
   ];
 }
 
-function getAllCategories(): string[] {
+interface DropdownCategory {
+  label: string;
+  key: string;
+}
+
+function getAllCategories(): DropdownCategory[] {
   return [
     // Column 1
-    t('mfr.allCategories'),
-    t('mfr.allCat.jewelryEyewearWatches'),
-    t('mfr.allCat.electricalEquipment'),
-    t('mfr.allCat.foodBeverage'),
-    t('mfr.allCat.chemicals'),
-    t('mfr.allCat.medicalDevices'),
-    t('mfr.allCat.vehiclePartsAccessories'),
-    t('mfr.allCat.cosmetics'),
-    t('mfr.allCat.furniture'),
-    t('mfr.allCat.materialHandling'),
-    t('mfr.allCat.personalCareHomeCleaning'),
+    { label: t('mfr.allCategories'), key: '' },
+    { label: t('mfr.allCat.jewelryEyewearWatches'), key: 'jewelry_eyewear_watches' },
+    { label: t('mfr.allCat.electricalEquipment'), key: 'electrical_equipment' },
+    { label: t('mfr.allCat.foodBeverage'), key: 'food_beverage' },
+    { label: t('mfr.allCat.chemicals'), key: 'chemicals' },
+    { label: t('mfr.allCat.medicalDevices'), key: 'medical_devices' },
+    { label: t('mfr.allCat.vehiclePartsAccessories'), key: 'vehicle_parts_accessories' },
+    { label: t('mfr.allCat.cosmetics'), key: 'cosmetics' },
+    { label: t('mfr.allCat.furniture'), key: 'furniture' },
+    { label: t('mfr.allCat.materialHandling'), key: 'material_handling' },
+    { label: t('mfr.allCat.personalCareHomeCleaning'), key: 'personal_care_home_cleaning' },
     // Column 2
-    t('mfr.allCat.luggageBagsCases'),
-    t('mfr.allCat.motherChildToys'),
-    t('mfr.allCat.packagingPrinting'),
-    t('mfr.allCat.clothingAccessories'),
-    t('mfr.allCat.metalAlloys'),
-    t('mfr.allCat.sportsEntertainment'),
-    t('mfr.allCat.lampsLighting'),
-    t('mfr.allCat.rubberPlastics'),
-    t('mfr.allCat.commercialEquipmentMachinery'),
-    t('mfr.allCat.renewableEnergy'),
-    t('mfr.allCat.constructionBuildingMachinery'),
+    { label: t('mfr.allCat.luggageBagsCases'), key: 'luggage_bags_cases' },
+    { label: t('mfr.allCat.motherChildToys'), key: 'mother_child_toys' },
+    { label: t('mfr.allCat.packagingPrinting'), key: 'packaging_printing' },
+    { label: t('mfr.allCat.clothingAccessories'), key: 'clothing_accessories' },
+    { label: t('mfr.allCat.metalAlloys'), key: 'metal_alloys' },
+    { label: t('mfr.allCat.sportsEntertainment'), key: 'sports_entertainment' },
+    { label: t('mfr.allCat.lampsLighting'), key: 'lamps_lighting' },
+    { label: t('mfr.allCat.rubberPlastics'), key: 'rubber_plastics' },
+    { label: t('mfr.allCat.commercialEquipmentMachinery'), key: 'commercial_equipment_machinery' },
+    { label: t('mfr.allCat.renewableEnergy'), key: 'renewable_energy' },
+    { label: t('mfr.allCat.constructionBuildingMachinery'), key: 'construction_building_machinery' },
     // Column 3
-    t('mfr.allCat.sportswearOutdoor'),
-    t('mfr.allCat.shoesAccessories'),
-    t('mfr.allCat.homeGarden'),
-    t('mfr.allCat.fabricTextileRawMaterials'),
-    t('mfr.allCat.environment'),
-    t('mfr.allCat.schoolOfficeSupplies'),
-    t('mfr.allCat.manufacturingServices'),
-    t('mfr.allCat.electronicPartsTelecom'),
-    t('mfr.allCat.vehiclesTransportation'),
-    t('mfr.allCat.occupationalSafety'),
-    t('mfr.allCat.petProducts'),
+    { label: t('mfr.allCat.sportswearOutdoor'), key: 'sportswear_outdoor' },
+    { label: t('mfr.allCat.shoesAccessories'), key: 'shoes_accessories' },
+    { label: t('mfr.allCat.homeGarden'), key: 'home_garden' },
+    { label: t('mfr.allCat.fabricTextileRawMaterials'), key: 'fabric_textile_raw_materials' },
+    { label: t('mfr.allCat.environment'), key: 'environment' },
+    { label: t('mfr.allCat.schoolOfficeSupplies'), key: 'school_office_supplies' },
+    { label: t('mfr.allCat.manufacturingServices'), key: 'manufacturing_services' },
+    { label: t('mfr.allCat.electronicPartsTelecom'), key: 'electronic_parts_telecom' },
+    { label: t('mfr.allCat.vehiclesTransportation'), key: 'vehicles_transportation' },
+    { label: t('mfr.allCat.occupationalSafety'), key: 'occupational_safety' },
+    { label: t('mfr.allCat.petProducts'), key: 'pet_products' },
     // Column 4
-    t('mfr.allCat.personalElectronics'),
-    t('mfr.allCat.giftsHobbies'),
-    t('mfr.allCat.agriculture'),
-    t('mfr.allCat.homeAppliances'),
-    t('mfr.allCat.constructionRealEstate'),
-    t('mfr.allCat.security'),
-    t('mfr.allCat.industrialMachinery'),
-    t('mfr.allCat.handToolsHardware'),
-    t('mfr.allCat.powerTransmission'),
-    t('mfr.allCat.testEquipment'),
+    { label: t('mfr.allCat.personalElectronics'), key: 'personal_electronics' },
+    { label: t('mfr.allCat.giftsHobbies'), key: 'gifts_hobbies' },
+    { label: t('mfr.allCat.agriculture'), key: 'agriculture' },
+    { label: t('mfr.allCat.homeAppliances'), key: 'home_appliances' },
+    { label: t('mfr.allCat.constructionRealEstate'), key: 'construction_real_estate' },
+    { label: t('mfr.allCat.security'), key: 'security' },
+    { label: t('mfr.allCat.industrialMachinery'), key: 'industrial_machinery' },
+    { label: t('mfr.allCat.handToolsHardware'), key: 'hand_tools_hardware' },
+    { label: t('mfr.allCat.powerTransmission'), key: 'power_transmission' },
+    { label: t('mfr.allCat.testEquipment'), key: 'test_equipment' },
   ];
 }
 
@@ -140,9 +145,10 @@ export function HorizontalCategoryBar(): string {
     return `
               <li class="mb-3 pr-4 ${isHeader ? 'font-bold' : 'font-normal'} text-[#222]"
                   style="font-size: 14px; line-height: 21px;"
-                  data-dropdown-cat="${cat}"
+                  data-dropdown-cat="${cat.label}"
+                  data-dropdown-key="${cat.key}"
                   ${isHeader ? 'data-column-header' : ''}>
-                <a href="#" class="hover:text-primary-600 transition-colors">${cat}</a>
+                <a href="#" class="hover:text-primary-600 transition-colors">${cat.label}</a>
               </li>
             `;
   }).join('')}
@@ -290,16 +296,16 @@ export function initHorizontalCategoryBar(): void {
     });
   });
 
-  // Dropdown category click → dispatch category change + close menu
+  // Dropdown category click → dispatch category change with machine key + close menu
   dropdownItems.forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
-      const catName = item.dataset.dropdownCat || '';
+      const categoryKey = item.dataset.dropdownKey || '';
       closeMain();
 
-      // Dispatch category change with the category name (backend can match by name)
+      // Dispatch category change with the machine-readable key (not display label)
       document.dispatchEvent(new CustomEvent('mfr:category-change', {
-        detail: { category: catName },
+        detail: { category: categoryKey },
       }));
     });
   });

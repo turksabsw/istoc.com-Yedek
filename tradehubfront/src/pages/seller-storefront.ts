@@ -34,7 +34,7 @@ import {
 } from '../data/seller/staticConfig';
 
 // Sanitization
-import { safeInnerHTML } from '../utils/sanitize';
+import { safeInnerHTML, sanitizeHtml } from '../utils/sanitize';
 
 // Types
 import type {
@@ -202,7 +202,7 @@ function renderStorefront(apiData: SellerStorefrontApiData): void {
   const verifiedByEl = document.querySelector<HTMLElement>('[data-verified-by]');
   if (verifiedByEl) {
     if (seller.verified_by) {
-      verifiedByEl.innerHTML = `${t('seller.sf.verifiedBy')} ${seller.verified_by} &mdash; ${seller.verified_at} <span class="inline-block ml-1 cursor-help" data-tooltip-target="tuv-tooltip" data-tooltip-placement="top">&oplus;</span>`;
+      verifiedByEl.innerHTML = `${t('seller.sf.verifiedBy')} ${sanitizeHtml(seller.verified_by)} &mdash; ${sanitizeHtml(seller.verified_at)} <span class="inline-block ml-1 cursor-help" data-tooltip-target="tuv-tooltip" data-tooltip-placement="top">&oplus;</span>`;
     } else {
       verifiedByEl.classList.add('hidden');
     }
@@ -242,20 +242,29 @@ function renderStorefront(apiData: SellerStorefrontApiData): void {
     // If no factory_video_url, leave it hidden (default state)
   }
 
-  // 16. [data-capabilities] — Capability list (user-provided content, use safeInnerHTML)
+  // 16. [data-capabilities] — Capability list
+  // Uses DOM API to keep trusted SVG markup while safely escaping API-sourced capability names
   const capabilitiesEl = document.querySelector<HTMLElement>('[data-capabilities]');
   if (capabilitiesEl && (storefront.capabilities || []).length > 0) {
-    const checkIcon = '<svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
-    const capsHtml = storefront.capabilities.map(c =>
-      `<li class="flex items-center gap-2">${checkIcon} ${c}</li>`
-    ).join('');
-    safeInnerHTML(capabilitiesEl, capsHtml);
+    const checkSvg = '<svg class="w-4 h-4 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
+    capabilitiesEl.innerHTML = ''; // Clear existing content
+    storefront.capabilities.forEach(c => {
+      const li = document.createElement('li');
+      li.className = 'flex items-center gap-2';
+      // SVG is trusted hardcoded markup — safe to use innerHTML for it
+      const iconSpan = document.createElement('span');
+      iconSpan.innerHTML = checkSvg;
+      li.appendChild(iconSpan.firstChild!);
+      // Capability name is API data — use textContent (XSS-safe)
+      li.appendChild(document.createTextNode(` ${c}`));
+      capabilitiesEl.appendChild(li);
+    });
   }
 
   // 17. [data-capability-verifier] — Verifier text
   const verifierEl = document.querySelector<HTMLElement>('[data-capability-verifier]');
   if (verifierEl && storefront.capability_verified_by) {
-    verifierEl.innerHTML = `${t('seller.sf.verifiedBy')} <strong>${storefront.capability_verified_by}</strong>`;
+    verifierEl.innerHTML = `${t('seller.sf.verifiedBy')} <strong>${sanitizeHtml(storefront.capability_verified_by)}</strong>`;
   }
 
   // 18. [data-sidebar-name] — Sidebar company name
