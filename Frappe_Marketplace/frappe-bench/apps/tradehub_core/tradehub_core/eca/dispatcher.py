@@ -93,11 +93,11 @@ def _get_applicable_rules(doctype, event):
         rules = frappe.get_all(
             "ECA Rule",
             filters={
-                "doctype_name": doctype,
-                "event": event,
-                "enabled": 1
+                "event_doctype": doctype,
+                "event_type": event,
+                "is_active": 1
             },
-            fields=["name", "condition", "action_type", "action_template", "priority"],
+            fields=["name", "jinja_condition", "python_condition", "priority"],
             order_by="priority asc"
         )
         # Cache for 5 minutes
@@ -140,7 +140,7 @@ def _evaluate_condition(doc, rule):
     Returns:
         bool: True if condition is met, False otherwise.
     """
-    condition = rule.get("condition")
+    condition = rule.get("jinja_condition") or rule.get("python_condition")
 
     # No condition means always execute
     if not condition or condition.strip() == "":

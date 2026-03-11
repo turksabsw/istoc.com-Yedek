@@ -284,6 +284,9 @@ def install_app(name, verbose=False, set_as_patched=True, force=False):
 	# install pre-requisites
 	if app_hooks.required_apps:
 		for app in app_hooks.required_apps:
+			# Skip remote resolution if app is already installed locally
+			if app in frappe.get_installed_apps() or app in frappe.get_all_apps():
+				continue
 			required_app = parse_app_name(app)
 			install_app(required_app, verbose=verbose)
 
