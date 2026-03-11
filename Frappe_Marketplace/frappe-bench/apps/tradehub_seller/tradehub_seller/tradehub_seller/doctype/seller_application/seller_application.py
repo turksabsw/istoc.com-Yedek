@@ -53,7 +53,34 @@ class SellerApplication(Document):
 
     def on_update(self):
         """Actions to perform after application is updated."""
-        pass
+        doc_before_save = self.get_doc_before_save()
+        if not doc_before_save:
+            return
+
+        old_status = doc_before_save.status
+        # Auto-assign Seller role when status transitions to Approved
+        if old_status != "Approved" and self.status == "Approved":
+            self._assign_seller_role()
+
+    def _assign_seller_role(self):
+        """Assign the Seller role to the applicant user.
+
+        Checks if the Seller role already exists on the user before
+        appending to prevent duplicates.
+        """
+        if not self.applicant_user:
+            return
+
+        user = frappe.get_doc("User", self.applicant_user)
+
+        # Check if Seller role already exists to prevent duplicates
+        existing_roles = [r.role for r in user.get("roles", [])]
+        if "Seller" in existing_roles:
+            return
+
+        user.append("roles", {"role": "Seller"})
+        user.flags.ignore_permissions = True
+        user.save()
 
     def after_insert(self):
         """Actions to perform after application is inserted."""
