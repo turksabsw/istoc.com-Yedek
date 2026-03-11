@@ -3798,6 +3798,16 @@ const en = {
       requiredField: 'This field is required',
       termsRequired: 'You must accept all terms and agreements',
       fileUploadFailed: 'File upload failed. Please try again.',
+
+      // Pending Page
+      pendingTitle: 'Application Under Review',
+      pendingSubtitle: 'Thank you for your application!',
+      pendingMessage: 'Your seller application has been submitted and is currently under review by our team. We will notify you once a decision has been made.',
+      pendingTimeline: 'This process typically takes 1-3 business days.',
+      pendingBackToStore: 'Back to Storefront',
+      pendingCheckStatus: 'Check Application Status',
+      pendingStatusLabel: 'Status',
+      pendingStatusValue: 'Under Review',
     },
   },
 

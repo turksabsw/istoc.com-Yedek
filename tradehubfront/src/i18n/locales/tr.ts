@@ -3789,6 +3789,16 @@ const tr = {
       requiredField: 'Bu alan zorunludur',
       termsRequired: 'Tüm şartları ve sözleşmeleri kabul etmelisiniz',
       fileUploadFailed: 'Dosya yüklenemedi. Lütfen tekrar deneyin.',
+
+      // Pending Page
+      pendingTitle: 'Başvuru İnceleniyor',
+      pendingSubtitle: 'Başvurunuz için teşekkürler!',
+      pendingMessage: 'Satıcı başvurunuz gönderildi ve şu anda ekibimiz tarafından incelenmektedir. Bir karar verildiğinde size bildirilecektir.',
+      pendingTimeline: 'Bu süreç genellikle 1-3 iş günü sürer.',
+      pendingBackToStore: 'Mağazaya Dön',
+      pendingCheckStatus: 'Başvuru Durumunu Kontrol Et',
+      pendingStatusLabel: 'Durum',
+      pendingStatusValue: 'İnceleniyor',
     },
   },
 
