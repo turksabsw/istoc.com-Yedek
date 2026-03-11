@@ -19,6 +19,7 @@ All endpoints follow Frappe conventions and patterns.
 """
 
 import json
+import re
 from typing import Any, Dict, List, Optional
 
 import frappe
@@ -220,6 +221,67 @@ def validate_iban(iban: str) -> Dict[str, Any]:
         "iban_formatted": f"{iban[:4]} {iban[4:8]} {iban[8:12]} {iban[12:16]} {iban[16:20]} {iban[20:24]} {iban[24:]}",
         "error": _("Invalid IBAN checksum") if not is_valid else None,
     }
+
+
+# Turkish character transliteration map
+TURKISH_CHAR_MAP = {
+    "ç": "c", "Ç": "c",
+    "ş": "s", "Ş": "s",
+    "ğ": "g", "Ğ": "g",
+    "ı": "i", "İ": "i",
+    "ö": "o", "Ö": "o",
+    "ü": "u", "Ü": "u",
+}
+
+
+def generate_slug(display_name: str) -> str:
+    """
+    Generate a URL-safe slug from a display name.
+
+    Converts display_name to lowercase, transliterates Turkish characters
+    (ç→c, ş→s, ğ→g, ı→i, ö→o, ü→u), removes non-alphanumeric characters
+    (except hyphens), and ensures uniqueness against the Storefront DocType's
+    existing slug field by appending -1, -2, etc. on collision.
+
+    Follows the pattern from Storefront.generate_slug() but as a standalone
+    utility function.
+
+    Args:
+        display_name: The display name to convert to a slug
+
+    Returns:
+        str: A unique, URL-safe slug
+    """
+    if not display_name:
+        display_name = "store"
+
+    # Lowercase
+    slug = display_name.strip().lower()
+
+    # Turkish character transliteration
+    for turkish_char, latin_char in TURKISH_CHAR_MAP.items():
+        slug = slug.replace(turkish_char, latin_char)
+
+    # Replace non-alphanumeric characters with hyphens
+    slug = re.sub(r"[^a-z0-9\-]", "-", slug)
+
+    # Collapse multiple hyphens
+    slug = re.sub(r"-+", "-", slug)
+
+    # Strip leading/trailing hyphens
+    slug = slug.strip("-")
+
+    if not slug:
+        slug = "store"
+
+    # Ensure uniqueness against Storefront slugs
+    counter = 1
+    original_slug = slug
+    while frappe.db.exists("Storefront", {"slug": slug}):
+        slug = f"{original_slug}-{counter}"
+        counter += 1
+
+    return slug
 
 
 def get_current_seller() -> Optional[str]:
@@ -1083,11 +1145,72 @@ def update_storefront(storefront_name: Optional[str] = None, **kwargs) -> Dict[s
         "facebook_url", "instagram_url", "twitter_url", "linkedin_url", "youtube_url", "tiktok_url",
         "shipping_policy", "return_policy", "privacy_policy", "terms_of_service",
         "custom_css", "custom_header_html", "custom_footer_html",
+        # Factory & Capabilities fields
+        "factory_video_url", "employee_count", "factory_area",
+        "annual_revenue", "capability_verified_by",
     ]
 
     for field in allowed_fields:
         if field in kwargs:
             setattr(storefront, field, kwargs[field])
+
+    # Handle child table: factory_images → Storefront Factory Image
+    if "factory_images" in kwargs:
+        images_data = kwargs["factory_images"]
+        if isinstance(images_data, str):
+            import json as json_lib
+            try:
+                images_data = json_lib.loads(images_data)
+            except (ValueError, TypeError):
+                images_data = []
+        if isinstance(images_data, list):
+            storefront.set("factory_images", [])
+            for idx, img in enumerate(images_data):
+                if isinstance(img, dict) and img.get("image"):
+                    storefront.append("factory_images", {
+                        "image": img["image"],
+                        "caption": img.get("caption", ""),
+                        "sort_order": img.get("sort_order", idx),
+                    })
+
+    # Handle child table: certificates → Storefront Certificate
+    if "certificates" in kwargs:
+        certs_data = kwargs["certificates"]
+        if isinstance(certs_data, str):
+            import json as json_lib
+            try:
+                certs_data = json_lib.loads(certs_data)
+            except (ValueError, TypeError):
+                certs_data = []
+        if isinstance(certs_data, list):
+            storefront.set("certificates", [])
+            for cert in certs_data:
+                if isinstance(cert, dict) and (cert.get("certificate_type") or cert.get("certificate_name")):
+                    storefront.append("certificates", {
+                        "certificate_name": cert.get("certificate_name", cert.get("certificate_type", "")),
+                        "certificate_type": cert.get("certificate_type", ""),
+                        "issued_date": cert.get("issued_date"),
+                        "expiry_date": cert.get("expiry_date"),
+                    })
+
+    # Handle child table: capabilities → Storefront Capability
+    if "capabilities" in kwargs:
+        caps_data = kwargs["capabilities"]
+        if isinstance(caps_data, str):
+            import json as json_lib
+            try:
+                caps_data = json_lib.loads(caps_data)
+            except (ValueError, TypeError):
+                caps_data = []
+        if isinstance(caps_data, list):
+            storefront.set("capabilities", [])
+            for cap in caps_data:
+                if isinstance(cap, dict) and cap.get("capability_name"):
+                    storefront.append("capabilities", {
+                        "capability_name": cap["capability_name"],
+                        "capability_type": cap.get("capability_type", ""),
+                        "is_verified": cap.get("is_verified", 0),
+                    })
 
     storefront.save()
 
@@ -1574,6 +1697,513 @@ def validate_iban_api(iban: str) -> Dict[str, Any]:
 
 
 # =============================================================================
+# MANUFACTURER CATEGORY ENDPOINTS
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def get_manufacturer_categories() -> List[Dict[str, Any]]:
+    """
+    Get product categories from active sellers' listings.
+
+    Queries active sellers' product categories by joining
+    Seller Profile → Listing → Product Category. Returns categories
+    that have at least one active listing from an active seller.
+
+    Returns:
+        list: Categories with {name, label, count} objects where
+            - name: Product Category document name
+            - label: Human-readable category name
+            - count: Number of active listings in this category from active sellers
+
+    Example:
+        GET /api/method/tr_tradehub.api.v1.seller.get_manufacturer_categories
+        [
+            {"name": "CAT-001", "label": "Elektrik Sayaçları", "count": 42},
+            {"name": "CAT-002", "label": "Su Sayaçları", "count": 28},
+            ...
+        ]
+    """
+    categories = frappe.db.sql(
+        """
+        SELECT
+            pc.name AS name,
+            pc.category_name AS label,
+            COUNT(DISTINCT l.name) AS count
+        FROM `tabProduct Category` pc
+        INNER JOIN `tabListing` l ON l.category = pc.name
+        INNER JOIN `tabSeller Profile` sp ON l.seller = sp.name
+        WHERE sp.status = 'Active'
+        AND l.status = 'Active'
+        AND pc.enabled = 1
+        GROUP BY pc.name, pc.category_name
+        ORDER BY count DESC
+        """,
+        as_dict=True,
+    )
+
+    return categories
+
+
+# =============================================================================
+# MANUFACTURERS LIST ENDPOINT
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def get_manufacturers_list(
+    category: Optional[str] = None,
+    filters: Optional[str] = None,
+    sort_by: str = "popular",
+    page: int = 1,
+    page_size: int = 10,
+) -> Dict[str, Any]:
+    """
+    Get paginated list of manufacturers with seller profile, top products,
+    factory images, and performance metrics.
+
+    Parameters:
+        category: Optional product category to filter by (Product Category name)
+        filters: Optional comma-separated capability filter names
+        sort_by: Sort order — 'popular' (default), 'best_seller', 'leader', 'fast_response'
+        page: Page number (default: 1)
+        page_size: Number of results per page (default: 10, max: 50)
+
+    Returns:
+        dict: {data: [...], total, page, page_size} where each data item contains
+            seller_id, storefront_slug, logo, display_name, is_verified,
+            years_active, employee_count, factory_area, annual_revenue,
+            average_rating, total_reviews, response_time_hours,
+            on_time_delivery_rate, certificates, capabilities, top_products,
+            factory_images, chat_url, contact_url
+
+    Example:
+        GET /api/method/tr_tradehub.api.v1.seller.get_manufacturers_list?sort_by=popular&page=1&page_size=10
+    """
+    # Validate and sanitize parameters
+    page = max(1, cint(page))
+    page_size = min(50, max(1, cint(page_size)))
+    offset = (page - 1) * page_size
+
+    # Build sort clause from validated sort options
+    sort_map = {
+        "popular": "sp.average_rating DESC",
+        "best_seller": "sp.total_sales_count DESC",
+        "leader": (
+            "CASE WHEN sp.seller_tier = 'Enterprise' OR sp.is_top_seller = 1 "
+            "THEN 0 ELSE 1 END ASC, sp.average_rating DESC"
+        ),
+        "fast_response": "sp.response_time_hours ASC",
+    }
+    order_clause = sort_map.get(cstr(sort_by).strip(), sort_map["popular"])
+
+    # Build WHERE conditions
+    conditions = [
+        "sp.status = 'Active'",
+        "sf.status = 'Active'",
+        "sf.is_published = 1",
+    ]
+    params = []
+
+    if category:
+        conditions.append(
+            "EXISTS ("
+            "SELECT 1 FROM `tabListing` lf "
+            "WHERE lf.seller = sp.name "
+            "AND lf.category = %s "
+            "AND lf.status = 'Active'"
+            ")"
+        )
+        params.append(cstr(category).strip())
+
+    if filters:
+        filter_list = [f.strip() for f in cstr(filters).split(",") if f.strip()]
+        if filter_list:
+            placeholders = ", ".join(["%s"] * len(filter_list))
+            conditions.append(
+                "EXISTS ("
+                "SELECT 1 FROM `tabStorefront Capability` scf "
+                "WHERE scf.parent = sf.name "
+                "AND scf.capability_name IN (" + placeholders + ")"
+                ")"
+            )
+            params.extend(filter_list)
+
+    where_clause = " AND ".join(conditions)
+
+    # Count total matching sellers
+    count_sql = (
+        "SELECT COUNT(DISTINCT sp.name) AS total "
+        "FROM `tabSeller Profile` sp "
+        "INNER JOIN `tabStorefront` sf ON sf.seller = sp.name "
+        "WHERE " + where_clause
+    )
+    count_result = frappe.db.sql(count_sql, params, as_dict=True)
+    total = cint(count_result[0].total) if count_result else 0
+
+    if total == 0:
+        return {
+            "data": [],
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+        }
+
+    # Main query: fetch sellers with storefront data
+    main_sql = (
+        "SELECT "
+        "sp.name AS seller_id, "
+        "sf.name AS storefront_name, "
+        "sf.slug AS storefront_slug, "
+        "sf.logo AS logo, "
+        "sp.display_name, "
+        "CASE WHEN sp.verification_status = 'Verified' THEN 1 ELSE 0 END AS is_verified, "
+        "sp.joined_at, "
+        "sf.employee_count, "
+        "sf.factory_area, "
+        "sf.annual_revenue, "
+        "sp.average_rating, "
+        "sp.total_reviews, "
+        "sp.response_time_hours, "
+        "sp.on_time_delivery_rate "
+        "FROM `tabSeller Profile` sp "
+        "INNER JOIN `tabStorefront` sf ON sf.seller = sp.name "
+        "WHERE " + where_clause + " "
+        "ORDER BY " + order_clause + " "
+        "LIMIT %s OFFSET %s"
+    )
+    sellers = frappe.db.sql(main_sql, params + [page_size, offset], as_dict=True)
+
+    # Collect storefront names for batch child table queries
+    storefront_names = [s.storefront_name for s in sellers if s.storefront_name]
+    seller_ids = [s.seller_id for s in sellers if s.seller_id]
+
+    # Batch fetch factory images for all storefronts
+    factory_images_map = {}
+    if storefront_names:
+        fi_placeholders = ", ".join(["%s"] * len(storefront_names))
+        factory_images_rows = frappe.db.sql(
+            "SELECT parent, image "
+            "FROM `tabStorefront Factory Image` "
+            "WHERE parent IN (" + fi_placeholders + ") "
+            "ORDER BY sort_order ASC",
+            storefront_names,
+            as_dict=True,
+        )
+        for row in factory_images_rows:
+            factory_images_map.setdefault(row.parent, []).append(row.image)
+
+    # Batch fetch certificates for all storefronts
+    certificates_map = {}
+    if storefront_names:
+        cert_placeholders = ", ".join(["%s"] * len(storefront_names))
+        cert_rows = frappe.db.sql(
+            "SELECT parent, certificate_type "
+            "FROM `tabStorefront Certificate` "
+            "WHERE parent IN (" + cert_placeholders + ")",
+            storefront_names,
+            as_dict=True,
+        )
+        for row in cert_rows:
+            certificates_map.setdefault(row.parent, []).append(row.certificate_type)
+
+    # Batch fetch capabilities for all storefronts
+    capabilities_map = {}
+    if storefront_names:
+        cap_placeholders = ", ".join(["%s"] * len(storefront_names))
+        cap_rows = frappe.db.sql(
+            "SELECT parent, capability_name "
+            "FROM `tabStorefront Capability` "
+            "WHERE parent IN (" + cap_placeholders + ")",
+            storefront_names,
+            as_dict=True,
+        )
+        for row in cap_rows:
+            capabilities_map.setdefault(row.parent, []).append(row.capability_name)
+
+    # Batch fetch top 4 products per seller
+    products_map = {}
+    if seller_ids:
+        prod_placeholders = ", ".join(["%s"] * len(seller_ids))
+        # Use a ranked query to get top 4 per seller
+        product_rows = frappe.db.sql(
+            "SELECT "
+            "l.seller, "
+            "l.primary_image AS item_image, "
+            "l.selling_price AS price_min, "
+            "COALESCE(l.compare_at_price, l.selling_price) AS price_max, "
+            "l.currency, "
+            "l.min_order_qty, "
+            "l.stock_uom AS uom "
+            "FROM `tabListing` l "
+            "INNER JOIN ("
+            "SELECT name, seller, "
+            "ROW_NUMBER() OVER (PARTITION BY seller ORDER BY view_count DESC, average_rating DESC) AS rn "
+            "FROM `tabListing` "
+            "WHERE seller IN (" + prod_placeholders + ") "
+            "AND status = 'Active'"
+            ") ranked ON l.name = ranked.name "
+            "WHERE ranked.rn <= 4",
+            seller_ids,
+            as_dict=True,
+        )
+        for row in product_rows:
+            products_map.setdefault(row.seller, []).append({
+                "item_image": row.item_image or "",
+                "price_min": flt(row.price_min),
+                "price_max": flt(row.price_max),
+                "currency": row.currency or "USD",
+                "min_order_qty": cint(row.min_order_qty),
+                "uom": row.uom or "Adet",
+            })
+
+    # Build result
+    today_year = getdate(nowdate()).year
+    result = []
+    for seller in sellers:
+        seller_id = seller.seller_id
+        sf_name = seller.storefront_name
+
+        # Calculate years_active from joined_at
+        years_active = 0
+        if seller.joined_at:
+            years_active = today_year - getdate(seller.joined_at).year
+
+        result.append({
+            "seller_id": seller_id,
+            "storefront_slug": seller.storefront_slug or "",
+            "logo": seller.logo or "",
+            "display_name": seller.display_name or "",
+            "is_verified": bool(seller.is_verified),
+            "years_active": years_active,
+            "employee_count": seller.employee_count or "",
+            "factory_area": seller.factory_area or "",
+            "annual_revenue": seller.annual_revenue or "",
+            "average_rating": flt(seller.average_rating, 1),
+            "total_reviews": cint(seller.total_reviews),
+            "response_time_hours": cint(seller.response_time_hours),
+            "on_time_delivery_rate": flt(seller.on_time_delivery_rate, 1),
+            "certificates": certificates_map.get(sf_name, []),
+            "capabilities": capabilities_map.get(sf_name, []),
+            "top_products": products_map.get(seller_id, []),
+            "factory_images": factory_images_map.get(sf_name, []),
+            "chat_url": "/chat/" + cstr(seller_id),
+            "contact_url": "/contact/" + cstr(seller_id),
+        })
+
+    return {
+        "data": result,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+# =============================================================================
+# STOREFRONT DATA
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def get_seller_storefront_data(storefront_slug: str) -> Dict[str, Any]:
+    """
+    Get all data for a single seller storefront page.
+
+    Looks up the Storefront by its unique slug field, joins with the
+    associated Seller Profile, and returns seller info, performance metrics,
+    storefront details (factory images, capabilities), and tab counts.
+
+    Args:
+        storefront_slug: The unique URL slug of the storefront
+
+    Returns:
+        dict: Contains 4 objects — seller, performance, storefront, tabs
+
+    Raises:
+        frappe.ValidationError: If slug is missing or storefront not found
+
+    Example:
+        GET /api/method/tr_tradehub.api.v1.seller.get_seller_storefront_data?storefront_slug=anadolu-endustriyel
+    """
+    storefront_slug = cstr(storefront_slug).strip()
+
+    if not storefront_slug:
+        frappe.throw(_("Storefront not found"))
+
+    # Look up Storefront by slug and join with Seller Profile
+    storefront_data = frappe.db.sql(
+        """
+        SELECT
+            sf.name AS storefront_name,
+            sf.slug,
+            sf.factory_video_url,
+            sf.capability_verified_by,
+            sp.name AS seller_id,
+            sp.display_name,
+            sp.logo,
+            sp.verification_status,
+            sp.verified_by,
+            sp.verified_at,
+            sp.joined_at,
+            sp.city,
+            sp.country,
+            sp.contact_email,
+            sp.average_rating,
+            sp.total_reviews,
+            sp.response_time_hours,
+            sp.on_time_delivery_rate,
+            sp.total_sales_count
+        FROM `tabStorefront` sf
+        INNER JOIN `tabSeller Profile` sp ON sf.seller = sp.name
+        WHERE sf.slug = %s
+        AND sf.status = 'Active'
+        AND sf.is_published = 1
+        LIMIT 1
+        """,
+        storefront_slug,
+        as_dict=True,
+    )
+
+    if not storefront_data:
+        frappe.throw(_("Storefront not found"))
+
+    sf = storefront_data[0]
+    seller_id = sf.seller_id
+    storefront_name = sf.storefront_name
+
+    # Compute years_active from joined_at
+    years_active = 0
+    if sf.joined_at:
+        years_active = getdate(nowdate()).year - getdate(sf.joined_at).year
+
+    # Determine verification fields
+    is_verified = sf.verification_status == "Verified"
+    verification_label = "Verified" if is_verified else ""
+
+    # --- Derive categories from active Listings ---
+    categories_rows = frappe.db.sql(
+        """
+        SELECT DISTINCT l.category
+        FROM `tabListing` l
+        WHERE l.seller = %s
+        AND l.status = 'Active'
+        AND l.category IS NOT NULL
+        AND l.category != ''
+        ORDER BY l.category ASC
+        """,
+        seller_id,
+        as_dict=True,
+    )
+    categories = [row.category for row in categories_rows]
+
+    # --- Fetch seller badges (child table on Seller Profile) ---
+    badge_rows = frappe.db.sql(
+        """
+        SELECT badge_name, badge_code
+        FROM `tabSeller Badge`
+        WHERE parent = %s
+        AND parenttype = 'Seller Profile'
+        AND is_active = 1
+        ORDER BY idx ASC
+        """,
+        seller_id,
+        as_dict=True,
+    )
+    badges = [
+        {"label": row.badge_name or "", "type": row.badge_code or ""}
+        for row in badge_rows
+    ]
+
+    # --- Fetch factory images from Storefront child table ---
+    factory_images_rows = frappe.db.sql(
+        """
+        SELECT image
+        FROM `tabStorefront Factory Image`
+        WHERE parent = %s
+        ORDER BY sort_order ASC
+        """,
+        storefront_name,
+        as_dict=True,
+    )
+    factory_images = [row.image for row in factory_images_rows if row.image]
+
+    # --- Fetch capabilities from Storefront child table ---
+    capability_rows = frappe.db.sql(
+        """
+        SELECT capability_name
+        FROM `tabStorefront Capability`
+        WHERE parent = %s
+        ORDER BY idx ASC
+        """,
+        storefront_name,
+        as_dict=True,
+    )
+    capabilities = [row.capability_name for row in capability_rows if row.capability_name]
+
+    # --- Tab counts ---
+    # Products count: active listings for this seller
+    products_count = cint(
+        frappe.db.count(
+            "Listing",
+            filters={"seller": seller_id, "status": "Active"},
+        )
+    )
+
+    # Categories count: distinct categories from active listings
+    categories_count = len(categories)
+
+    # Campaigns count: active campaigns for this seller
+    campaigns_count_result = frappe.db.sql(
+        """
+        SELECT COUNT(*) AS cnt
+        FROM `tabCampaign`
+        WHERE seller = %s
+        AND status = 'Active'
+        AND (end_date IS NULL OR end_date >= %s)
+        """,
+        (seller_id, nowdate()),
+        as_dict=True,
+    )
+    campaigns_count = cint(campaigns_count_result[0].cnt) if campaigns_count_result else 0
+
+    return {
+        "seller": {
+            "seller_id": seller_id,
+            "display_name": sf.display_name or "",
+            "logo": sf.logo or "",
+            "is_verified": is_verified,
+            "verification_label": verification_label,
+            "verified_by": sf.verified_by or "",
+            "verified_at": cstr(sf.verified_at) if sf.verified_at else "",
+            "years_active": years_active,
+            "city": sf.city or "",
+            "country": sf.country or "",
+            "contact_email": sf.contact_email or "",
+            "categories": categories,
+            "badges": badges,
+        },
+        "performance": {
+            "average_rating": flt(sf.average_rating, 1),
+            "total_reviews": cint(sf.total_reviews),
+            "response_time_hours": cint(sf.response_time_hours),
+            "on_time_delivery_rate": flt(sf.on_time_delivery_rate, 1),
+            "total_orders": cint(sf.total_sales_count),
+        },
+        "storefront": {
+            "factory_video_url": sf.factory_video_url or "",
+            "factory_images": factory_images,
+            "capabilities": capabilities,
+            "capability_verified_by": sf.capability_verified_by or "",
+        },
+        "tabs": {
+            "products_count": products_count,
+            "categories_count": categories_count,
+            "campaigns_count": campaigns_count,
+        },
+    }
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
@@ -1649,4 +2279,13 @@ Seller Tiers:
 Validation:
 - validate_tax_id_api: Validate Turkish tax ID
 - validate_iban_api: Validate Turkish IBAN
+
+Manufacturer Categories:
+- get_manufacturer_categories: Get product categories from active sellers' listings
+
+Manufacturers:
+- get_manufacturers_list: Get paginated list of manufacturers with profiles, products, and metrics
+
+Storefront Data:
+- get_seller_storefront_data: Get full storefront page data (seller, performance, storefront, tabs)
 """

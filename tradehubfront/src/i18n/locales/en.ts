@@ -1829,6 +1829,18 @@ const en = {
         // CategoryProductListing extras
         minOrder: 'Min. Order',
         sold: 'sold',
+        // Error states
+        storefrontNotFound: 'Storefront not found',
+        browseManufacturers: 'Browse Manufacturers',
+        missingStoreParam: 'No store identifier was provided. Please select a seller from the manufacturers page.',
+        loadError: 'Could not load storefront data. Please try again later.',
+        // Factory video
+        factoryVideoAlt: 'Factory video',
+        noFactoryVideo: 'No factory video available',
+        // Guest auth
+        loginRequired: 'Please log in to use this feature',
+        loginToChat: 'Please log in to chat with this supplier',
+        loginToFavorite: 'Please log in to add to favorites',
       },
     },
 
@@ -2472,7 +2484,32 @@ const en = {
         next: 'Next',
         addToFavorites: 'Add to favorites',
         odmService: 'ODM service available',
+        noManufacturers: 'No manufacturers found',
+        noProducts: 'No products',
       },
+
+      // Sort options
+      sort: {
+        label: 'Sort by',
+        popular: 'Most popular',
+        bestSeller: 'Best sellers',
+        leader: 'Leading factories',
+        fastResponse: 'Quick response',
+      },
+
+      // Pagination
+      pagination: {
+        showing: 'Showing {{from}}\u2013{{to}} of {{total}} manufacturers',
+        page: 'Page {{current}} of {{total}}',
+        prev: 'Previous',
+        next: 'Next',
+      },
+
+      // Loading & error states
+      loadingText: 'Loading manufacturers...',
+      errorText: 'Failed to load manufacturers. Please try again.',
+      retry: 'Retry',
+      resultsCount: '{{count}} manufacturers found',
     },
 
     // ============================================================

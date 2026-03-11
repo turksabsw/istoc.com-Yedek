@@ -415,6 +415,47 @@ class Storefront(Document):
 
     def get_public_info(self):
         """Get public-facing storefront information."""
+        # Build factory images list from child table
+        factory_images = []
+        if hasattr(self, "factory_images") and self.factory_images:
+            factory_images = [
+                {
+                    "image": row.image,
+                    "caption": row.caption or "",
+                    "sort_order": row.sort_order or 0,
+                    "name": row.name,
+                }
+                for row in self.factory_images
+                if row.image
+            ]
+
+        # Build certificates list from child table
+        certificates = []
+        if hasattr(self, "certificates") and self.certificates:
+            certificates = [
+                {
+                    "certificate_name": row.certificate_name or "",
+                    "certificate_type": row.certificate_type or "",
+                    "issued_date": str(row.issued_date) if row.issued_date else "",
+                    "expiry_date": str(row.expiry_date) if row.expiry_date else "",
+                    "name": row.name,
+                }
+                for row in self.certificates
+            ]
+
+        # Build capabilities list from child table
+        capabilities = []
+        if hasattr(self, "capabilities") and self.capabilities:
+            capabilities = [
+                {
+                    "capability_name": row.capability_name or "",
+                    "capability_type": row.capability_type or "",
+                    "is_verified": cint(row.is_verified),
+                    "name": row.name,
+                }
+                for row in self.capabilities
+            ]
+
         return {
             "name": self.name,
             "store_name": self.store_name,
@@ -424,6 +465,7 @@ class Storefront(Document):
             "about": self.about_html,
             "logo": self.logo,
             "banner": self.banner,
+            "is_published": cint(self.is_published),
             "theme": self.get_theme_config(),
             "contact": {
                 "email": self.public_email,
@@ -431,6 +473,7 @@ class Storefront(Document):
                 "whatsapp": self.whatsapp_number,
                 "address": self.public_address if self.show_address else None
             },
+            "public_email": self.public_email,
             "social": {
                 "facebook": self.facebook_url,
                 "instagram": self.instagram_url,
@@ -454,7 +497,16 @@ class Storefront(Document):
                 "show_contact_info": cint(self.show_contact_info),
                 "products_per_page": self.products_per_page
             },
-            "route": self.route
+            "route": self.route,
+            # Factory & Capabilities fields
+            "factory_video_url": self.factory_video_url if hasattr(self, "factory_video_url") else "",
+            "employee_count": self.employee_count if hasattr(self, "employee_count") else "",
+            "factory_area": self.factory_area if hasattr(self, "factory_area") else "",
+            "annual_revenue": self.annual_revenue if hasattr(self, "annual_revenue") else "",
+            "capability_verified_by": self.capability_verified_by if hasattr(self, "capability_verified_by") else "",
+            "factory_images": factory_images,
+            "certificates": certificates,
+            "capabilities": capabilities,
         }
 
 

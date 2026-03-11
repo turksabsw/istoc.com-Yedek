@@ -1,90 +1,105 @@
 import { t } from '../../i18n';
 
-function getTabCategories(): string[] {
+interface TabCategory {
+  label: string;
+  key: string;
+}
+
+interface SubTabFilter {
+  label: string;
+  key: string;
+}
+
+function getTabCategories(): TabCategory[] {
   return [
-    t('mfr.allCategories'),
-    t('mfr.cat.luggageBagsCases'),
-    t('mfr.cat.sportswearOutdoor'),
-    t('mfr.cat.personalElectronics'),
-    t('mfr.cat.jewelryEyewearWatches'),
-    t('mfr.cat.motherChildToys'),
-    t('mfr.cat.shoesAccessories'),
+    { label: t('mfr.allCategories'), key: '' },
+    { label: t('mfr.cat.luggageBagsCases'), key: 'luggage_bags_cases' },
+    { label: t('mfr.cat.sportswearOutdoor'), key: 'sportswear_outdoor' },
+    { label: t('mfr.cat.personalElectronics'), key: 'personal_electronics' },
+    { label: t('mfr.cat.jewelryEyewearWatches'), key: 'jewelry_eyewear_watches' },
+    { label: t('mfr.cat.motherChildToys'), key: 'mother_child_toys' },
+    { label: t('mfr.cat.shoesAccessories'), key: 'shoes_accessories' },
   ];
 }
 
-function getAllCategories(): string[] {
+interface DropdownCategory {
+  label: string;
+  key: string;
+}
+
+function getAllCategories(): DropdownCategory[] {
   return [
     // Column 1
-    t('mfr.allCategories'),
-    t('mfr.allCat.jewelryEyewearWatches'),
-    t('mfr.allCat.electricalEquipment'),
-    t('mfr.allCat.foodBeverage'),
-    t('mfr.allCat.chemicals'),
-    t('mfr.allCat.medicalDevices'),
-    t('mfr.allCat.vehiclePartsAccessories'),
-    t('mfr.allCat.cosmetics'),
-    t('mfr.allCat.furniture'),
-    t('mfr.allCat.materialHandling'),
-    t('mfr.allCat.personalCareHomeCleaning'),
+    { label: t('mfr.allCategories'), key: '' },
+    { label: t('mfr.allCat.jewelryEyewearWatches'), key: 'jewelry_eyewear_watches' },
+    { label: t('mfr.allCat.electricalEquipment'), key: 'electrical_equipment' },
+    { label: t('mfr.allCat.foodBeverage'), key: 'food_beverage' },
+    { label: t('mfr.allCat.chemicals'), key: 'chemicals' },
+    { label: t('mfr.allCat.medicalDevices'), key: 'medical_devices' },
+    { label: t('mfr.allCat.vehiclePartsAccessories'), key: 'vehicle_parts_accessories' },
+    { label: t('mfr.allCat.cosmetics'), key: 'cosmetics' },
+    { label: t('mfr.allCat.furniture'), key: 'furniture' },
+    { label: t('mfr.allCat.materialHandling'), key: 'material_handling' },
+    { label: t('mfr.allCat.personalCareHomeCleaning'), key: 'personal_care_home_cleaning' },
     // Column 2
-    t('mfr.allCat.luggageBagsCases'),
-    t('mfr.allCat.motherChildToys'),
-    t('mfr.allCat.packagingPrinting'),
-    t('mfr.allCat.clothingAccessories'),
-    t('mfr.allCat.metalAlloys'),
-    t('mfr.allCat.sportsEntertainment'),
-    t('mfr.allCat.lampsLighting'),
-    t('mfr.allCat.rubberPlastics'),
-    t('mfr.allCat.commercialEquipmentMachinery'),
-    t('mfr.allCat.renewableEnergy'),
-    t('mfr.allCat.constructionBuildingMachinery'),
+    { label: t('mfr.allCat.luggageBagsCases'), key: 'luggage_bags_cases' },
+    { label: t('mfr.allCat.motherChildToys'), key: 'mother_child_toys' },
+    { label: t('mfr.allCat.packagingPrinting'), key: 'packaging_printing' },
+    { label: t('mfr.allCat.clothingAccessories'), key: 'clothing_accessories' },
+    { label: t('mfr.allCat.metalAlloys'), key: 'metal_alloys' },
+    { label: t('mfr.allCat.sportsEntertainment'), key: 'sports_entertainment' },
+    { label: t('mfr.allCat.lampsLighting'), key: 'lamps_lighting' },
+    { label: t('mfr.allCat.rubberPlastics'), key: 'rubber_plastics' },
+    { label: t('mfr.allCat.commercialEquipmentMachinery'), key: 'commercial_equipment_machinery' },
+    { label: t('mfr.allCat.renewableEnergy'), key: 'renewable_energy' },
+    { label: t('mfr.allCat.constructionBuildingMachinery'), key: 'construction_building_machinery' },
     // Column 3
-    t('mfr.allCat.sportswearOutdoor'),
-    t('mfr.allCat.shoesAccessories'),
-    t('mfr.allCat.homeGarden'),
-    t('mfr.allCat.fabricTextileRawMaterials'),
-    t('mfr.allCat.environment'),
-    t('mfr.allCat.schoolOfficeSupplies'),
-    t('mfr.allCat.manufacturingServices'),
-    t('mfr.allCat.electronicPartsTelecom'),
-    t('mfr.allCat.vehiclesTransportation'),
-    t('mfr.allCat.occupationalSafety'),
-    t('mfr.allCat.petProducts'),
+    { label: t('mfr.allCat.sportswearOutdoor'), key: 'sportswear_outdoor' },
+    { label: t('mfr.allCat.shoesAccessories'), key: 'shoes_accessories' },
+    { label: t('mfr.allCat.homeGarden'), key: 'home_garden' },
+    { label: t('mfr.allCat.fabricTextileRawMaterials'), key: 'fabric_textile_raw_materials' },
+    { label: t('mfr.allCat.environment'), key: 'environment' },
+    { label: t('mfr.allCat.schoolOfficeSupplies'), key: 'school_office_supplies' },
+    { label: t('mfr.allCat.manufacturingServices'), key: 'manufacturing_services' },
+    { label: t('mfr.allCat.electronicPartsTelecom'), key: 'electronic_parts_telecom' },
+    { label: t('mfr.allCat.vehiclesTransportation'), key: 'vehicles_transportation' },
+    { label: t('mfr.allCat.occupationalSafety'), key: 'occupational_safety' },
+    { label: t('mfr.allCat.petProducts'), key: 'pet_products' },
     // Column 4
-    t('mfr.allCat.personalElectronics'),
-    t('mfr.allCat.giftsHobbies'),
-    t('mfr.allCat.agriculture'),
-    t('mfr.allCat.homeAppliances'),
-    t('mfr.allCat.constructionRealEstate'),
-    t('mfr.allCat.security'),
-    t('mfr.allCat.industrialMachinery'),
-    t('mfr.allCat.handToolsHardware'),
-    t('mfr.allCat.powerTransmission'),
-    t('mfr.allCat.testEquipment'),
+    { label: t('mfr.allCat.personalElectronics'), key: 'personal_electronics' },
+    { label: t('mfr.allCat.giftsHobbies'), key: 'gifts_hobbies' },
+    { label: t('mfr.allCat.agriculture'), key: 'agriculture' },
+    { label: t('mfr.allCat.homeAppliances'), key: 'home_appliances' },
+    { label: t('mfr.allCat.constructionRealEstate'), key: 'construction_real_estate' },
+    { label: t('mfr.allCat.security'), key: 'security' },
+    { label: t('mfr.allCat.industrialMachinery'), key: 'industrial_machinery' },
+    { label: t('mfr.allCat.handToolsHardware'), key: 'hand_tools_hardware' },
+    { label: t('mfr.allCat.powerTransmission'), key: 'power_transmission' },
+    { label: t('mfr.allCat.testEquipment'), key: 'test_equipment' },
   ];
 }
 
 // Column header indices (first item of each column is bold)
 const COLUMN_HEADERS = [0, 11, 22, 33];
 
-function getSubTabFilters(): string[] {
+function getSubTabFilters(): SubTabFilter[] {
   return [
-    t('mfr.filter.lowMoqCustomization'),
-    t('mfr.filter.sampleCustomization'),
-    t('mfr.filter.qualityCertified'),
-    t('mfr.filter.smallCustomization'),
+    { label: t('mfr.filter.lowMoqCustomization'), key: 'low_moq' },
+    { label: t('mfr.filter.sampleCustomization'), key: 'samples' },
+    { label: t('mfr.filter.qualityCertified'), key: 'quality_control' },
+    { label: t('mfr.filter.smallCustomization'), key: 'small_customization' },
   ];
 }
 
-function getSubTabMoreFilters(): string[] {
+function getSubTabMoreFilters(): SubTabFilter[] {
   return [
-    t('mfr.filter.lowMoqCustomization'),
-    t('mfr.filter.sampleCustomization'),
-    t('mfr.filter.qualityCertified'),
-    t('mfr.filter.smallCustomization'),
-    t('mfr.filter.fullCustomization'),
-    t('mfr.filter.highRdCapacity'),
-    t('mfr.filter.fortune500Collab'),
+    { label: t('mfr.filter.lowMoqCustomization'), key: 'low_moq' },
+    { label: t('mfr.filter.sampleCustomization'), key: 'samples' },
+    { label: t('mfr.filter.qualityCertified'), key: 'quality_control' },
+    { label: t('mfr.filter.smallCustomization'), key: 'small_customization' },
+    { label: t('mfr.filter.fullCustomization'), key: 'full_customization' },
+    { label: t('mfr.filter.highRdCapacity'), key: 'high_rd' },
+    { label: t('mfr.filter.fortune500Collab'), key: 'fortune_500' },
   ];
 }
 
@@ -104,8 +119,8 @@ export function HorizontalCategoryBar(): string {
           ${TAB_CATEGORIES.map((cat, i) => `
             <li class="whitespace-nowrap cursor-pointer px-5 h-[61px] leading-[61px] text-base transition-colors
                        ${i === 0 ? 'factory-tab-active font-bold text-[#222]' : 'font-normal text-[#222] hover:text-[#666]'}"
-                data-tab-index="${i}">
-              ${cat}
+                data-tab-index="${i}" data-category-key="${cat.key}">
+              ${cat.label}
             </li>
           `).join('')}
         </ul>
@@ -130,9 +145,10 @@ export function HorizontalCategoryBar(): string {
     return `
               <li class="mb-3 pr-4 ${isHeader ? 'font-bold' : 'font-normal'} text-[#222]"
                   style="font-size: 14px; line-height: 21px;"
-                  data-dropdown-cat="${cat}"
+                  data-dropdown-cat="${cat.label}"
+                  data-dropdown-key="${cat.key}"
                   ${isHeader ? 'data-column-header' : ''}>
-                <a href="#" class="hover:text-primary-600 transition-colors">${cat}</a>
+                <a href="#" class="hover:text-primary-600 transition-colors">${cat.label}</a>
               </li>
             `;
   }).join('')}
@@ -142,8 +158,9 @@ export function HorizontalCategoryBar(): string {
       <!-- Sub Tab Filter Chips -->
       <ul class="flex items-center h-[48px] px-5 list-none m-0 p-0 overflow-x-auto" data-factory-sub-tab>
         ${SUB_TAB_FILTERS.map(filter => `
-          <li class="flex-shrink-0 flex items-center h-8 mr-3 mt-0 px-4 border border-[#767676] rounded-full text-xs text-[#222] text-center cursor-pointer whitespace-nowrap hover:border-[#222] hover:font-medium transition-colors">
-            ${filter}
+          <li class="flex-shrink-0 flex items-center h-8 mr-3 mt-0 px-4 border border-[#767676] rounded-full text-xs text-[#222] text-center cursor-pointer whitespace-nowrap hover:border-[#222] hover:font-medium transition-colors"
+              data-filter-key="${filter.key}">
+            ${filter.label}
           </li>
         `).join('')}
         <!-- Sub-tab view more -->
@@ -159,8 +176,9 @@ export function HorizontalCategoryBar(): string {
       <div id="sub-tab-dropdown" class="hidden absolute left-0 right-0 top-[110px] z-50 bg-white rounded-b-lg py-6 px-5" style="box-shadow: rgba(0,0,0,0.12) 0 8px 20px 0">
         <ul class="flex flex-wrap list-none m-0 p-0">
           ${SUB_TAB_MORE_FILTERS.map(filter => `
-            <li class="w-1/4 mb-3 pr-4 text-sm text-[#222] cursor-pointer hover:text-primary-600 transition-colors">
-              ${filter}
+            <li class="w-1/4 mb-3 pr-4 text-sm text-[#222] cursor-pointer hover:text-primary-600 transition-colors"
+                data-filter-key="${filter.key}">
+              ${filter.label}
             </li>
           `).join('')}
         </ul>
@@ -239,7 +257,7 @@ export function initHorizontalCategoryBar(): void {
     if (subDropdown && subBtn && !subDropdown.contains(target) && !subBtn.contains(target)) closeSub();
   });
 
-  // Tab switching + dropdown active sync
+  // Tab switching + dropdown active sync + category-change event dispatch
   const tabs = Array.from(tabUl.querySelectorAll<HTMLElement>('[data-tab-index]'));
   const dropdownItems = menu.querySelectorAll<HTMLElement>('[data-dropdown-cat]');
 
@@ -267,8 +285,88 @@ export function initHorizontalCategoryBar(): void {
       tab.classList.remove('font-normal');
 
       const idx = parseInt(tab.dataset.tabIndex || '0');
+      const categoryKey = tab.dataset.categoryKey || '';
       const TAB_CATEGORIES = getTabCategories();
-      syncDropdownActive(TAB_CATEGORIES[idx]);
+      syncDropdownActive(TAB_CATEGORIES[idx].label);
+
+      // Dispatch category change event
+      document.dispatchEvent(new CustomEvent('mfr:category-change', {
+        detail: { category: categoryKey },
+      }));
     });
+  });
+
+  // Dropdown category click → dispatch category change with machine key + close menu
+  dropdownItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const categoryKey = item.dataset.dropdownKey || '';
+      closeMain();
+
+      // Dispatch category change with the machine-readable key (not display label)
+      document.dispatchEvent(new CustomEvent('mfr:category-change', {
+        detail: { category: categoryKey },
+      }));
+    });
+  });
+
+  // Filter chip toggle + filter-change event dispatch
+  const filterChips = document.querySelectorAll<HTMLElement>('[data-factory-sub-tab] [data-filter-key]');
+  const dropdownFilterChips = subDropdown
+    ? subDropdown.querySelectorAll<HTMLElement>('[data-filter-key]')
+    : [];
+
+  const activeFilters = new Set<string>();
+
+  function dispatchFilterChange() {
+    document.dispatchEvent(new CustomEvent('mfr:filter-change', {
+      detail: { filters: Array.from(activeFilters).join(',') },
+    }));
+  }
+
+  function toggleFilter(chip: HTMLElement) {
+    const key = chip.dataset.filterKey || '';
+    if (!key) return;
+
+    if (activeFilters.has(key)) {
+      activeFilters.delete(key);
+      chip.classList.remove('bg-[#222]', 'text-white', 'border-[#222]');
+      chip.classList.add('border-[#767676]', 'text-[#222]');
+    } else {
+      activeFilters.add(key);
+      chip.classList.add('bg-[#222]', 'text-white', 'border-[#222]');
+      chip.classList.remove('border-[#767676]', 'text-[#222]');
+    }
+
+    // Sync toggle state across main and dropdown filter chips
+    syncFilterChipState(key);
+    dispatchFilterChange();
+  }
+
+  function syncFilterChipState(key: string) {
+    const isActive = activeFilters.has(key);
+    const allChips = [
+      ...Array.from(filterChips),
+      ...Array.from(dropdownFilterChips),
+    ];
+    allChips.forEach(c => {
+      if (c.dataset.filterKey === key) {
+        if (isActive) {
+          c.classList.add('bg-[#222]', 'text-white', 'border-[#222]');
+          c.classList.remove('border-[#767676]', 'text-[#222]');
+        } else {
+          c.classList.remove('bg-[#222]', 'text-white', 'border-[#222]');
+          c.classList.add('border-[#767676]', 'text-[#222]');
+        }
+      }
+    });
+  }
+
+  filterChips.forEach(chip => {
+    chip.addEventListener('click', () => toggleFilter(chip));
+  });
+
+  dropdownFilterChips.forEach(chip => {
+    chip.addEventListener('click', () => toggleFilter(chip));
   });
 }

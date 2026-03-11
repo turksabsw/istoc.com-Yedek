@@ -96,6 +96,20 @@
   "featured_until",
   "column_break_featured",
   "featured_priority",
+  "factory_capabilities_tab",
+  "factory_details_section",
+  "factory_video_url",
+  "employee_count",
+  "factory_area",
+  "column_break_factory",
+  "annual_revenue",
+  "capability_verified_by",
+  "factory_images_section",
+  "factory_images",
+  "certificates_section",
+  "certificates",
+  "capabilities_section",
+  "capabilities",
   "system_tab",
   "timestamps_section",
   "published_at",
@@ -673,6 +687,87 @@
    "description": "Higher priority = higher placement"
   },
   {
+   "fieldname": "factory_capabilities_tab",
+   "fieldtype": "Tab Break",
+   "label": "Factory & Capabilities"
+  },
+  {
+   "fieldname": "factory_details_section",
+   "fieldtype": "Section Break",
+   "label": "Factory Details"
+  },
+  {
+   "fieldname": "factory_video_url",
+   "fieldtype": "Data",
+   "label": "Factory Video URL",
+   "options": "URL",
+   "description": "URL to a factory tour or promotional video"
+  },
+  {
+   "fieldname": "employee_count",
+   "fieldtype": "Data",
+   "label": "Employee Count",
+   "description": "Number of employees (e.g., '100+', '500-1000')"
+  },
+  {
+   "fieldname": "factory_area",
+   "fieldtype": "Data",
+   "label": "Factory Area",
+   "description": "Factory area in square meters (e.g., '10.000+')"
+  },
+  {
+   "fieldname": "column_break_factory",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "annual_revenue",
+   "fieldtype": "Data",
+   "label": "Annual Revenue",
+   "description": "Annual revenue range (e.g., '$70 B+')"
+  },
+  {
+   "fieldname": "capability_verified_by",
+   "fieldtype": "Data",
+   "label": "Capability Verified By",
+   "description": "Organization that verified the capabilities (e.g., 'Intertek')"
+  },
+  {
+   "fieldname": "factory_images_section",
+   "fieldtype": "Section Break",
+   "label": "Factory Images"
+  },
+  {
+   "fieldname": "factory_images",
+   "fieldtype": "Table",
+   "label": "Factory Images",
+   "options": "Storefront Factory Image",
+   "description": "Photos of the factory and production facilities"
+  },
+  {
+   "fieldname": "certificates_section",
+   "fieldtype": "Section Break",
+   "label": "Certificates"
+  },
+  {
+   "fieldname": "certificates",
+   "fieldtype": "Table",
+   "label": "Certificates",
+   "options": "Storefront Certificate",
+   "description": "Quality and compliance certificates"
+  },
+  {
+   "fieldname": "capabilities_section",
+   "fieldtype": "Section Break",
+   "label": "Capabilities"
+  },
+  {
+   "fieldname": "capabilities",
+   "fieldtype": "Table",
+   "label": "Capabilities",
+   "options": "Storefront Capability",
+   "description": "Manufacturing and service capabilities"
+  },
+  {
    "fieldname": "timestamps_section",
    "fieldtype": "Section Break",
    "label": "System Information",
@@ -722,7 +817,7 @@
    "link_fieldname": "storefront"
   }
  ],
- "modified": "2024-01-01 00:00:00.000000",
+ "modified": "2026-03-11 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "TradeHub Marketing",
  "name": "Storefront",
