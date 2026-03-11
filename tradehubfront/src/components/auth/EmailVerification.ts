@@ -141,17 +141,28 @@ function renderOTPInputs(): string {
 
 /* ── Helper Functions ────────────────────────────────── */
 
+/** HTML-encode a string to prevent XSS when used in innerHTML */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /**
  * Mask email address for display (e.g., "t***@example.com")
+ * Returns an HTML-safe string (escaped).
  */
 function maskEmail(email: string): string {
-  if (!email || !email.includes('@')) return email;
+  if (!email || !email.includes('@')) return escapeHtml(email);
 
   const [local, domain] = email.split('@');
   if (local.length <= 2) {
-    return `${local[0]}***@${domain}`;
+    return escapeHtml(`${local[0]}***@${domain}`);
   }
-  return `${local[0]}${local[1]}***@${domain}`;
+  return escapeHtml(`${local[0]}${local[1]}***@${domain}`);
 }
 
 /* ── Init Logic ──────────────────────────────────────── */

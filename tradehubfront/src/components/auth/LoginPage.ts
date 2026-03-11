@@ -233,6 +233,20 @@ function setSubmitLoading(btn: HTMLButtonElement | null, loading: boolean): void
 }
 
 /**
+ * Validate that a return URL is safe (same-origin only).
+ * Prevents open-redirect attacks via crafted `?return=https://evil.com` params.
+ */
+function isSafeReturnUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.origin === window.location.origin;
+  } catch {
+    // Relative paths are safe
+    return !url.startsWith('//') && !url.includes('://');
+  }
+}
+
+/**
  * Handle successful login — store tokens/user and redirect
  */
 function handleLoginSuccess(
@@ -253,7 +267,7 @@ function handleLoginSuccess(
   const params = new URLSearchParams(window.location.search);
   const returnUrl = params.get('return');
 
-  if (returnUrl) {
+  if (returnUrl && isSafeReturnUrl(returnUrl)) {
     window.location.href = returnUrl;
   } else {
     // Redirect based on user_type
