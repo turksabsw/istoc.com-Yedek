@@ -1,0 +1,765 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: TradeHub 5-Task Planning Documentation Suite
+Workspace: .auto-claude/specs/006-hata-zel
+Started: 2026-03-05
+
+Workflow Type: feature
+Rationale: Five parallel planning documents (markdown only) covering UOM filtering, identity verification, error detection, link field filtering, and ad management. Feature workflow chosen because most tasks define new DocTypes, fields, and system behaviors, even though output is documentation-only.
+
+Session 1 (Planner):
+- Created implementation_plan.json
+- Phases: 7
+- Total subtasks: 9
+- Created init.sh
+- Updated project_index.json
+- Updated context.json
+
+Phase Summary:
+- Phase 1 (Codebase Analysis): 4 subtasks - investigation of all DocType JSONs and JS files, no dependencies
+- Phase 2 (122.md - UOM Filtering): 1 subtask, depends on Phase 1
+- Phase 3 (131.md - VKN/TC Verification): 1 subtask, depends on Phase 1
+- Phase 4 (155.md - Error Detection): 1 subtask, depends on Phase 1
+- Phase 5 (157.md - Link Field Filtering): 1 subtask, depends on Phase 1
+- Phase 6 (158.md - Ad Management): 2 subtasks (core DocTypes + engine/billing), depends on Phase 1
+- Phase 7 (Verification): 1 subtask, depends on Phases 2-6
+
+Services Involved:
+- frappe_bench: Single service (Frappe/ERPNext bench). Read-only for analysis. No services need to run.
+
+Apps Analyzed:
+- tradehub_logistics: Shipment, Marketplace Shipment, Carrier, Shipping Rule (UOM fields for Task 122)
+- tradehub_core: KYC Profile, Organization (VKN/TC fields for Task 131)
+- tradehub_seller: Seller Profile, Listing, Seller Balance (wallet pattern for Task 158)
+- tradehub_marketing: Campaign (base pattern for Ad Campaign in Task 158)
+- tradehub_commerce: Order, Sub Order, Cart (Link fields for Tasks 155/157)
+- tradehub_compliance: Moderation Case (admin queue pattern for Task 131)
+- tradehub_catalog: Product, Category, Brand (Link fields for Tasks 155/157)
+
+Key Codebase Findings:
+- Shipment: weight_uom (Link->UOM), dimension_uom (Link->UOM), volume_uom (Data, NOT Link!)
+- Marketplace Shipment: weight_unit (Select: kg/lb/g), dimension_unit (Select: cm/in/m) - hardcoded, needs migration
+- shipment.js: Already has set_query for weight_uom, volume_uom, dimension_uom using name-based lists
+- KYC Profile: Has tckn (Data), tax_id (Data), tax_id_type (Select: TCKN/VKN)
+- Seller Profile: Has tax_id + tax_id_type (Select: TCKN/VKN)
+- Seller Balance: Perfect wallet model (parent + child transaction table) to mirror for Ad Wallet
+- 15 JS files already use set_query patterns across all apps
+- Moderation Case: MOD-.YYYY.-.##### autoname, priority/status/case_type pattern for admin queue
+
+Parallelism Analysis:
+- Max parallel phases: 5 (all 5 document phases can run in parallel after Phase 1)
+- Recommended workers: 2
+- Parallel groups: [Phase 2, Phase 3, Phase 4, Phase 5, Phase 6] all depend only on Phase 1
+
+Output Constraint:
+- ALL output is .md files written to outputs/ directory
+- ZERO code files (.py/.js/.json/.css/.html/.csv) will be created or modified
+- Codebase is READ-ONLY for analysis
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 006 --parallel 2
+
+Example:
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 006 --parallel 2
+
+=== END SESSION 1 ===
+
+=== SESSION 2 (subtask-1-1: UOM Field Analysis) ===
+
+## COMPLETE UOM FIELD INVENTORY
+
+### A. LOGISTICS DocTypes (tradehub_logistics)
+
+#### 1. Shipment (shipment.json)
+| Fieldname        | Fieldtype | Options  | Default | Category | Notes |
+|------------------|-----------|----------|---------|----------|-------|
+| weight_uom       | Link      | UOM      | kg      | Weight   | Has set_query filter in shipment.js (hardcoded name list) |
+| volume_uom       | Data      | (none)   | cbm     | Volume   | BUG: Should be Link to UOM, not Data. JS set_query silently fails |
+| dimension_uom    | Link      | UOM      | cm      | Length   | Has set_query filter in shipment.js (hardcoded name list) |
+
+Related numeric fields: total_weight (Float), total_volume (Float), length/width/height (Float), dimensional_weight (Float, read_only)
+
+#### 2. Marketplace Shipment (marketplace_shipment.json)
+| Fieldname        | Fieldtype | Options     | Default | Category | Notes |
+|------------------|-----------|-------------|---------|----------|-------|
+| weight_unit      | Select    | kg\nlb\ng   | kg      | Weight   | PROBLEM: Hardcoded Select, not Link to UOM |
+| dimension_unit   | Select    | cm\nin\nm   | cm      | Length   | PROBLEM: Hardcoded Select, not Link to UOM |
+
+Related numeric fields: total_weight (Float), total_length/total_width/total_height (Float), volumetric_weight (Float, read_only), total_volume (Float)
+
+BUG: marketplace_shipment.js setup_uom_filters() calls set_query on weight_uom, dimension_uom, volume_uom - but JSON has weight_unit and dimension_unit (different field names). No volume_uom field exists at all. All 3 set_query calls silently fail.
+
+#### 3. Carrier (carrier.json)
+| Fieldname        | Fieldtype | Options | Default | Category | Notes |
+|------------------|-----------|---------|---------|----------|-------|
+| weight_uom       | Link      | UOM     | kg      | Weight   | Has set_query filter in carrier.js (hardcoded name list) |
+
+Related numeric fields: min_weight (Float), max_weight (Float), dimensional_divisor (Int, default 5000), rate_per_kg (Currency - hardcoded "KG" in label)
+
+No dimension_uom or volume_uom fields.
+
+#### 4. Shipping Rule (shipping_rule.json)
+No UOM Link/Select fields. Weight references are hardcoded in labels:
+- per_kg_rate: "Per KG Rate" (Currency)
+- min_weight: "Minimum Weight (kg)" (Float)
+- max_weight: "Maximum Weight (kg)" (Float)
+- Calculation method Select includes "Weight Based", "Weight Tiered" options
+
+#### 5. Shipping Rate Tier (shipping_rate_tier.json) - child table
+No UOM fields. Threshold description says "weight in kg or price" - hardcoded.
+rate_type Select includes "Per KG" option - hardcoded unit reference.
+
+#### 6. Shipping Zone Rate (shipping_zone_rate.json) - child table
+No UOM fields. rate_per_kg: "Rate per KG" (Currency) - hardcoded.
+
+#### 7. Logistics Provider (logistics_provider.json)
+No UOM Link/Select fields. ALL units hardcoded in field labels:
+- min_chargeable_weight: "Min Chargeable Weight (KG)" (Float)
+- max_weight_kg: "Max Weight (KG)" (Float)
+- max_length_cm: "Max Length (CM)" (Float)
+- max_width_cm: "Max Width (CM)" (Float)
+- max_height_cm: "Max Height (CM)" (Float)
+- max_volume_cm3: "Max Volume (CM3)" (Float)
+- rate_per_kg: "Rate per KG" (Currency)
+
+#### 8. Lead Time (lead_time.json)
+No UOM-related fields. Uses "Days" for lead time measurement (hardcoded).
+
+#### 9. Tracking Event (tracking_event.json)
+- weight_at_event: Float, no associated UOM field
+
+#### 10. Shipping Zone (shipping_zone.json)
+No UOM fields.
+
+### B. SELLER DocTypes (tradehub_seller)
+
+#### 1. Listing (listing.json)
+| Fieldname        | Fieldtype | Options | Default    | Category | Notes |
+|------------------|-----------|---------|------------|----------|-------|
+| stock_uom        | Link      | UOM     | Nos        | Quantity | reqd=1, NO set_query filter |
+| weight_uom       | Link      | UOM     | Kg         | Weight   | NO set_query filter |
+| dimension_uom    | Link      | UOM     | Centimeter | Length   | NO set_query filter |
+
+Also: shipping_weight (Float) labeled "Shipping Weight (kg)" - hardcoded unit in label
+
+#### 2. Listing Variant (listing_variant.json)
+| Fieldname        | Fieldtype | Options | Default    | Category | Notes |
+|------------------|-----------|---------|------------|----------|-------|
+| weight_uom       | Link      | UOM     | Kg         | Weight   | NO set_query filter |
+| dimension_uom    | Link      | UOM     | Centimeter | Length   | NO set_query filter |
+
+#### 3. SKU (sku.json)
+| Fieldname        | Fieldtype | Options | Default    | Category | Notes |
+|------------------|-----------|---------|------------|----------|-------|
+| weight_uom       | Link      | UOM     | Kg         | Weight   | NO set_query filter |
+| dimension_uom    | Link      | UOM     | Centimeter | Length   | NO set_query filter |
+
+#### 4. SKU Product (sku_product.json)
+| Fieldname        | Fieldtype | Options | Default | Category | Notes |
+|------------------|-----------|---------|---------|----------|-------|
+| stock_uom        | Link      | UOM     | Unit    | Quantity | NO set_query filter |
+| weight_uom       | Link      | UOM     | Kg      | Weight   | NO set_query filter |
+| dimension_uom    | Link      | UOM     | Cm      | Length   | NO set_query filter |
+
+#### 5. Buy Box Entry (buy_box_entry.json)
+| Fieldname        | Fieldtype | Options | Default | Category | Notes |
+|------------------|-----------|---------|---------|----------|-------|
+| stock_uom        | Link      | UOM     | Unit    | Quantity | NO set_query filter |
+
+### C. CATALOG DocTypes (tradehub_catalog)
+
+#### 1. PIM Product (pim_product.json)
+| Fieldname        | Fieldtype | Options | Default | Category | Notes |
+|------------------|-----------|---------|---------|----------|-------|
+| weight_uom       | Link      | UOM     | Kg      | Weight   | NO set_query filter |
+| dimension_uom    | Link      | UOM     | cm      | Length   | NO set_query filter |
+
+#### 2. PIM Product Variant (pim_product_variant.json)
+| Fieldname        | Fieldtype | Options | Default | Category | Notes |
+|------------------|-----------|---------|---------|----------|-------|
+| weight_uom       | Link      | UOM     | Kg      | Weight   | NO set_query filter |
+| dimension_uom    | Link      | UOM     | cm      | Length   | NO set_query filter |
+
+#### 3. Product Variant (product_variant.json)
+| Fieldname        | Fieldtype | Options | Default | Category | Notes |
+|------------------|-----------|---------|---------|----------|-------|
+| stock_uom        | Link      | UOM     | (none)  | Quantity | read_only, fetch_from=sku_product.stock_uom |
+| weight_uom       | Link      | UOM     | (none)  | Weight   | read_only, fetch_from=sku_product.weight_uom |
+| dimension_uom    | Link      | UOM     | (none)  | Length   | read_only, fetch_from=sku_product.dimension_uom |
+
+#### 4. Product (product.json)
+No UOM fields found.
+
+### D. EXISTING JS SET_QUERY PATTERNS
+
+#### shipment.js (3 filters)
+- weight_uom: name IN ['Kilogram','Gram','Pound','Ounce','Kg','Gm','g','kg','lb','oz','Milligram','Ton']
+- volume_uom: name IN ['Cubic Meter','Cubic Centimeter','Liter','Cubic Foot','Cubic Inch','Milliliter','Gallon'] (FAILS - Data field)
+- dimension_uom: name IN ['Centimeter','Meter','Inch','Foot','Cm','M','cm','m','in','ft','Millimeter','Yard']
+
+#### carrier.js (1 filter)
+- weight_uom: name IN ['Kilogram','Gram','Pound','Ounce','Kg','Gm','g','kg','lb','oz','Milligram','Ton']
+
+#### marketplace_shipment.js (3 filters - ALL FAIL due to field name mismatch)
+- weight_uom (field is weight_unit Select): FAILS
+- dimension_uom (field is dimension_unit Select): FAILS
+- volume_uom (field doesn't exist): FAILS
+
+### E. KEY ISSUES SUMMARY
+
+1. **Field type inconsistency**: Marketplace Shipment uses Select (weight_unit, dimension_unit) while Shipment uses Link to UOM (weight_uom, dimension_uom). Needs migration.
+
+2. **Field name mismatch bug**: marketplace_shipment.js set_query references weight_uom/dimension_uom/volume_uom but JSON has weight_unit/dimension_unit. All 3 calls silently fail.
+
+3. **Data vs Link inconsistency**: Shipment volume_uom is Data type while weight_uom and dimension_uom are Link type. Needs migration to Link.
+
+4. **No set_query on catalog/seller UOM fields**: 12+ Link→UOM fields across Listing, SKU, SKU Product, PIM Product, PIM Product Variant, Buy Box Entry have no set_query filters. Users see ALL UOM entries.
+
+5. **Default value inconsistency across DocTypes**:
+   - Weight UOM: "kg" (Shipment), "Kg" (Listing/SKU/PIM)
+   - Dimension UOM: "cm" (Shipment/PIM), "Centimeter" (Listing/Listing Variant), "Cm" (SKU Product)
+   - Stock UOM: "Nos" (Listing), "Unit" (SKU Product/Buy Box Entry)
+
+6. **Hardcoded units in labels**: Shipping Rule, Logistics Provider, Shipping Rate Tier, Shipping Zone Rate all have units hardcoded in field labels (e.g., "Per KG Rate", "Max Weight (KG)") with no dynamic UOM selection.
+
+7. **Fragile name-based filtering**: Existing set_query filters use hardcoded UOM name lists. Any new UOM added to the system won't appear in filtered dropdowns.
+
+### F. TOTAL UOM FIELD COUNT
+
+| Category | Link to UOM | Select (hardcoded) | Data (wrong type) | Total |
+|----------|-------------|--------------------|--------------------|-------|
+| Weight   | 9           | 1                  | 0                  | 10    |
+| Length   | 8           | 1                  | 0                  | 9     |
+| Volume   | 0           | 0                  | 1                  | 1     |
+| Quantity | 4           | 0                  | 0                  | 4     |
+| TOTAL    | 21          | 2                  | 1                  | 24    |
+
+=== END subtask-1-1 ===
+
+=== SESSION 3 (subtask-1-2: Link Field Inventory Scan) ===
+
+## COMPLETE LINK FIELD INVENTORY - ALL TRADEHUB APPS
+
+Scanned all DocType JSON files across 7 TradeHub apps (tradehub_core, tradehub_seller, tradehub_catalog, tradehub_commerce, tradehub_logistics, tradehub_marketing, tradehub_compliance). Other apps (tr_tradehub, tr_consent_center, tr_contract_center, frappe_guardian) have no DocType JSON files in this codebase.
+
+Full machine-readable inventory written to: outputs/link_field_inventory.json (317KB, 737 entries)
+
+### A. GLOBAL SUMMARY
+
+| Metric | Count |
+|--------|-------|
+| Total Link fields across all apps | 737 |
+| With set_query filter | 139 (18.9%) |
+| WITHOUT set_query filter | 598 (81.1%) |
+| Child table fields filtered from parent JS | 12 |
+
+### B. PER-APP BREAKDOWN
+
+| App | Total Link Fields | Filtered | Unfiltered | % Unfiltered |
+|-----|-------------------|----------|------------|--------------|
+| tradehub_core | 79 | 19 | 60 | 75.9% |
+| tradehub_seller | 131 | 16 | 115 | 87.8% |
+| tradehub_catalog | 105 | 21 | 84 | 80.0% |
+| tradehub_commerce | 215 | 44 | 171 | 79.5% |
+| tradehub_logistics | 41 | 14 | 27 | 65.9% |
+| tradehub_marketing | 43 | 14 | 29 | 67.4% |
+| tradehub_compliance | 123 | 11 | 112 | 91.1% |
+
+### C. LINK TARGETS BY FREQUENCY (Top 20)
+
+| Target DocType | Total Refs | Filtered | Unfiltered | Notes |
+|----------------|-----------|----------|------------|-------|
+| User | 126 | 1 | 125 | Most are read_only (created_by, modified_by) - low priority for filtering |
+| Tenant | 80 | 1 | 79 | Most auto-populated via fetch_from or read_only - tenant isolation concern |
+| Currency | 60 | 8 | 52 | Many are read_only fetch_from - active fields need filtering |
+| Seller Profile | 60 | 20 | 40 | KEY: Seller scoping is critical for marketplace isolation |
+| UOM | 37 | 3 | 34 | Already analyzed in subtask-1-1, needs category-based filtering |
+| Country | 35 | 2 | 33 | Most are origin/destination - low priority for filtering |
+| Category | 19 | 10 | 9 | Good coverage, remaining 9 are mostly in child tables |
+| Sales Channel | 16 | 0 | 16 | Zero filtering! All in catalog child tables |
+| Buyer Profile | 14 | 4 | 10 | Needs buyer scoping filters |
+| DocType | 12 | 2 | 10 | Meta-references (event_doctype etc) - low filtering value |
+| Listing | 12 | 5 | 7 | Needs seller-scoped filtering |
+| Organization | 10 | 8 | 2 | Good coverage (80% filtered) |
+| Sub Order | 10 | 7 | 3 | Good coverage |
+| Seller Tier | 9 | 5 | 4 | Needs tenant-scoped filtering |
+| PIM Attribute | 9 | 0 | 9 | Zero filtering! All in catalog child tables |
+| Marketplace Order | 9 | 5 | 4 | Reasonable coverage |
+| SKU Product | 8 | 4 | 4 | Needs seller-scoped filtering |
+| Item | 7 | 1 | 6 | ERPNext references - mostly read_only |
+| RFQ | 7 | 2 | 5 | Needs buyer/tenant scoping |
+| Company | 7 | 0 | 7 | All in compliance app - tenant isolation needed |
+
+### D. KEY FINDINGS FOR TASK 155 (Error Detection)
+
+1. **81.1% of all Link fields have NO set_query filter** - massive UX issue where users see all records from all tenants/sellers
+2. **Tenant isolation gap**: 80 Link→Tenant fields, only 1 filtered. While many are read_only/fetch_from, active tenant fields allow cross-tenant selection
+3. **Seller Profile isolation gap**: 60 Link→Seller Profile fields, only 20 filtered. Active seller fields without filters allow cross-seller operations
+4. **Sales Channel & PIM Attribute**: Zero filtering across 25 Link fields total - users see all channels and attributes without context
+5. **Company fields in compliance app**: 7 Link→Company fields with zero filtering - compliance records can reference any company
+
+### E. KEY FINDINGS FOR TASK 157 (Link Field Filtering)
+
+**FILTERING PRIORITY TIERS:**
+
+**CRITICAL (tenant/seller isolation):**
+- 79 unfiltered Tenant links (exclude read_only/fetch_from → ~15 active fields need filters)
+- 40 unfiltered Seller Profile links (exclude read_only → ~25 active fields need filters)
+- 10 unfiltered Buyer Profile links (active fields need buyer scoping)
+- 7 unfiltered Organization links (need tenant scoping)
+
+**HIGH (business logic filtering):**
+- 34 unfiltered UOM links (need category-based filtering per subtask-1-1)
+- 9 unfiltered Category links (need is_active and parent_category cascade)
+- 7 unfiltered Listing links (need seller-scoped filtering)
+- 5 unfiltered Marketplace Order links (need buyer/seller scoping)
+- 5 unfiltered Marketplace Shipment links (need order scoping)
+- 4 unfiltered SKU Product links (need seller scoping)
+
+**MEDIUM (reference quality):**
+- 52 unfiltered Currency links (many are fetch_from - filter active fields by enabled=1)
+- 33 unfiltered Country links (filter by enabled or allowed list)
+- 16 unfiltered Sales Channel links (filter by active/tenant)
+- 9 unfiltered PIM Attribute links (filter by group or active status)
+- 7 unfiltered Company links (filter by tenant)
+- 4 unfiltered Warehouse links (filter by company)
+
+**LOW (system/read-only fields):**
+- 125 unfiltered User links (mostly created_by, modified_by - read_only, no filter needed)
+- 10 unfiltered DocType links (meta-references for ECA/consent)
+- 4 unfiltered Language links (small static list)
+- 4 unfiltered Email Template links (admin use only)
+
+### F. EXISTING SET_QUERY PATTERNS FOUND
+
+JS files with set_query implementations:
+1. listing.js - 5 filters (seller, category, subcategory, attribute_set, variant_of)
+2. seller_profile.js - 5+ filters (organization, seller_tier, kyc_profile, district, neighborhood) + child table cascading (city/district/neighborhood in addresses, locations)
+3. shipment.js - 6 filters (order, sub_order, carrier, weight_uom, dimension_uom, customs_currency)
+4. marketplace_shipment.js - 5 filters (sub_order, seller, currency, cost_currency, logistics_provider) + 3 BROKEN filters (wrong field names)
+5. carrier.js - 2 filters (weight_uom, currency)
+6. cart.js - 5 filters (buyer, organization, marketplace_order) + child table (listing, listing_variant)
+7. marketplace_order.js - 5+ filters (organization, payment_intent, escrow_account, cart) + child table
+8. order.js - 6 filters (buyer, seller, rfq, quotation, sample_request)
+9. escrow_account.js - 6 filters (marketplace_order, sub_order, payment_intent, seller, dispute_case)
+10. commission_rule.js - 4+ filters (category, seller_tier, last_applied_order) + child table
+11. rfq.js - 5 filters (buyer, category, nda_template, accepted_quote, organization)
+12. review.js - 6 filters (organization, listing, seller, category, marketplace_order, sub_order)
+13. pim_product.js - 8 filters (product_family, product_class, brand, manufacturer, primary_category, parent_product, erpnext_item_code)
+14. brand.js - 1 filter (country_of_origin)
+15. subscription.js - 5 filters (subscription_package, seller_profile, organization, currency, previous_package)
+16. wholesale_offer.js - 3+ filters (seller, currency) + child table
+17. group_buy.js - 4 filters (seller, listing, currency)
+18. coupon.js - 2 filters (seller, campaign)
+
+### G. CLASSIFICATION OF UNFILTERED FIELDS
+
+| Classification | Count | Action Needed |
+|----------------|-------|---------------|
+| read_only + fetch_from (auto-populated) | ~120 | No filter needed - data comes from parent |
+| read_only (display-only) | ~80 | Low priority - users can't select wrong value |
+| hidden | ~10 | No filter needed - not visible |
+| Active editable fields needing filters | ~388 | MUST add set_query filters |
+| Active required fields needing filters | ~95 | CRITICAL - user must select, needs guidance |
+
+=== END subtask-1-2 ===
+
+=== SESSION 4 (subtask-1-3: VKN/TCKN Fields & Admin Queue Patterns) ===
+
+## VKN/TCKN FIELD INVENTORY ACROSS ALL DOCTYPES
+
+### A. TAX ID FIELD PATTERNS BY DOCTYPE
+
+| DocType | Field | Type | Options/Default | Required | Description | Notes |
+|---------|-------|------|-----------------|----------|-------------|-------|
+| KYC Profile | tckn | Data | - | No | "Turkish Citizenship Number (11 digits)" | Dedicated TCKN field |
+| KYC Profile | tax_id_individual | Data | - | No | "Personal Tax ID for sole proprietors/freelancers" | Separate individual tax field |
+| KYC Profile | tax_id | Data | - | No | Generic Tax ID | Added outside field_order (late addition) |
+| KYC Profile | tax_id_type | Select | "\nTC Kimlik No\nVergi No\nPassport" | No | Tax ID type selector | INCONSISTENT: Uses Turkish labels |
+| Seller Profile | tax_id | Data | - | No | "VKN (10 digits) or TCKN (11 digits)" | Combined VKN/TCKN field |
+| Seller Profile | tax_id_type | Select | "TCKN\nVKN" (default TCKN) | No | Tax ID type selector | INCONSISTENT: Uses abbreviations |
+| Seller Application | tax_id | Data | - | mandatory_depends_on non-Individual | "VKN (10 digits) or TCKN (11 digits)" | Same as Seller Profile |
+| Seller Application | tax_id_type | Select | "TCKN\nVKN" (default TCKN) | No | Tax ID type selector | Matches Seller Profile format |
+| Organization | tax_id | Data | - | reqd=1 | "VKN - 10 digit Tax Identification Number" | Always VKN (organizations) |
+| Organization | (none) | - | - | - | No tax_id_type field | Organization always uses VKN |
+
+### B. TAX_ID_TYPE INCONSISTENCY (CRITICAL BUG)
+
+**KYC Profile uses different option labels than Seller Profile/Application:**
+
+| DocType | TCKN Option | VKN Option | Extra Options |
+|---------|-------------|------------|---------------|
+| KYC Profile | "TC Kimlik No" | "Vergi No" | "Passport" (+ empty first option) |
+| Seller Profile | "TCKN" | "VKN" | (none) |
+| Seller Application | "TCKN" | "VKN" | (none) |
+| Organization | N/A | N/A | No tax_id_type field (always VKN) |
+
+This means KYC Profile's tax_id_type values ("TC Kimlik No", "Vergi No") won't match Seller Profile values ("TCKN", "VKN") when comparing or migrating data. Task 131 MUST standardize these options.
+
+### C. VERIFICATION STATUS FIELDS
+
+| DocType | Field | Options | Default | permlevel |
+|---------|-------|---------|---------|-----------|
+| KYC Profile | status | Draft/Pending Review/In Review/Documents Required/Verified/Rejected/Expired/Suspended | Draft | 0 |
+| KYC Profile | verification_status | Pending/In Progress/Completed/Failed/Manual Review Required | Pending | 0 (read_only) |
+| Seller Profile | status | Pending/Under Review/Active/Suspended/Blocked/Inactive/Vacation | Pending | 0 |
+| Seller Profile | verification_status | Pending/In Review/Documents Requested/Verified/Rejected | Pending | 1 |
+| Seller Application | status | Draft/Submitted/Under Review/Documents Requested/Revision Required/Approved/Rejected/Cancelled | Draft | 0 (read_only) |
+| Seller Application | workflow_state | Draft/Pending Review/In Review/Documents Requested/Revision Required/Approved/Rejected/Cancelled | Draft | 0 (read_only) |
+| Seller Application | review_status | Not Started/In Progress/Pending Documents/Pending Verification/Completed | (empty) | 0 |
+| Organization | status | Pending Verification/Active/Suspended/Blocked/Inactive | Pending Verification | 0 |
+| Organization | verification_status | Pending/In Review/Documents Requested/Verified/Rejected | Pending | 1 |
+
+**Pattern: Dual status + verification_status is common. verification_status at permlevel 1 (admin-only write) is the standard approach.**
+
+### D. VERIFICATION CHECKLIST FIELDS
+
+| DocType | Check Fields | Notes |
+|---------|-------------|-------|
+| KYC Profile | id_verified, address_verified, liveness_verified | Identity verification granularity |
+| Seller Profile | identity_verified, business_verified, bank_verified | Seller verification granularity |
+| Organization | documents_verified, tax_documents_verified, trade_registry_verified | KYB verification granularity |
+
+### E. REVIEW WORKFLOW FIELDS (Seller Application as model)
+
+- assigned_to: Link -> User (reviewer)
+- review_started_at: Datetime (read_only)
+- review_deadline: Date
+- review_status: Select (Not Started/In Progress/Pending Documents/Pending Verification/Completed)
+- review_notes: Text (internal)
+- rejection_reason: Select (Incomplete Documents/Invalid Tax ID/Failed Verification/Prohibited Category/Previous Violations/Duplicate Application/Suspicious Activity/Other)
+- reviewed_at: Datetime (read_only)
+- reviewed_by: Link -> User (read_only)
+- revision_requested: Check (read_only)
+- revision_notes: Small Text
+
+### F. MODERATION CASE ADMIN QUEUE PATTERN (reference for Identity Verification)
+
+**Key patterns to replicate:**
+
+1. **Autoname**: MOD-.YYYY.-.##### (year-based sequential)
+2. **Status workflow with color-coded states**: Open(blue) -> Assigned(yellow) -> In Review(orange) -> Pending Info(gray) -> Escalated(red) -> Resolved(green) -> Closed(gray) / Appealed(purple) / Reopened(orange)
+3. **Priority**: Critical/High/Medium/Low (Select, reqd)
+4. **Assignment**: assigned_to (User), assigned_at (Datetime read_only)
+5. **Review timing**: review_started_at, review_completed_at, review_time_seconds (all read_only)
+6. **Decision**: decision (Select with multiple options), decision_reason (Small Text), decision_notes (Text Editor)
+7. **Appeal workflow**: is_appealable, appeal_status, appeal_submitted_at, appeal_reason, appeal_evidence, appeal_decision, appeal_decided_by, appeal_decided_at, appeal_response
+8. **Escalation**: is_escalated, escalation_level (5 levels), escalated_to, escalation_reason, escalated_at, escalated_by
+9. **SLA tracking**: sla_target_hours, sla_status (On Track/At Risk/Breached/Exempt), queue_position, wait_time_hours, resolution_time_hours
+10. **Dynamic content link**: content_type (Link->DocType) + content_id (Dynamic Link) - allows any DocType to be reviewed
+11. **Notification tracking**: owner_notified, reporter_notified, decision_notification_sent (Check fields)
+12. **History table**: Moderation Action Log (child table)
+13. **Permissions**: System Manager (full), Marketplace Admin (create/read/write), Marketplace Moderator (create/read/write, no delete/export)
+
+### G. BUSINESS DOCUMENT REQUIREMENTS (Seller Application)
+
+| Document | Required For | Field |
+|----------|-------------|-------|
+| Identity Document | All | identity_document_attachment (Attach, reqd) |
+| Trade Registry (Ticaret Sicil Gazetesi) | Business, Enterprise | trade_registry_attachment |
+| Tax Certificate (Vergi Levhasi) | Business, Enterprise | tax_certificate_attachment |
+| Signature Circular (Imza Sirkuleri) | Enterprise only | signature_circular_attachment |
+| Activity Certificate (Faaliyet Belgesi) | Optional | activity_certificate_attachment |
+| Bank Statement | Optional | bank_statement_attachment |
+| Additional Documents | Optional | additional_documents (Table -> Seller Application Document) |
+
+### H. KEY FINDINGS FOR TASK 131 (Identity Verification Plan)
+
+1. **tax_id_type inconsistency** is the most critical finding - KYC Profile uses "TC Kimlik No/Vergi No/Passport" while Seller Profile/Application use "TCKN/VKN". Must standardize.
+
+2. **No algorithmic validation exists** - All tax_id fields are plain Data type with no format enforcement or checksum validation.
+
+3. **No uniqueness check** - tax_id is not marked unique in any DocType. Multiple sellers could register with the same VKN/TCKN.
+
+4. **Organization always VKN** - Organization.tax_id is always VKN (10 digits, required). No tax_id_type selector needed since organizations are always companies.
+
+5. **Seller Application -> Seller Profile pipeline** - Application approval creates Seller Profile, so tax_id data flows from Application to Profile. Identity Verification Request should integrate into this pipeline.
+
+6. **Dual status pattern** - Use separate status (overall) and verification_status (identity-specific). Verification_status at permlevel 1 (admin-only write) is the established pattern.
+
+7. **Moderation Case is the blueprint** for admin review queue - replicate: priority, status workflow with colors, assignment, review timing, decision/appeal/escalation, SLA tracking, notification tracking, and history table patterns.
+
+8. **Missing "Invalid Tax ID" validation** - Seller Application has "Invalid Tax ID" as a rejection_reason option but no automated validation to detect it before manual review.
+
+=== END subtask-1-3 ===
+
+=== SESSION 5 (subtask-1-4: Wallet Pattern & Campaign Structure Analysis) ===
+
+## SELLER BALANCE (WALLET) PATTERN ANALYSIS
+
+### A. SELLER BALANCE DOCTYPE - ARCHITECTURE
+
+**Key Metadata:**
+- autoname: "field:seller" (1:1 relationship - one balance per seller)
+- naming_rule: "By fieldname"
+- module: "TradeHub Seller"
+- allow_rename: 0
+- track_changes: 1
+- engine: InnoDB
+
+**Tab-Based Layout (8 tabs):**
+1. Details - Basic info (seller link, seller_name fetch_from, status, tenant, currency, last_updated)
+2. Balance - Current balances (available, pending, held, reserved, total) + Lifetime statistics
+3. Payout - Payout settings (method, IBAN, bank) + Schedule (frequency, dates) + Pending payout info
+4. Orders & Transactions - Order statistics + Transaction Records (child table: Seller Balance Transaction) + Recent Transactions (deprecated JSON)
+5. Tax - Tax withholding, tax ID, certificate validity
+6. Alerts - Payment issues, suspension status
+7. System - Audit trail (created_at, created_by, modified_at, modified_by_user, notes)
+
+**Balance Fields (all Currency, read_only, options="currency"):**
+- available_balance: Funds ready for payout (default 0)
+- pending_balance: Awaiting escrow release (default 0)
+- held_balance: Under dispute/review (default 0)
+- reserved_balance: Reserved for pending payouts (default 0)
+- total_balance: Sum of all (default 0, read_only)
+- minimum_payout_threshold: Min for payout (default 100, NOT read_only)
+
+**Status field:** Select with "Active\nPending Verification\nSuspended\nClosed" (default Active)
+**Color-coded states:** Active(green), Pending Verification(orange), Suspended(red), Closed(gray)
+
+**Permissions:**
+- System Manager: full CRUD + email/export/print/report/share
+- All: read + print only (no create/write/delete)
+
+**Links:**
+- Seller Profile (via seller_balance)
+- Escrow Account (via seller)
+
+### B. SELLER BALANCE TRANSACTION (CHILD TABLE)
+
+**Key Metadata:**
+- istable: 1 (child table - embedded in parent)
+- naming_rule: "Random"
+- module: "TradeHub Seller"
+- editable_grid: 1
+- track_changes: 0
+- sort_field: "transaction_date", sort_order: "DESC"
+
+**Fields:**
+- transaction_date: Datetime (reqd, in_list_view) - "Date and time of the transaction"
+- transaction_type: Select (reqd, in_list_view) - Options: "\nCredit\nDebit\nHold\nRelease"
+- amount: Currency (reqd, in_list_view, options="currency") - "Transaction amount"
+- running_balance: Currency (read_only, in_list_view, options="currency") - "Balance after this transaction"
+- reference_type: Data - "DocType of the referenced document"
+- reference_name: Data - "Name/ID of the referenced document"
+- description: Data - "Brief description of the transaction"
+
+**Layout:** 2 columns + collapsible Reference section
+**No permissions** (inherits from parent)
+
+### C. SELLER BALANCE PYTHON CLASS - KEY PATTERNS
+
+**Balance Operations (all use db_set for atomic updates):**
+1. add_earnings(amount, order_name, description) → pending_balance += amount
+2. release_to_available(amount, escrow_name, description) → pending -= amount, available += amount
+3. deduct_commission(amount, order_name, description) → lifetime_commissions += amount
+4. process_refund(amount, order_name, description) → available -= amount (then pending if insufficient)
+5. hold_funds(amount, reason) → available -= amount, held += amount
+6. release_held_funds(amount, release_to, description) → held -= amount, available += amount
+7. apply_adjustment(amount, reason, adjustment_type) → available += amount, lifetime_adjustments += amount
+
+**Payout Lifecycle:**
+1. can_payout() → checks status, suspension, payment issues, threshold, IBAN
+2. request_payout(amount) → available -= amount, reserved += amount
+3. complete_payout(amount, reference) → reserved -= amount, lifetime_payouts += amount
+4. fail_payout(amount, reason) → reserved -= amount, available += amount + sets payment issue flag
+
+**Validation:** validate_seller, validate_balances (no negative), validate_iban (TR format + MOD-97), validate_payout_settings
+**Transaction logging:** _log_transaction() writes to JSON field (recent_transactions) - keeps last 100 entries
+**Cache:** clear_cache on update (seller_balance:{name} and seller_balance_seller:{seller})
+**Factory:** get_or_create_seller_balance(seller) - auto-creates from Seller Profile data
+**Scheduled job:** process_scheduled_payouts() - finds eligible balances and requests payouts
+
+**KEY INSIGHT FOR AD WALLET:**
+- The wallet uses BOTH a child table (transaction_records → Seller Balance Transaction) AND a JSON field (recent_transactions) for transaction history
+- The JSON field is deprecated in favor of the child table but both exist
+- All balance mutations use db_set() for atomic single-field updates (not save())
+- get_or_create pattern is essential - wallet auto-creates on first access
+- Permission checks in API endpoints: session.user == seller.user OR has_permission
+
+### D. CAMPAIGN DOCTYPE - ARCHITECTURE
+
+**Key Metadata:**
+- autoname: "field:campaign_name" (named by campaign name)
+- naming_rule: "By fieldname"
+- module: "TradeHub Marketing"
+- allow_rename: 1
+- track_changes: 1
+- index_web_pages_for_search: 1
+
+**Tab-Based Layout (9 tabs):**
+1. Details - Basic info (campaign_name unique/reqd, campaign_type Select, status, priority Int, is_featured Check) + Description (Text Editor + banner_image Attach Image)
+2. Validity - Period (start_date/end_date Datetime reqd) + timezone (default "Europe/Istanbul") + auto_activate/auto_deactivate (Check, both default 1)
+3. Discount - Configuration (discount_type Select, discount_value Float, max_discount_amount Currency with depends_on Percentage, min_order_amount Currency)
+4. Applicability - Target (applies_to Select: All Products/Specific Categories/Specific Sellers/Specific Products) + conditional fields (Small Text comma-separated) + excluded_products + Coupon Integration section
+5. Budget & Limits - Budget (budget_enabled Check, total_budget/spent_amount/remaining_budget Currency) + Usage (usage_limit/usage_per_customer/total_usage/unique_users Int)
+6. Targeting - Customer segment (target_audience Select, buyer_levels, new_customers_only, min/max_previous_orders, geographic_regions)
+7. Display - Settings (show_on_homepage/show_in_category/show_countdown Check, display_order Int, highlight_color Color, highlight_text Data) + Seller & Tenant section
+8. Analytics - Stats (views_count/clicks_count/orders_count Int read_only, revenue_generated Currency read_only)
+9. System - Notes & Terms (internal_notes Text, terms_and_conditions Text Editor)
+
+**Campaign Types:** Discount, Flash Sale, Seasonal, Clearance, Buy X Get Y, Free Shipping, Bundle Deal, Loyalty, Referral, New Customer, Holiday, Other
+
+**Status Workflow:** Draft(gray) → Scheduled(blue) → Active(green) → Paused(yellow) → Ended(red) / Cancelled(red)
+
+**Seller/Tenant Pattern:**
+- seller: Link → Seller Profile (optional, blank = platform-wide)
+- seller_name: fetch_from seller.seller_name (read_only)
+- tenant: fetch_from seller.tenant, Link → Tenant (read_only)
+- tenant_name: fetch_from tenant.tenant_name (read_only)
+
+**Permissions:**
+- System Manager: full CRUD + email/export/print/report/share
+- Seller: create/read/write + email/print/report (no delete/export/share)
+- Buyer: read only
+
+**Links:** Coupon (via linked_coupons), Seller Profile (via seller)
+**Sort:** priority DESC (higher priority first)
+**Search fields:** campaign_name, campaign_type, status, seller
+
+### E. COUPON DOCTYPE - ARCHITECTURE
+
+**Key Metadata:**
+- autoname: "field:coupon_code" (named by code)
+- naming_rule: "By fieldname"
+- module: "TradeHub Marketing"
+- allow_rename: 0
+- track_changes: 1
+- index_web_pages_for_search: 1
+
+**Tab-Based Layout (8 tabs):**
+1. Details - Coupon code (unique/reqd), title (reqd), is_active (Check default 1), status (Select read_only: Draft/Active/Expired/Used Up/Deactivated)
+2. Seller - seller (Link → Seller Profile optional, blank = platform-wide), tenant (fetch_from seller.tenant read_only)
+3. Discount - discount_type (Select reqd: Percentage/Fixed Amount/Free Shipping/Buy X Get Y), discount_value (Float reqd), max_discount_amount (depends_on Percentage), min_order_amount
+4. BOGO - Conditional on Buy X Get Y: buy_quantity, get_quantity, get_discount_percent, same_product_only + Product selection tables (bogo_buy_products/bogo_get_products → Coupon Product Item, bogo_categories → Coupon Category Item)
+5. Validity - valid_from/valid_until (Datetime reqd), usage_limit/used_count/usage_per_customer (Int)
+6. Applicability - applies_to (Select: All Products/Specific Categories/Specific Products) + Table MultiSelect child tables (Coupon Category Item, Coupon Product Item) + Exclusions
+7. Restrictions - new_customers_only, requires_minimum_items/minimum_items, buyer_levels (Small Text), max_uses_per_order, stackable
+8. System - Campaign link (Link → Campaign optional) + Description/Terms
+
+**Child Tables (Table MultiSelect):**
+- Coupon Product Item: listing (Link → Listing reqd) + listing_title (fetch_from listing.title read_only) — istable: 1, naming_rule: Random
+- Coupon Category Item: category (Link → Category reqd) + category_name (fetch_from category.category_name read_only) — istable: 1, naming_rule: Random
+
+**Permissions:** System Manager (full CRUD), All (create/read/write - NOTE: very permissive!)
+**Links:** Seller Profile (via seller), Campaign (via campaign)
+
+### F. KEY PATTERNS FOR TASK 158 (AD WALLET & AD CAMPAIGN)
+
+**AD WALLET should mirror Seller Balance:**
+1. One-to-one with Seller Profile (autoname: "field:seller")
+2. Balance tiers: available_balance (for ad spend), reserved_balance (committed to active campaigns), total_balance
+3. No pending/held needed for ad context (simpler than seller balance)
+4. Currency field with TRY default
+5. Child table for transaction history (Ad Wallet Transaction) with: transaction_date, transaction_type (Credit/Debit/Hold/Release/Ad Spend/Refund), amount, running_balance, reference_type, reference_name, description
+6. Python class with: add_funds(), deduct_ad_spend(), reserve_for_campaign(), release_reserved(), get_or_create pattern
+7. Auto-pause campaigns when balance depletes (zero-balance handling)
+8. Minimum balance alerts (like minimum_payout_threshold)
+9. API endpoints with permission checks (seller user OR admin)
+10. Atomic balance updates via db_set()
+
+**AD CAMPAIGN should mirror Campaign:**
+1. Tab-based layout with 8-10 tabs
+2. Status workflow: Draft → Pending Approval → Scheduled → Active → Paused → Ended → Cancelled
+3. Seller/tenant pattern: seller (Link → Seller Profile reqd for ads), tenant (fetch_from)
+4. Budget management: daily_budget, total_budget, spent_amount, remaining_budget
+5. Validity: start_date/end_date Datetime, auto_activate/auto_deactivate
+6. Analytics tab: impressions, clicks, conversions, CTR, ACoS, ROAS (all read_only)
+7. Targeting: categories, keywords, placements
+8. Priority/bid amount determines ad rank
+9. Permissions: System Manager (full), Seller (create/read/write), Buyer (none - ads are backend only)
+10. Color-coded status states
+
+**COUPON CHILD TABLE PATTERN for Ad Campaign Items:**
+- Minimal child table: Link to target entity + fetch_from display name
+- istable: 1, naming_rule: Random, editable_grid: 1
+- Table MultiSelect for product/category selection in applicability
+
+**CAMPAIGN-COUPON RELATIONSHIP for Ad Campaign-Ad Creative:**
+- Campaign links to Coupons via linked_coupons field
+- Coupon links back via campaign Link field
+- Mirror this: Ad Campaign links to Ad Creatives, Ad Creative links back to Ad Campaign
+
+### G. CRITICAL DIFFERENCES FOR AD SYSTEM
+
+1. **Wallet direction reversed:** Seller Balance receives money (earnings), Ad Wallet spends money (ad costs). Flow is: seller deposits → ad spend deducts → balance decreases.
+
+2. **No payout needed:** Ad Wallet doesn't need payout methods/IBAN/scheduling. Instead needs: deposit/top-up methods, auto-pause on zero balance, minimum balance warnings.
+
+3. **Campaign requires approval:** Unlike marketing Campaigns (seller can create freely), Ad Campaigns should require admin approval before going Active (fraud prevention).
+
+4. **Real-time budget tracking:** Ad Campaigns need real-time budget checks per click/impression, not just aggregate tracking like marketing Campaigns.
+
+5. **Auction integration:** Ad Campaign Items need bid amounts and quality scores, which marketing Campaign doesn't have.
+
+6. **No discount mechanics:** Ad Campaigns don't have discount_type/discount_value. Instead they have bid_amount, pricing_model (CPC/CPM/CPT), and placement targeting.
+
+=== END subtask-1-4 ===
+
+=== SESSION 9 (subtask-7-1: Final Verification & QA Checks) ===
+
+## VERIFICATION RESULTS
+
+### Check 1: File Existence & Size
+All 5 files exist with non-zero size:
+- outputs/122.md: 1066 lines, 36,618 bytes
+- outputs/131.md: 1811 lines, 67,897 bytes (after fix)
+- outputs/155.md: 1558 lines, 79,196 bytes
+- outputs/157.md: 1760 lines, 88,997 bytes
+- outputs/158.md: 4141 lines, 189,799 bytes
+Total: 10,336 lines
+
+### Check 2: Required Sections Per Spec
+- 122.md: 10 sections + Appendix (Overview, Current State, Field Inventory, UOM Categories, Migration Plan, set_query Filters, Conversion Plan, Edge Cases, Checklist, Post-Implementation) ✓
+- 131.md: 12 sections (Overview, VKN Algorithm, TC Algorithm, GIB API, DocType Design, Workflow, Admin Queue, Status Badges, Restriction Rules, Integration, Edge Cases, Post-Implementation) ✓
+- 155.md: 10 sections + 2 Appendices (Overview, Audit Methodology, Detection Tools, Error Sources, Logging Format, Priority Tiers, Audit Checklist, Fix Strategy, Regression Prevention, Post-Implementation) ✓
+- 157.md: 10 sections (Overview, Current State, Link Field Inventory, Filter Rules, Implementation Method, JS Samples, Child Tables, Edge Cases, Testing, Post-Implementation) ✓
+- 158.md: 22 sections (TOC, Overview, References, Architecture, 13 DocTypes, Auction Engine, Fraud Detection, Billing, Seller Dashboard, Admin Panel, Post-Implementation) ✓
+
+### Check 3: VKN/TC Algorithm Correctness
+- VKN (10-digit): Algorithm correct. v[i] = (d[i] + 9-i) % 10, then power-modulus transformation, check digit = (10 - total % 10) % 10. Python/JS implementations match. Worked example verified: 1234567890 → check digit 0 ✓
+- TC (11-digit): Algorithm correct. d10 = ((odd_sum * 7) - even_sum) % 10, d11 = first_10_sum % 10. Python/JS implementations match. Worked example for 10000000146 verified: d10=4 ✓, d11=6 ✓
+- FIX APPLIED: Corrected digit table in 131.md TCKN worked example (d[8]=1 not 0, d[9]=4 not 1, d[10]=6 not 4). Removed inline self-correction text.
+
+### Check 4: Frappe Fieldtype Validation (158.md)
+All DocType field definitions use valid Frappe fieldtypes:
+- Link (53), Data (49), Select (48), Currency (76), Int (69), Float (17), Check (28)
+- Section Break (93), Column Break (85), Tab Break (49)
+- Datetime (21), Date (7), Time (2), Percent (18), Small Text (27)
+- Text (3), Text Editor (1), HTML (1), Color (1), Attach (1), Attach Image (1), Table (5)
+No invalid fieldtypes found ✓
+
+### Check 5: No Code Files Created/Modified
+git diff shows only: .auto-claude/specs/ metadata files + outputs/*.md files ✓
+No .py, .js, .json, .css, .html, .csv files in codebase modified ✓
+(outputs/link_field_inventory.json exists as analysis artifact in outputs/ dir, not in codebase)
+
+### Check 6: Markdown Rendering Quality
+- Tables: All files have proper header/separator/data rows (122: 16 tables, 131: 31, 155: 38, 157: 24, 158: 79)
+- Code blocks: All properly closed (even fence counts: 54, 76, 42, 42, 130)
+- Code language specifiers present on code blocks
+- Headers properly nested (##, ###, ####)
+
+### Check 7: Post-Implementation Notes
+- 122.md: bench migrate + bench clear-cache + bench clear-website-cache ✓
+- 131.md: bench migrate + bench clear-cache + bench execute workflows + bench restart ✓
+- 155.md: bench migrate + bench clear-cache referenced in fix strategy ✓
+- 157.md: bench clear-cache + bench restart + bench migrate ✓
+- 158.md: Section 22 with full post-implementation notes ✓
+
+### Check 8: Content Specifics
+- 158.md: 13 DocTypes defined (exceeds 10+ requirement) ✓
+- 158.md: Ad Rank = Max CPC Bid × Quality Score Multiplier formula ✓
+- 158.md: Second-price auction: Actual CPC = (Next Ad Rank / Winner QS Multiplier) + 0.01 ✓
+- 158.md: Quality Score with 5 weighted components ✓
+- 158.md: Fraud detection: IP dedup (60s window), bot UA filtering, click speed check, click flooding, coordinated fraud ✓
+- 158.md: Wallet: per-click deduction, zero-balance auto-pause, minimum balance alerts ✓
+- 155.md: Priority tiers: Critical (form won't open, 4h SLA), High (can't save, 1 day), Medium (field error, 2 week), Low (cosmetic) ✓
+- 157.md: 737 Link fields inventoried, 598 unfiltered, specific filter rules per field ✓
+
+## ALL QA CHECKS PASSED ✓
+
+=== END subtask-7-1 ===

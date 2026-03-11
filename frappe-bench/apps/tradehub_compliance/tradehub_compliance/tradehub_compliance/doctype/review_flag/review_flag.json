@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "creation": "2026-02-12 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "flag_type",
+  "flagged_by",
+  "column_break_1",
+  "flagged_at",
+  "details_section",
+  "description",
+  "column_break_2",
+  "is_resolved",
+  "resolved_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "flag_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Flag Type",
+   "options": "\nSpam\nInappropriate Content\nFake Review\nOff-topic\nViolates Guidelines\nSeller Manipulation\nConflict of Interest\nAbusive Language\nOther",
+   "reqd": 1,
+   "description": "Type of flagged issue"
+  },
+  {
+   "fieldname": "flagged_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Flagged By",
+   "options": "User",
+   "description": "User who raised this flag"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "flagged_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Flagged At",
+   "description": "When the flag was raised"
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "description": "Detailed description of the flagged issue"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_resolved",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Resolved",
+   "description": "Whether this flag has been reviewed and resolved"
+  },
+  {
+   "depends_on": "eval:doc.is_resolved",
+   "fieldname": "resolved_at",
+   "fieldtype": "Datetime",
+   "label": "Resolved At",
+   "description": "When the flag was resolved"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Compliance",
+ "name": "Review Flag",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "flagged_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}

@@ -1,0 +1,465 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "VRQ-.YYYY.-.#####",
+ "creation": "2026-02-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "naming_series",
+  "request_section",
+  "requesting_seller",
+  "brand",
+  "parent_product",
+  "column_break_request",
+  "brand_gating",
+  "request_title",
+  "attributes_section",
+  "requested_color",
+  "requested_size",
+  "column_break_attributes",
+  "requested_material",
+  "requested_packaging",
+  "custom_attributes_section",
+  "custom_attribute_1_label",
+  "custom_attribute_1_value",
+  "column_break_custom_attributes",
+  "custom_attribute_2_label",
+  "custom_attribute_2_value",
+  "demand_section",
+  "customer_demand_description",
+  "estimated_demand_quantity",
+  "column_break_demand",
+  "reference_image",
+  "status_tab",
+  "status_section",
+  "status",
+  "column_break_status",
+  "reviewed_by",
+  "review_date",
+  "review_notes_section",
+  "review_notes",
+  "rejection_section",
+  "rejection_reason",
+  "demand_aggregation_tab",
+  "demand_aggregation_section",
+  "demand_group_key",
+  "demand_request_count",
+  "column_break_demand_aggregation",
+  "demand_sellers_summary",
+  "demand_first_requested",
+  "variant_section",
+  "created_variant",
+  "auto_creation_log",
+  "tenant_section",
+  "tenant"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "VRQ-.YYYY.-.#####",
+   "default": "VRQ-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1,
+   "hidden": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "request_section",
+   "fieldtype": "Section Break",
+   "label": "Request Information"
+  },
+  {
+   "fieldname": "requesting_seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Requesting Seller",
+   "options": "Seller Profile",
+   "reqd": 1,
+   "description": "Seller requesting the new variant",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "brand",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Brand",
+   "options": "Brand",
+   "reqd": 1,
+   "description": "Brand for the requested variant",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "parent_product",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Parent Product",
+   "options": "SKU Product",
+   "reqd": 1,
+   "description": "SKU Product that the new variant will belong to",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_request",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "brand_gating",
+   "fieldtype": "Link",
+   "label": "Brand Gating",
+   "options": "Brand Gating",
+   "read_only": 1,
+   "description": "Auto-filled from Brand - active Brand Gating record if applicable"
+  },
+  {
+   "fieldname": "request_title",
+   "fieldtype": "Data",
+   "label": "Request Title",
+   "read_only": 1,
+   "description": "Auto-generated title summarizing the variant request"
+  },
+  {
+   "fieldname": "attributes_section",
+   "fieldtype": "Section Break",
+   "label": "Variant Attributes"
+  },
+  {
+   "fieldname": "requested_color",
+   "fieldtype": "Data",
+   "label": "Requested Color",
+   "description": "Color attribute for the requested variant"
+  },
+  {
+   "fieldname": "requested_size",
+   "fieldtype": "Data",
+   "label": "Requested Size",
+   "description": "Size attribute for the requested variant"
+  },
+  {
+   "fieldname": "column_break_attributes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "requested_material",
+   "fieldtype": "Data",
+   "label": "Requested Material",
+   "description": "Material attribute for the requested variant"
+  },
+  {
+   "fieldname": "requested_packaging",
+   "fieldtype": "Data",
+   "label": "Requested Packaging",
+   "description": "Packaging attribute for the requested variant"
+  },
+  {
+   "fieldname": "custom_attributes_section",
+   "fieldtype": "Section Break",
+   "label": "Custom Attributes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "custom_attribute_1_label",
+   "fieldtype": "Data",
+   "label": "Custom Attribute 1 Label",
+   "description": "Label for the first custom attribute"
+  },
+  {
+   "fieldname": "custom_attribute_1_value",
+   "fieldtype": "Data",
+   "label": "Custom Attribute 1 Value",
+   "description": "Value for the first custom attribute"
+  },
+  {
+   "fieldname": "column_break_custom_attributes",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_attribute_2_label",
+   "fieldtype": "Data",
+   "label": "Custom Attribute 2 Label",
+   "description": "Label for the second custom attribute"
+  },
+  {
+   "fieldname": "custom_attribute_2_value",
+   "fieldtype": "Data",
+   "label": "Custom Attribute 2 Value",
+   "description": "Value for the second custom attribute"
+  },
+  {
+   "fieldname": "demand_section",
+   "fieldtype": "Section Break",
+   "label": "Demand Information"
+  },
+  {
+   "fieldname": "customer_demand_description",
+   "fieldtype": "Text",
+   "label": "Customer Demand Description",
+   "reqd": 1,
+   "description": "Describe the customer demand for this variant"
+  },
+  {
+   "fieldname": "estimated_demand_quantity",
+   "fieldtype": "Int",
+   "label": "Estimated Demand Quantity",
+   "description": "Estimated number of units in demand"
+  },
+  {
+   "fieldname": "column_break_demand",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reference_image",
+   "fieldtype": "Attach Image",
+   "label": "Reference Image",
+   "description": "Upload a reference image for the requested variant"
+  },
+  {
+   "fieldname": "status_tab",
+   "fieldtype": "Tab Break",
+   "label": "Review"
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nUnder Review\nApproved\nRejected",
+   "reqd": 1,
+   "description": "Current status of the variant request",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User",
+   "read_only": 1,
+   "description": "Admin user who reviewed this request",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "label": "Review Date",
+   "read_only": 1,
+   "description": "Date when the request was reviewed",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "review_notes_section",
+   "fieldtype": "Section Break",
+   "label": "Review Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "review_notes",
+   "fieldtype": "Small Text",
+   "label": "Review Notes",
+   "description": "Internal review notes about this request (not visible to seller)",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "rejection_section",
+   "fieldtype": "Section Break",
+   "label": "Rejection Details",
+   "depends_on": "eval:doc.status == 'Rejected'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Data",
+   "label": "Rejection Reason",
+   "description": "Brief reason for rejecting the variant request",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "demand_aggregation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Demand Aggregation"
+  },
+  {
+   "fieldname": "demand_aggregation_section",
+   "fieldtype": "Section Break",
+   "label": "Demand Group"
+  },
+  {
+   "fieldname": "demand_group_key",
+   "fieldtype": "Data",
+   "label": "Demand Group Key",
+   "read_only": 1,
+   "description": "Normalized key for grouping identical variant requests across sellers"
+  },
+  {
+   "fieldname": "demand_request_count",
+   "fieldtype": "Int",
+   "label": "Demand Request Count",
+   "read_only": 1,
+   "default": "1",
+   "description": "Number of requests in the same demand group"
+  },
+  {
+   "fieldname": "column_break_demand_aggregation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "demand_sellers_summary",
+   "fieldtype": "Small Text",
+   "label": "Demand Sellers Summary",
+   "read_only": 1,
+   "description": "Summary of sellers requesting this variant"
+  },
+  {
+   "fieldname": "demand_first_requested",
+   "fieldtype": "Date",
+   "label": "Demand First Requested",
+   "read_only": 1,
+   "description": "Date when the first request in this demand group was created"
+  },
+  {
+   "fieldname": "variant_section",
+   "fieldtype": "Section Break",
+   "label": "Created Variant",
+   "depends_on": "eval:doc.status == 'Approved'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "created_variant",
+   "fieldtype": "Link",
+   "label": "Created Variant",
+   "options": "Product Variant",
+   "read_only": 1,
+   "description": "Product Variant created upon approval of this request"
+  },
+  {
+   "fieldname": "auto_creation_log",
+   "fieldtype": "Text",
+   "label": "Auto Creation Log",
+   "read_only": 1,
+   "description": "Log of automatic variant creation process"
+  },
+  {
+   "fieldname": "tenant_section",
+   "fieldtype": "Section Break",
+   "label": "Tenant"
+  },
+  {
+   "fetch_from": "requesting_seller.tenant",
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Auto-filled from Requesting Seller - Multi-tenant isolation field"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Brand",
+   "link_doctype": "Brand",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Seller",
+   "link_doctype": "Seller Profile",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Product",
+   "link_doctype": "SKU Product",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Variant",
+   "link_doctype": "Product Variant",
+   "link_fieldname": "name"
+  }
+ ],
+ "modified": "2026-02-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Catalog",
+ "name": "Variant Request",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Seller",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "requesting_seller, brand, parent_product, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "gray",
+   "title": "Pending"
+  },
+  {
+   "color": "blue",
+   "title": "Under Review"
+  },
+  {
+   "color": "green",
+   "title": "Approved"
+  },
+  {
+   "color": "red",
+   "title": "Rejected"
+  }
+ ],
+ "title_field": "request_title",
+ "track_changes": 1
+}

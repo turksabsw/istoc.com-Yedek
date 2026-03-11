@@ -1,0 +1,55 @@
+{
+ "actions": [],
+ "creation": "2026-02-12 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "seller",
+  "column_break_1",
+  "setting_key",
+  "override_value"
+ ],
+ "fields": [
+  {
+   "fieldname": "seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Seller",
+   "options": "Seller Profile",
+   "description": "Seller profile for this override"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "setting_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Setting Key",
+   "description": "The cart protection setting key to override"
+  },
+  {
+   "fieldname": "override_value",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Override Value",
+   "description": "The override value for this setting"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Commerce",
+ "name": "Seller Cart Protection Override",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

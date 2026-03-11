@@ -1,0 +1,1 @@
+const a=["#6366F1","#10B981","#F59E0B","#3B82F6","#EC4899","#8B5CF6","#14B8A6","#F97316","#EF4444","#84CC16","#06B6D4","#A78BFA"],s=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],A=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];export{a as C,A as D,s as M};

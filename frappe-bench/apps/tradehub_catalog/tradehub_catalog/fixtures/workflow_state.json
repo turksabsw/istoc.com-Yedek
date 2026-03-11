@@ -1,0 +1,30 @@
+[
+  {
+    "doctype": "Workflow State",
+    "name": "Draft",
+    "workflow_state_name": "Draft",
+    "icon": "fa fa-pencil",
+    "style": ""
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Pending Review",
+    "workflow_state_name": "Pending Review",
+    "icon": "fa fa-clock-o",
+    "style": "Warning"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Approved",
+    "workflow_state_name": "Approved",
+    "icon": "fa fa-check",
+    "style": "Success"
+  },
+  {
+    "doctype": "Workflow State",
+    "name": "Rejected",
+    "workflow_state_name": "Rejected",
+    "icon": "fa fa-times",
+    "style": "Danger"
+  }
+]

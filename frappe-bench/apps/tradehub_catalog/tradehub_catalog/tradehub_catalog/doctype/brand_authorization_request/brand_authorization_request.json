@@ -1,0 +1,353 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "BAR-.YYYY.-.#####",
+ "creation": "2026-02-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "naming_series",
+  "request_section",
+  "requesting_seller",
+  "requesting_seller_name",
+  "brand",
+  "column_break_request",
+  "brand_name",
+  "brand_owner_seller",
+  "authorization_type",
+  "justification_section",
+  "justification",
+  "documents_section",
+  "authorization_letter",
+  "distribution_agreement",
+  "column_break_documents",
+  "additional_document_1",
+  "additional_document_2",
+  "status_tab",
+  "status_section",
+  "status",
+  "column_break_status",
+  "reviewed_by",
+  "review_date",
+  "review_notes_section",
+  "review_notes",
+  "rejection_section",
+  "rejection_reason",
+  "gating_section",
+  "brand_gating",
+  "tenant_section",
+  "tenant"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "BAR-.YYYY.-.#####",
+   "default": "BAR-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1,
+   "hidden": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "request_section",
+   "fieldtype": "Section Break",
+   "label": "Request Information"
+  },
+  {
+   "fieldname": "requesting_seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Requesting Seller",
+   "options": "Seller Profile",
+   "reqd": 1,
+   "description": "Seller requesting brand authorization",
+   "set_only_once": 1
+  },
+  {
+   "fetch_from": "requesting_seller.seller_name",
+   "fieldname": "requesting_seller_name",
+   "fieldtype": "Data",
+   "label": "Requesting Seller Name",
+   "read_only": 1,
+   "description": "Auto-filled from Requesting Seller"
+  },
+  {
+   "fieldname": "brand",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Brand",
+   "options": "Brand",
+   "reqd": 1,
+   "description": "Brand being requested for authorization",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_request",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "brand.brand_name",
+   "fieldname": "brand_name",
+   "fieldtype": "Data",
+   "label": "Brand Name",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Auto-filled from Brand"
+  },
+  {
+   "fetch_from": "brand.owner_seller",
+   "fieldname": "brand_owner_seller",
+   "fieldtype": "Link",
+   "label": "Brand Owner Seller",
+   "options": "Seller Profile",
+   "read_only": 1,
+   "description": "Auto-filled from Brand - the seller who owns this brand"
+  },
+  {
+   "default": "Standard Reseller",
+   "fieldname": "authorization_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Authorization Type",
+   "options": "Standard Reseller\nAuthorized Distributor\nExclusive Distributor\nOfficial Partner\nManufacturer Direct",
+   "reqd": 1,
+   "description": "Type of brand authorization being requested"
+  },
+  {
+   "fieldname": "justification_section",
+   "fieldtype": "Section Break",
+   "label": "Justification"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Text Editor",
+   "label": "Justification",
+   "description": "Detailed justification for the brand authorization request"
+  },
+  {
+   "fieldname": "documents_section",
+   "fieldtype": "Section Break",
+   "label": "Supporting Documents"
+  },
+  {
+   "fieldname": "authorization_letter",
+   "fieldtype": "Attach",
+   "label": "Authorization Letter",
+   "description": "Upload authorization letter from brand owner"
+  },
+  {
+   "fieldname": "distribution_agreement",
+   "fieldtype": "Attach",
+   "label": "Distribution Agreement",
+   "description": "Upload distribution or reseller agreement"
+  },
+  {
+   "fieldname": "column_break_documents",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "additional_document_1",
+   "fieldtype": "Attach",
+   "label": "Additional Document 1",
+   "description": "Upload any additional supporting document"
+  },
+  {
+   "fieldname": "additional_document_2",
+   "fieldtype": "Attach",
+   "label": "Additional Document 2",
+   "description": "Upload any additional supporting document"
+  },
+  {
+   "fieldname": "status_tab",
+   "fieldtype": "Tab Break",
+   "label": "Review"
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nUnder Review\nApproved\nRejected",
+   "reqd": 1,
+   "description": "Current status of the authorization request",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User",
+   "read_only": 1,
+   "description": "Admin user who reviewed this request",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "label": "Review Date",
+   "read_only": 1,
+   "description": "Date when the request was reviewed",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "review_notes_section",
+   "fieldtype": "Section Break",
+   "label": "Review Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "review_notes",
+   "fieldtype": "Small Text",
+   "label": "Review Notes",
+   "description": "Internal review notes about this request (not visible to seller)",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "rejection_section",
+   "fieldtype": "Section Break",
+   "label": "Rejection Details",
+   "depends_on": "eval:doc.status == 'Rejected'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Data",
+   "label": "Rejection Reason",
+   "description": "Brief reason for rejecting the authorization request",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "gating_section",
+   "fieldtype": "Section Break",
+   "label": "Brand Gating",
+   "depends_on": "eval:doc.status == 'Approved'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "brand_gating",
+   "fieldtype": "Link",
+   "label": "Brand Gating",
+   "options": "Brand Gating",
+   "read_only": 1,
+   "description": "Brand Gating record created upon approval - back-reference"
+  },
+  {
+   "fieldname": "tenant_section",
+   "fieldtype": "Section Break",
+   "label": "Tenant"
+  },
+  {
+   "fetch_from": "requesting_seller.tenant",
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Auto-filled from Requesting Seller - Multi-tenant isolation field"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Brand",
+   "link_doctype": "Brand",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Seller",
+   "link_doctype": "Seller Profile",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Brand Gating",
+   "link_doctype": "Brand Gating",
+   "link_fieldname": "name"
+  }
+ ],
+ "modified": "2026-02-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Catalog",
+ "name": "Brand Authorization Request",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Seller",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "requesting_seller, brand, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "gray",
+   "title": "Pending"
+  },
+  {
+   "color": "blue",
+   "title": "Under Review"
+  },
+  {
+   "color": "green",
+   "title": "Approved"
+  },
+  {
+   "color": "red",
+   "title": "Rejected"
+  }
+ ],
+ "title_field": "brand",
+ "track_changes": 1
+}

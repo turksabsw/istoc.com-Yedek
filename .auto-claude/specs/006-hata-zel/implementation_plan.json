@@ -1,0 +1,430 @@
+{
+  "feature": "TradeHub 5-Task Planning Documentation Suite",
+  "workflow_type": "feature",
+  "workflow_rationale": "Five parallel planning documents producing Markdown files covering UOM filtering, identity verification, error detection, link field filtering, and ad management system. Although output is documentation-only, the workflow follows feature phases because each document requires codebase investigation followed by structured authoring.",
+  "phases": [
+    {
+      "id": "phase-1-codebase-analysis",
+      "name": "Codebase Analysis & Data Gathering",
+      "type": "investigation",
+      "description": "Deep-read all referenced DocType JSONs and JS files across all TradeHub apps. Extract field inventories, Link field targets, existing set_query patterns, and UOM usage. This analysis feeds all 5 documents.",
+      "depends_on": [],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Analyze all logistics DocType JSONs for UOM fields (Shipment, Marketplace Shipment, Shipping Rule, Shipping Rate Tier, Lead Time, Carrier). Extract: fieldname, fieldtype, current options/defaults. Identify which use Select vs Link for units. Also scan Listing and Product DocTypes for weight/dimension fields that may need UOM filtering.",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_logistics/tradehub_logistics/tradehub_logistics/doctype/shipment/shipment.json",
+            "frappe-bench/apps/tradehub_logistics/tradehub_logistics/tradehub_logistics/doctype/marketplace_shipment/marketplace_shipment.json"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Verified understanding of all UOM-related fields across logistics and catalog DocTypes"
+          },
+          "status": "completed",
+          "notes": "Complete UOM field inventory across all logistics, seller, and catalog DocTypes. Found 24 UOM-related fields total: 21 Link→UOM, 2 hardcoded Select (Marketplace Shipment weight_unit/dimension_unit), 1 wrong-type Data (Shipment volume_uom). Critical bugs found: (1) marketplace_shipment.js set_query references wrong field names (weight_uom vs weight_unit) - all 3 calls silently fail, (2) Shipment volume_uom is Data not Link so set_query fails, (3) 12+ Link→UOM fields in seller/catalog apps have no set_query filters at all, (4) default values inconsistent across DocTypes (kg vs Kg, cm vs Centimeter vs Cm), (5) Shipping Rule/Logistics Provider have units hardcoded in labels with no dynamic UOM.",
+          "updated_at": "2026-03-05T17:21:10.799166+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Scan all DocType JSON files across all 9 TradeHub apps for Link fields. Build inventory of: DocType name, fieldname, target options (Link target), presence of existing set_query in corresponding .js file. This feeds both Task 155 (error detection) and Task 157 (link field filtering).",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/listing/listing.js",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_profile/seller_profile.js"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Complete Link field inventory compiled from all TradeHub apps"
+          },
+          "status": "completed",
+          "notes": "Complete Link field inventory: 737 total Link fields across 7 TradeHub apps. 139 (18.9%) have set_query filters, 598 (81.1%) are unfiltered. Key gaps: 125 unfiltered User links (mostly read_only), 79 unfiltered Tenant links, 52 unfiltered Currency links, 40 unfiltered Seller Profile links, 34 unfiltered UOM links, 33 unfiltered Country links, 16 unfiltered Sales Channel links (0% filtered), 9 unfiltered PIM Attribute links (0% filtered). 18 JS files already implement set_query patterns. Full machine-readable inventory at outputs/link_field_inventory.json. Child table filtering detected from 12 parent JS files. ~388 active editable fields need filters, ~95 of which are required fields (critical priority). Committed as 90638dd.",
+          "updated_at": "2026-03-05T17:26:06.533692+00:00"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Read KYC Profile, Seller Profile, Seller Application, Organization DocType JSONs to understand existing VKN/TCKN fields, tax_id_type patterns, and verification workflow status fields. Read Moderation Case for admin review queue pattern.",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/kyc_profile/kyc_profile.json",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_profile/seller_profile.json",
+            "frappe-bench/apps/tradehub_compliance/tradehub_compliance/tradehub_compliance/doctype/moderation_case/moderation_case.json"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Confirmed understanding of existing VKN/TC fields and admin queue workflow patterns"
+          },
+          "status": "completed",
+          "notes": "Analyzed 5 DocType JSONs: KYC Profile, Seller Profile, Seller Application, Organization, Moderation Case. Key findings: (1) CRITICAL tax_id_type inconsistency - KYC uses \"TC Kimlik No/Vergi No/Passport\" while Seller Profile/Application use \"TCKN/VKN\" - must standardize for Task 131. (2) No algorithmic validation or uniqueness on tax_id fields anywhere. (3) Organization always VKN (no tax_id_type needed). (4) Dual status + verification_status (permlevel 1) is the standard pattern. (5) Moderation Case provides complete admin queue blueprint: MOD-.YYYY.-.##### autoname, priority (Critical/High/Medium/Low), color-coded status workflow (9 states), assignment/review timing, decision/appeal/escalation workflows, SLA tracking, notification tracking, history table. (6) Seller Application review workflow is the onboarding pipeline model (assigned_to, review_status, rejection_reason with \"Invalid Tax ID\" option). (7) Business document requirements well-defined with mandatory_depends_on patterns per seller_type. Committed as 6dfe77a.",
+          "updated_at": "2026-03-05T17:29:27.443828+00:00"
+        },
+        {
+          "id": "subtask-1-4",
+          "description": "Read Seller Balance, Seller Balance Transaction, Campaign, Coupon DocType JSONs to understand existing wallet pattern and campaign structure. These are the reference architectures for Ad Wallet and Ad Campaign in Task 158.",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_balance/seller_balance.json",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_balance_transaction/seller_balance_transaction.json",
+            "frappe-bench/apps/tradehub_marketing/tradehub_marketing/tradehub_marketing/doctype/campaign/campaign.json"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Wallet pattern and campaign structure fully understood and documented for Task 158 reference"
+          },
+          "status": "completed",
+          "notes": "Analyzed all 4 reference DocTypes: Seller Balance (wallet parent with 8 tabs, balance tiers, status workflow, color-coded states, permissions), Seller Balance Transaction (child table with transaction_date, type Credit/Debit/Hold/Release, amount, running_balance, reference_type/name, description), Campaign (9 tabs: details/validity/discount/applicability/budget/targeting/display/analytics/system, status Draft→Scheduled→Active→Paused→Ended→Cancelled, seller/tenant fetch_from pattern, budget tracking, coupon integration, analytics counters), Coupon (8 tabs, autoname by coupon_code, discount types Percentage/Fixed/Free Shipping/BOGO, Table MultiSelect child tables for products/categories via Coupon Product Item and Coupon Category Item, usage tracking, campaign link). Python class analysis: Seller Balance uses db_set() for atomic balance mutations, get_or_create factory pattern, transaction logging to both child table and deprecated JSON field, permission checks in API endpoints. KEY PATTERNS FOR TASK 158: (1) Ad Wallet mirrors Seller Balance but reversed (spends not earns) - needs add_funds/deduct_ad_spend/reserve_for_campaign methods, (2) Ad Campaign mirrors Campaign but adds approval workflow, bid amounts, real-time budget checks, auction integration, (3) Child tables use minimal Link + fetch_from pattern, (4) Wallet-Campaign relationship: auto-pause campaigns on zero balance. Committed as bec49c0.",
+          "updated_at": "2026-03-05T17:33:00.737658+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-doc-122",
+      "name": "Write 122.md - UOM Filtering System",
+      "type": "implementation",
+      "description": "Create the UOM Filtering System planning document. Covers: DocType field inventory, UOM category definitions, set_query filter patterns, conversion factor logic, and post-implementation steps.",
+      "depends_on": [
+        "phase-1-codebase-analysis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Write outputs/122.md with all required sections: (1) Overview, (2) DocType/field inventory table showing all UOM-related fields across Shipment, Marketplace Shipment, Shipping Rule, and other relevant DocTypes, (3) UOM category definitions (Weight/Length/Volume/Area/Quantity/Other) with example units per category, (4) Migration plan from Select to Link fields in Marketplace Shipment, (5) set_query filter JS code samples for each field context, (6) UOM Conversion Factor integration plan, (7) Edge cases (custom UOMs, cross-category conversion errors), (8) Post-implementation notes (bench migrate + bench clear-cache).",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [
+            "outputs/122.md"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_logistics/tradehub_logistics/tradehub_logistics/doctype/shipment/shipment.js"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "test -f outputs/122.md && wc -l outputs/122.md",
+            "expected": "File exists with substantial content (100+ lines)"
+          },
+          "status": "completed",
+          "notes": "Written outputs/122.md with 1066 lines covering all 8 required sections: Overview, DocType/field inventory (34 UOM fields across 4 apps), UOM category definitions (Mass/Length/Volume/Area/Unit/Other), migration plan (Select->Link for Marketplace Shipment, Data->Link for Shipment volume_uom), set_query filter JS code for all contexts, UOM Conversion Factor integration plan, edge cases, and post-implementation notes. Also identified 4 critical bugs: wrong field refs in marketplace_shipment.js, wrong fieldtype for volume_uom, inconsistent defaults, missing filters on 28+ fields. Committed as 69f3558.",
+          "updated_at": "2026-03-05T17:38:48.174036+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-doc-131",
+      "name": "Write 131.md - VKN & TC Identity Verification",
+      "type": "implementation",
+      "description": "Create the VKN/TC Identity Verification planning document. Covers: validation algorithms, new DocType design, workflow states, admin review queue, restriction rules, and status badges.",
+      "depends_on": [
+        "phase-1-codebase-analysis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Write outputs/131.md with all required sections: (1) Overview, (2) VKN validation algorithm (10-digit checksum math), (3) TC Kimlik No validation algorithm (11-digit checksum math), (4) GIB API integration research with fallback strategy, (5) Identity Verification Request DocType design with complete field definitions, (6) Workflow definition (Pending -> Approved/Rejected), (7) Admin review queue design (following Moderation Case pattern), (8) Visual status badges specification, (9) Unverified user restriction rules, (10) Integration points with KYC Profile and Seller Profile, (11) Edge cases (duplicate submissions, expired verification, re-verification), (12) Post-implementation notes.",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [
+            "outputs/131.md"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/kyc_profile/kyc_profile.json",
+            "frappe-bench/apps/tradehub_compliance/tradehub_compliance/tradehub_compliance/doctype/moderation_case/moderation_case.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "test -f outputs/131.md && wc -l outputs/131.md",
+            "expected": "File exists with substantial content (150+ lines)"
+          },
+          "status": "completed",
+          "notes": "Written outputs/131.md with 1811 lines covering all 12 required sections: Overview (current state analysis, critical issues), VKN validation algorithm (10-digit checksum with Python/JS implementations), TC Kimlik No validation algorithm (11-digit checksum with worked example using test TCKN 10000000146), GIB API integration research with tiered fallback strategy, Identity Verification Request DocType design (7 tabs, 60+ fields, IDVR-.YYYY.-.##### autoname), Workflow definition (7 states, 11 transitions), Admin review queue (following Moderation Case pattern with priority rules, SLA targets, dashboard widget), Visual status badges (6 verification statuses, 3 identity type badges with CSS/JS), Unverified user restriction matrix (10 actions x 4 verification levels), Integration points (KYC Profile + Seller Profile propagation, tax_id_type standardization migration), Edge cases (duplicate submissions, expiry, resubmission, concurrent submissions, name change, VKN transfer), Post-implementation notes (bench migrate + clear-cache, scheduled tasks, indexes). Committed as 8060f21.",
+          "updated_at": "2026-03-05T17:46:28.864022+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-doc-155",
+      "name": "Write 155.md - Popup Error Detection & Fix",
+      "type": "implementation",
+      "description": "Create the Popup Error Detection & Fix planning document. Covers: systematic audit methodology, error logging format, priority tiers, common error sources, and remediation strategy.",
+      "depends_on": [
+        "phase-1-codebase-analysis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Write outputs/155.md with all required sections: (1) Overview, (2) Systematic audit methodology (tools, process, test matrix), (3) Error detection tools (browser console, Frappe error log, bench --verbose), (4) Common error source catalogue (broken Link fields, missing permissions, invalid fetch_from, bad depends_on, JS errors), (5) Error logging format specification (DocType, action, message, source, priority), (6) Priority tier definitions (Critical=form won't open, High=can't save, Medium=field error, Low=cosmetic), (7) Complete DocType audit checklist for all TradeHub apps, (8) Fix ordering strategy (Critical/High first), (9) Regression prevention plan.",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [
+            "outputs/155.md"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "test -f outputs/155.md && wc -l outputs/155.md",
+            "expected": "File exists with substantial content (100+ lines)"
+          },
+          "status": "completed",
+          "notes": "Written outputs/155.md with 1558 lines covering all 9 required sections: (1) Overview with scope (227 DocTypes across 7 apps) and known issues from Phase 1 analysis, (2) Systematic audit methodology (5-step process, test matrix, static analysis checklist, automated scanning script), (3) Error detection tools (browser console with capture protocol, Frappe Error Log patterns, bench --verbose), (4) Common error source catalogue (8 error categories with 20 error type codes), (5) Error logging format specification (20-field JSON schema, error type registry, tracking spreadsheet template), (6) Priority tier definitions (Critical=form won't open/4h SLA, High=can't save/1 day SLA, Medium=field error/2 week SLA, Low=cosmetic, with decision matrix), (7) Complete DocType audit checklist for all 227 DocTypes across 7 apps with per-DocType priority and risk areas, (8) Fix ordering strategy (4 waves: Critical Day 1-2, High Day 3-7, Medium Week 2-3, Low ongoing; batch fix patterns; dependency-aware ordering), (9) Regression prevention plan (pre-commit hooks, automated test suite, CI/CD pipeline, code review checklist, monitoring/alerting, periodic re-audit schedule). Also includes 2 appendices: error-to-fix quick reference and estimated error distribution by app (130-270 total estimated). Committed as 605566f.",
+          "updated_at": "2026-03-05T17:56:04.280300+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-doc-157",
+      "name": "Write 157.md - Link Field Filtering",
+      "type": "implementation",
+      "description": "Create the Link Field Filtering planning document. Covers: complete Link field inventory across all apps, context-aware filter rules per field, implementation method specification.",
+      "depends_on": [
+        "phase-1-codebase-analysis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Write outputs/157.md with all required sections: (1) Overview, (2) Current state analysis (which Link fields already have set_query, which don't), (3) Complete Link field inventory table (App, DocType, Field, Target DocType, Current Filter, Recommended Filter), (4) Context-aware filter rules per field with specific conditions, (5) Implementation method per field (set_query dynamic vs link_filters JSON static), (6) JavaScript code samples for each filter pattern, (7) Child table Link field filtering (with cascading examples), (8) Edge cases (empty results, circular dependencies), (9) Testing strategy.",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [
+            "outputs/157.md"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/listing/listing.js",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_profile/seller_profile.js"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "test -f outputs/157.md && wc -l outputs/157.md",
+            "expected": "File exists with substantial content (200+ lines)"
+          },
+          "status": "completed",
+          "notes": "Written outputs/157.md with 1760 lines covering all 9 required sections plus post-implementation notes. Complete audit of 737 Link fields across 7 TradeHub apps (139 filtered, 598 unfiltered, ~407 editable unfiltered). Includes: per-app inventory tables, 7 filter rule categories (P0-P3), implementation method assignment per field, 5 JS code sample patterns, 60+ child table field mappings with cascading examples, 6 edge case analyses, 12-case manual test matrix, automated Python test script, and 4-wave rollout plan. Committed as 08efb9b.",
+          "updated_at": "2026-03-05T18:04:49.802780+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-doc-158",
+      "name": "Write 158.md - Ad Management System",
+      "type": "implementation",
+      "description": "Create the Ad Management System planning document. The most complex document with 10+ DocType definitions, auction engine algorithm, fraud detection rules, wallet billing, and dashboard specifications.",
+      "depends_on": [
+        "phase-1-codebase-analysis"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Write outputs/158.md Part 1 - Core DocTypes: (1) Overview and reference platforms (Amazon Ads, Alibaba P4P, eBay Promoted), (2) Ad Campaign DocType (full field list, autoname, status workflow, admin approval), (3) Ad Campaign Item child table (product link, bid, creative), (4) Ad Keyword child table (keyword, match type, bid, negative keywords), (5) Ad Creative DocType (creative types, media rules, approval flow), (6) Ad Placement DocType (slots, dimensions, pricing models, min bid).",
+          "service": "frappe_bench",
+          "files_to_modify": [],
+          "files_to_create": [
+            "outputs/158.md"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_marketing/tradehub_marketing/tradehub_marketing/doctype/campaign/campaign.json",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_balance/seller_balance.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "test -f outputs/158.md && wc -l outputs/158.md",
+            "expected": "File exists with substantial content (200+ lines)"
+          },
+          "status": "completed",
+          "notes": "Written outputs/158.md Part 1 with 1282 lines covering 6 core sections: Overview with reference platforms (Amazon/Alibaba/eBay), system architecture (14 DocTypes), Ad Campaign (132 fields, 10-state workflow, admin approval), Ad Campaign Item (16 fields, per-item bids), Ad Keyword (14 fields, Broad/Phrase/Exact match, negatives), Ad Creative (60 fields, 6 types, media rules, approval flow), Ad Placement (74 fields, 9 types, CPC/CPM/CPT pricing, seed data). All follow Campaign and Seller Balance patterns. Committed as 57527e0.",
+          "updated_at": "2026-03-05T18:11:56.186950+00:00"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Append to outputs/158.md Part 2 - Engine, Billing & Dashboards: (7) Banner Booking DocType (CPT model, conflict detection), (8) Ad Event Log DocType (impression/click/conversion tracking), (9) Auction engine algorithm (second-price auction, Ad Rank formula, quality_score components, daily budget check), (10) Fraud detection rules (same-IP duplicate clicks <1min, bot filtering, coordinated fraud), (11) Ad Wallet DocType (mirroring Seller Balance pattern), (12) Ad Invoice DocType (monthly billing), (13) Billing flow (per-click deduction, zero-balance auto-pause, minimum balance alerts), (14) Seller dashboard specifications (CTR, ACoS, ROAS metrics), (15) Admin panel specifications (approval queue, revenue summary, fraud alerts), (16) Post-implementation notes.",
+          "service": "frappe_bench",
+          "files_to_modify": [
+            "outputs/158.md"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_balance_transaction/seller_balance_transaction.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "test -f outputs/158.md && wc -l outputs/158.md",
+            "expected": "File exists with substantial content (500+ lines)"
+          },
+          "status": "completed",
+          "notes": "Appended Part 2 to outputs/158.md (sections 9-22, 2867 new lines, total 4141 lines). All 22 sections verified present. Key deliverables: Banner Booking with CPT conflict detection, Ad Event Log (62 fields + indexes), Ad Wallet mirroring Seller Balance (full Python API), Ad Wallet Transaction (exact child table mirror), Ad Invoice + Item (monthly generation), Ad Quality Score (5 weighted components), Ad Fraud Rule (7 types), Auction Engine (second-price Ad Rank formula), Fraud Detection (4 rules), Billing Flow (per-click deduction + auto-pause), Seller Dashboard (CTR/ACoS/ROAS), Admin Panel (approval + fraud + revenue), Post-Implementation (migration, indexes, seed data, scheduled tasks). Committed as af24cdb.",
+          "updated_at": "2026-03-05T19:00:20.595072+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-7-verification",
+      "name": "Final Verification & QA Checks",
+      "type": "integration",
+      "description": "Verify all 5 markdown files exist, have all required sections, proper formatting, and accurate DocType references. Cross-check against spec acceptance criteria.",
+      "depends_on": [
+        "phase-2-doc-122",
+        "phase-3-doc-131",
+        "phase-4-doc-155",
+        "phase-5-doc-157",
+        "phase-6-doc-158"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-7-1",
+          "description": "Verify all 5 files exist in outputs/ directory. Check: (1) Each file has all required sections per spec, (2) VKN/TC algorithms are mathematically correct, (3) All DocType field references in 158.md use valid Frappe fieldtypes, (4) No code files (.py/.js/.json) were created or modified, (5) Markdown renders correctly (tables, code blocks, headers), (6) Post-implementation notes present where applicable.",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "ls -la outputs/122.md outputs/131.md outputs/155.md outputs/157.md outputs/158.md 2>&1",
+            "expected": "All 5 files exist with non-zero size"
+          },
+          "status": "completed",
+          "notes": "Full QA verification completed. All 5 files exist with substantial content (122.md: 1066 lines/36KB, 131.md: 1811 lines/68KB, 155.md: 1558 lines/79KB, 157.md: 1760 lines/89KB, 158.md: 4141 lines/190KB). Checks passed: (1) All required sections present per spec, (2) VKN 10-digit checksum algorithm mathematically correct with Python/JS code and worked example, (3) TC 11-digit checksum algorithm mathematically correct - fixed digit table in worked example, (4) All 158.md DocType field references use valid Frappe fieldtypes (Link, Data, Select, Currency, Int, Float, Check, etc.), (5) 13 DocTypes defined (exceeds 10+ requirement), (6) No code files modified (only .md files in outputs/ and spec metadata), (7) All code blocks properly closed (even fence counts), (8) All tables have header/separator/data rows, (9) Post-implementation notes (bench migrate + bench clear-cache) present in all applicable docs (122, 131, 155, 157, 158), (10) Second-price auction with Ad Rank formula correctly documented, (11) Fraud detection rules include IP dedup window, bot UA detection, click speed check, click flooding.",
+          "updated_at": "2026-03-05T22:05:00.000000+00:00"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 7,
+    "total_subtasks": 9,
+    "services_involved": [
+      "frappe_bench"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 5,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-2-doc-122",
+            "phase-3-doc-131",
+            "phase-4-doc-155",
+            "phase-5-doc-157",
+            "phase-6-doc-158"
+          ],
+          "reason": "All depend only on phase-1-codebase-analysis, each writes to a different file (122.md, 131.md, 155.md, 157.md, 158.md) - no file conflicts"
+        }
+      ],
+      "recommended_workers": 2,
+      "speedup_estimate": "2x faster than sequential - 5 independent document writes after shared analysis phase"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 006 --parallel 2"
+  },
+  "verification_strategy": {
+    "risk_level": "low",
+    "skip_validation": false,
+    "minimal_mode": true,
+    "test_creation_phase": "none",
+    "test_types_required": [],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All 5 .md files exist in outputs/ directory",
+      "Each file has all required sections per spec.md QA Acceptance Criteria table",
+      "VKN validation algorithm is mathematically correct (10-digit checksum)",
+      "TC validation algorithm is mathematically correct (11-digit checksum)",
+      "All DocType designs in 158.md follow Frappe field type conventions",
+      "Ad auction engine uses proper second-price auction logic",
+      "No code files (.py/.js/.json/.css/.html/.csv) were created or modified",
+      "All documents reference existing TradeHub DocTypes correctly",
+      "Post-implementation notes (bench migrate + bench clear-cache) included where applicable",
+      "Markdown renders correctly with no formatting errors"
+    ],
+    "verification_steps": [
+      {
+        "name": "File existence check",
+        "command": "ls -la outputs/122.md outputs/131.md outputs/155.md outputs/157.md outputs/158.md",
+        "expected_outcome": "All 5 files exist",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "No code files modified",
+        "command": "git diff --name-only",
+        "expected_outcome": "Only .md files in outputs/ and spec metadata files changed",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Content completeness spot-check",
+        "command": "grep -c '##' outputs/122.md outputs/131.md outputs/155.md outputs/157.md outputs/158.md",
+        "expected_outcome": "Each file has multiple sections (headers)",
+        "type": "test",
+        "required": true,
+        "blocking": false
+      }
+    ],
+    "reasoning": "Low risk - output is documentation only (.md files). No functional code changes. Validation focuses on file existence, section completeness, and content accuracy rather than test execution."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": false,
+      "commands": [],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": false,
+      "commands": [],
+      "services_to_test": []
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": false,
+      "pages": []
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    },
+    "document_verification": {
+      "required": true,
+      "checks": [
+        "outputs/122.md: UOM categories (Weight/Length/Volume/Area/Quantity/Other) all defined with example units",
+        "outputs/131.md: VKN 10-digit validation with proper checksum logic documented",
+        "outputs/131.md: TC 11-digit validation with proper checksum logic documented",
+        "outputs/155.md: Critical/High/Medium/Low priority tiers with clear criteria",
+        "outputs/157.md: Each Link field has exact filter condition (not generic)",
+        "outputs/158.md: Ad Rank = bid x quality_score formula with quality_score components",
+        "outputs/158.md: IP dedup window and bot detection criteria specified",
+        "outputs/158.md: Per-click cost calculation and zero-balance handling documented",
+        "outputs/158.md: 10+ DocType designs with complete field lists"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "created_at": "2026-03-05T12:41:43.008Z",
+  "updated_at": "2026-03-06T05:38:35.241Z",
+  "status": "done",
+  "planStatus": "completed",
+  "xstateState": "done",
+  "executionPhase": "complete",
+  "lastEvent": {
+    "eventId": "836c637e-224c-4604-8a88-cfb4853898dc",
+    "sequence": 1,
+    "type": "PLANNING_COMPLETE",
+    "timestamp": "2026-03-05T17:16:46.846635+00:00"
+  },
+  "last_updated": "2026-03-05T19:00:20.595080+00:00"
+}
