@@ -1,0 +1,148 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: TradeHub Siparis Odeme - 7 Planning Documents
+Workspace: /home/ali/Masaüstü/Frappe_Marketplace
+Started: 2026-03-05
+
+Workflow Type: feature
+Rationale: Creating 7 interconnected planning documents for a B2B marketplace order/payment system. Feature workflow chosen because each document plans a new functional capability with dependencies between them.
+
+Session 1 (Planner):
+- Completed deep codebase investigation of frappe-bench structure
+- Analyzed existing DocTypes: Marketplace Order, Payment Method, Cart, Sub Order, Shipment
+- Documented existing patterns (DocType JSON structure, status flows, naming series, hooks)
+- Created project_index.json with all services and conventions
+- Created context.json with existing implementations and constraints
+- Created implementation_plan.json with 5 phases, 7 subtasks
+- Created init.sh for environment setup
+- Created build-progress.txt
+
+Phase Summary:
+- Phase 1 (Foundation Docs): 2 subtasks - 117.md, 123.md - no dependencies
+- Phase 2 (Order Actions): 2 subtasks - 125.md, 147.md - depends on Phase 1
+- Phase 3 (Shipment & Protection): 2 subtasks - 126.md, 127.md - depends on Phase 2, parallel-safe
+- Phase 4 (Packing Slip): 1 subtask - 148.md - depends on Phase 3
+- Phase 5 (Cross-Validation): 1 subtask - consistency check - depends on Phase 4
+
+Services Involved:
+- tradehub_commerce: Orders, payments, cart, sub-orders (primary)
+- tradehub_seller: Seller profiles, listings (referenced)
+- tradehub_logistics: Shipments, carriers, delivery (referenced)
+- tradehub_core: Tenant isolation, buyer profiles (referenced)
+
+Output: 7 markdown files in /mnt/user-data/outputs/
+  117.md - Payment Terms (Odeme Kosullari) System Plan
+  123.md - Seller-Grouped Checkout System Plan
+  125.md - Marketplace Order Actions/Create Button Plan
+  126.md - Partial Shipment and Balance Tracking Plan
+  127.md - Cart/Order Temporal Protection System Plan
+  147.md - Seller Panel Order Document Creation Plan
+  148.md - Partial Shipment Packing Slip Print Format Plan
+
+Parallelism Analysis:
+- Max parallel phases: 2 (subtasks 3-1 and 3-2 can run in parallel)
+- Recommended workers: 1 (documents have sequential dependencies)
+- Parallel groups: [126.md, 127.md] can be written simultaneously after 125.md/147.md
+
+Key Codebase Findings:
+- Payment Method DocType ALREADY EXISTS with comprehensive fields (method types, fees, limits, installments, credit terms)
+- Marketplace Order has 15 statuses with explicit transition rules in validate_status_transitions()
+- Sub Order system already splits orders by seller automatically
+- Cart has seller_summary_table and expiry fields
+- Shipment DocType in tradehub_logistics with order/sub_order links
+- scheduler_events pattern in tradehub_commerce/hooks.py (daily seller_payout)
+
+Constraints:
+- NO code files (.py, .js, .json, .css, .html, .csv) to create/modify
+- NO CLI commands (bench, git, pip, npm, node)
+- Read-only codebase access for pattern discovery
+- Output: .md files ONLY in /mnt/user-data/outputs/
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 1
+
+Example:
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 1
+
+=== END SESSION 1 ===
+
+=== SESSION 2 (subtask-5-1: Cross-Reference Validation) ===
+
+Phase 5 Cross-Reference Validation - Complete
+
+All 7 documents read and validated for cross-document consistency.
+
+Validation Results:
+1. STATUS FLOWS (125, 126, 147): PASS (with fix applied)
+   - 125.md: Marketplace Order uses Pending/Confirmed/Invoiced/Processing/Packed/Shipped/Delivered/Completed
+   - 126.md: Referenced 125.md flow - FIXED to include "Invoiced" between Confirmed and Processing
+   - 147.md: Sub Order uses Pending/Accepted/Processing/Packed/Shipped/Delivered/Completed (correctly different DocType)
+   - 126.md fulfillment_status tracks: Partially Shipped/Shipped/Partially Delivered/Delivered (consistent)
+
+2. 147 EXTENDS 125: PASS (with fix applied)
+   - 147.md properly operates on Sub Order (seller's items) while 125.md on Marketplace Order
+   - FIXED: Overview table said "8 options" but actual count is 6 (adds Proforma Invoice, removes PE + Dispute)
+   - FIXED: "What 147.md Adds" table now lists both PE and Dispute removal
+   - Seller ownership validation (3-layer model) properly documented
+   - seller_allowed_transitions correctly limits seller to forward-only status changes
+
+3. PAYMENT TERMS (117) -> CHECKOUT (123): PASS
+   - 123.md Section 10.1 explicitly integrates with 117.md
+   - Checkout Seller Group has payment_terms_template Link field
+   - Auto-resolution algorithm: Seller Payment Terms -> conditional rules -> matching template
+   - Payment terms stored in seller group and passed to Marketplace Order creation
+
+4. DELIVERY NOTE (125) -> PARTIAL SHIPMENT (126): PASS
+   - 125.md make_delivery_note() defines creation via get_mapped_doc
+   - 126.md extends with custom fields: custom_marketplace_order, custom_shipment_number, etc.
+   - Balance tracking fields (custom_ordered_qty, custom_previously_shipped_qty, custom_remaining_after_this)
+   - Over-shipment prevention validation in 126.md consistent with 125.md's DN creation
+
+5. PACKING SLIP (148) -> DELIVERY NOTE (126): PASS
+   - All 12 custom fields from 126.md correctly referenced in 148.md Jinja template
+   - Fields match exactly: custom_marketplace_order, custom_sub_order, custom_shipment_number,
+     custom_is_partial_shipment, custom_total_shipments, custom_marketplace_order_item,
+     custom_listing, custom_sku, custom_ordered_qty, custom_previously_shipped_qty,
+     custom_remaining_after_this, custom_marketplace_order_id
+   - Template uses proper fallbacks for missing fields (backward compatibility)
+
+6. CART PROTECTION (127) -> CHECKOUT (123): PASS
+   - 127.md stock reservation triggers on Cart "Active" -> "Checkout" transition from 123.md
+   - Checkout Session.expires_at from 123.md used as timer reference
+   - Per-seller timer resolution aligns with Seller Cart Groups from 123.md
+   - initiate_checkout() from 123.md is the trigger for stock reservation
+
+7. ACCEPTANCE CRITERIA: PASS
+   All 7 documents contain acceptance criteria sections:
+   - 117.md: Section 11 (17 criteria)
+   - 123.md: Section 14
+   - 125.md: Section 12
+   - 126.md: Section 14
+   - 127.md: Section 14
+   - 147.md: Section 14
+   - 148.md: Section 8 (5 subsections with checkboxes)
+
+8. POST-IMPLEMENTATION STEPS: PASS
+   All 7 documents include bench migrate/clear-cache/build:
+   - 117.md: Section 10
+   - 123.md: Section 15
+   - 125.md: Section 11
+   - 126.md: Section 15
+   - 127.md: Section 15
+   - 147.md: Section 13
+   - 148.md: Section 9
+
+Fixes Applied:
+1. 147.md: Fixed overview table from "8 options" to "6 (adds Proforma Invoice; removes Payment Entry and Dispute)"
+2. 147.md: Added "Payment Entry Removed" row to "What 147.md Adds Over 125.md" table
+3. 126.md: Updated status flow diagram to include "Invoiced" between Confirmed and Processing (matching 125.md)
+
+Constraint Verification:
+- No code files created: 0 .py/.js/.json/.html/.css/.csv files in outputs/
+- No codebase modifications: only .md files in outputs/ directory
+- All 7 files exist in outputs/ with substantial content (43KB-95KB each)
+
+=== END SESSION 2 ===

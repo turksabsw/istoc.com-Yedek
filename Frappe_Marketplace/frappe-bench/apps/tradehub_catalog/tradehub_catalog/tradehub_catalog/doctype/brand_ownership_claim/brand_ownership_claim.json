@@ -1,0 +1,305 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "BOC-.YYYY.-.#####",
+ "creation": "2026-02-05 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "naming_series",
+  "claim_section",
+  "claiming_seller",
+  "brand",
+  "column_break_claim",
+  "ownership_type",
+  "is_competing_claim",
+  "documents_section",
+  "trademark_certificate",
+  "column_break_documents",
+  "trade_registry_document",
+  "justification_section",
+  "justification",
+  "status_tab",
+  "status_section",
+  "status",
+  "column_break_status",
+  "reviewed_by",
+  "review_date",
+  "rejection_section",
+  "rejection_reason",
+  "rejection_details",
+  "admin_section",
+  "admin_notes",
+  "tenant_section",
+  "tenant"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "BOC-.YYYY.-.#####",
+   "default": "BOC-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1,
+   "hidden": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "claim_section",
+   "fieldtype": "Section Break",
+   "label": "Claim Information"
+  },
+  {
+   "fieldname": "claiming_seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Claiming Seller",
+   "options": "Seller Profile",
+   "reqd": 1,
+   "description": "Seller who is claiming ownership of the brand",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "brand",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Brand",
+   "options": "Brand",
+   "reqd": 1,
+   "description": "Brand being claimed for ownership",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_claim",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Brand Owner",
+   "fieldname": "ownership_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Ownership Type",
+   "options": "Brand Owner\nLicensed Manufacturer\nAuthorized Distributor\nTrademark Holder",
+   "reqd": 1,
+   "description": "Type of ownership being claimed"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_competing_claim",
+   "fieldtype": "Check",
+   "label": "Is Competing Claim",
+   "read_only": 1,
+   "description": "Indicates if another seller has already claimed this brand"
+  },
+  {
+   "fieldname": "documents_section",
+   "fieldtype": "Section Break",
+   "label": "Supporting Documents"
+  },
+  {
+   "fieldname": "trademark_certificate",
+   "fieldtype": "Attach",
+   "label": "Trademark Certificate",
+   "description": "Upload trademark registration certificate"
+  },
+  {
+   "fieldname": "column_break_documents",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "trade_registry_document",
+   "fieldtype": "Attach",
+   "label": "Trade Registry Document",
+   "description": "Upload trade registry or business registration document"
+  },
+  {
+   "fieldname": "justification_section",
+   "fieldtype": "Section Break",
+   "label": "Justification"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Text Editor",
+   "label": "Justification",
+   "description": "Detailed justification for the brand ownership claim"
+  },
+  {
+   "fieldname": "status_tab",
+   "fieldtype": "Tab Break",
+   "label": "Review"
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nUnder Review\nApproved\nRejected",
+   "reqd": 1,
+   "description": "Current status of the ownership claim",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Reviewed By",
+   "options": "User",
+   "read_only": 1,
+   "description": "Admin user who reviewed this claim",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "label": "Review Date",
+   "read_only": 1,
+   "description": "Date when the claim was reviewed",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "rejection_section",
+   "fieldtype": "Section Break",
+   "label": "Rejection Details",
+   "depends_on": "eval:doc.status == 'Rejected'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Data",
+   "label": "Rejection Reason",
+   "description": "Brief reason for rejecting the claim",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "rejection_details",
+   "fieldtype": "Small Text",
+   "label": "Rejection Details",
+   "description": "Detailed explanation of why the claim was rejected",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "admin_section",
+   "fieldtype": "Section Break",
+   "label": "Admin Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "admin_notes",
+   "fieldtype": "Small Text",
+   "label": "Admin Notes",
+   "description": "Internal admin notes about this claim (not visible to seller)",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "tenant_section",
+   "fieldtype": "Section Break",
+   "label": "Tenant"
+  },
+  {
+   "fetch_from": "claiming_seller.tenant",
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "description": "Auto-filled from Claiming Seller - Multi-tenant isolation field"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Brand",
+   "link_doctype": "Brand",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Seller",
+   "link_doctype": "Seller Profile",
+   "link_fieldname": "name"
+  }
+ ],
+ "modified": "2026-02-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Catalog",
+ "name": "Brand Ownership Claim",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Seller",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "claiming_seller, brand, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "gray",
+   "title": "Pending"
+  },
+  {
+   "color": "blue",
+   "title": "Under Review"
+  },
+  {
+   "color": "green",
+   "title": "Approved"
+  },
+  {
+   "color": "red",
+   "title": "Rejected"
+  }
+ ],
+ "title_field": "brand",
+ "track_changes": 1
+}

@@ -1,0 +1,91 @@
+{
+	"actions": [],
+	"allow_rename": 0,
+	"creation": "2026-03-09 00:00:00.000000",
+	"doctype": "DocType",
+	"engine": "InnoDB",
+	"field_order": [
+		"category_proposal_section",
+		"enable_proposal_rate_limit",
+		"column_break_rate_limit",
+		"max_pending_proposals",
+		"daily_weekly_section",
+		"max_daily_category_proposals",
+		"column_break_weekly",
+		"max_weekly_category_proposals"
+	],
+	"fields": [
+		{
+			"fieldname": "category_proposal_section",
+			"fieldtype": "Section Break",
+			"label": "Category Proposal Rate Limiting"
+		},
+		{
+			"default": "1",
+			"description": "Enable rate limiting for category proposals submitted by sellers",
+			"fieldname": "enable_proposal_rate_limit",
+			"fieldtype": "Check",
+			"label": "Enable Proposal Rate Limit"
+		},
+		{
+			"fieldname": "column_break_rate_limit",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "3",
+			"description": "Maximum number of pending (unresolved) category proposals per seller",
+			"fieldname": "max_pending_proposals",
+			"fieldtype": "Int",
+			"label": "Max Pending Proposals"
+		},
+		{
+			"fieldname": "daily_weekly_section",
+			"fieldtype": "Section Break",
+			"label": "Daily & Weekly Limits"
+		},
+		{
+			"default": "5",
+			"description": "Maximum number of category proposals a seller can submit per day",
+			"fieldname": "max_daily_category_proposals",
+			"fieldtype": "Int",
+			"label": "Max Daily Category Proposals"
+		},
+		{
+			"fieldname": "column_break_weekly",
+			"fieldtype": "Column Break"
+		},
+		{
+			"default": "15",
+			"description": "Maximum number of category proposals a seller can submit per week",
+			"fieldname": "max_weekly_category_proposals",
+			"fieldtype": "Int",
+			"label": "Max Weekly Category Proposals"
+		}
+	],
+	"index_web_pages_for_search": 0,
+	"issingle": 1,
+	"links": [],
+	"modified": "2026-03-09 00:00:00.000000",
+	"modified_by": "Administrator",
+	"module": "TradeHub Catalog",
+	"name": "TradeHub Catalog Settings",
+	"owner": "Administrator",
+	"permissions": [
+		{
+			"create": 1,
+			"delete": 1,
+			"email": 1,
+			"export": 1,
+			"print": 1,
+			"read": 1,
+			"report": 1,
+			"role": "System Manager",
+			"share": 1,
+			"write": 1
+		}
+	],
+	"quick_entry": 0,
+	"sort_field": "modified",
+	"sort_order": "DESC",
+	"track_changes": 1
+}

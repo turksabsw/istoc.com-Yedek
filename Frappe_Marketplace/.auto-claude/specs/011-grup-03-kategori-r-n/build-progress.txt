@@ -1,0 +1,191 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: TradeHub Kategori & Ürün Sistemi - 6 Document Master Implementation
+Workspace: /home/ali/Masaüstü/Frappe_Marketplace
+Started: 2026-03-09
+
+Workflow Type: feature
+Rationale: Large-scale feature spanning 6 planning documents (137.md, 102.md, 136.md, 138.md, 140.md, 144.md) across 2 Frappe apps. Creates 5 new DocTypes, modifies 6+ existing ones, implements SVG sanitization, permission restructuring, workflow-driven proposal pipeline, and 3 data migration patches. Strict dependency order enforced.
+
+Session 1 (Planner):
+- Completed deep codebase investigation
+- Analyzed 53 existing DocTypes in tradehub_catalog
+- Analyzed 38 existing DocTypes in tradehub_seller
+- Read pattern files: category.py, product_category.py, listing.py, listing.js, hooks.py
+- Created implementation_plan.json
+- Created init.sh
+- Created build-progress.txt
+- Updated project_index.json with full service details
+- Updated context.json with files to modify/create/reference
+
+Phase Summary:
+- Phase 1 (Doc 137 - Permission Lockdown): 4 subtasks, depends on []
+  - Update category.json permissions (remove All, add Seller/Buyer)
+  - Create category_list.js
+  - Add deactivation guard to category.py
+  - Restrict workspace shortcut
+
+- Phase 2 (Doc 102 - Category Tree Migration): 8 subtasks, depends on [phase-1]
+  - Create Seller Custom Category DocType (JSON + PY + __init__)
+  - Update listing.json category references (Category -> Product Category)
+  - Update pim_product.json primary_category reference
+  - Update listing.js cascader logic
+  - Update listing.py for Product Category references
+  - Create migration patch (Category -> Product Category)
+  - Update hooks.py with permission queries
+
+- Phase 3 (Doc 136 - SVG Icons): 6 subtasks, depends on [phase-2]
+  - Add icon fields to category.json
+  - Add icon fields to product_category.json
+  - Add SVG validation to category.py (defusedxml)
+  - Add SVG validation to product_category.py
+  - Create category_icon.js + category_icon.css
+  - Update requirements.txt + hooks.py includes
+
+- Phase 4 (Doc 138 - Attribute Sets): 7 subtasks, depends on [phase-2]
+  - Create Category Attribute Set child table DocType
+  - Create Product Attribute Set child table DocType
+  - Add attribute fields to product_category.json
+  - Add product_attribute_sets to listing.json, pim_product.json, listing_attribute_value.json
+  - Add single-default validation to product_category.py
+  - Update listing.js attribute auto-assignment
+  - Create attribute set migration patch
+
+- Phase 5 (Doc 140 - Condition/Origin): 5 subtasks, depends on [phase-4]
+  - Add condition/origin fields to pim_product.json
+  - Add condition/origin fields to listing.json
+  - Add condition_note validation to pim_product.py + listing.py
+  - Add condition handlers to pim_product.js + listing.js
+  - Create condition backfill patch
+
+- Phase 6 (Doc 144 - Category Proposal): 6 subtasks, depends on [phase-2]
+  - Create TradeHub Catalog Settings Single DocType
+  - Create Category Proposal DocType JSON
+  - Create Category Proposal controller (py)
+  - Create Category Proposal client script (js)
+  - Create workflow + notification fixtures
+  - Update hooks.py (proposals permissions, scheduler, fixtures)
+
+- Phase 7 (Integration): 3 subtasks, depends on [phase-3, phase-4, phase-5, phase-6]
+  - Register all patches in patches.txt
+  - Final hooks.py consolidation
+  - End-to-end JSON validation
+
+Services Involved:
+- tradehub_catalog: Primary app — Category, Product Category, PIM Product, new DocTypes
+- tradehub_seller: Secondary app — Listing, Listing Attribute Value modifications
+
+New DocTypes to Create:
+- Seller Custom Category (tradehub_catalog) — seller-scoped custom sub-categories
+- Category Attribute Set (tradehub_catalog) — child table for multi-attribute-set per category
+- Product Attribute Set (tradehub_catalog) — child table for per-product attribute sets
+- Category Proposal (tradehub_catalog) — workflow-driven seller->admin proposal pipeline
+- TradeHub Catalog Settings (tradehub_catalog) — Single DocType for rate-limit config
+
+Patches to Create:
+1. migrate_category_to_product_category.py
+2. migrate_attribute_set_to_child_table.py
+3. backfill_condition_field.py
+
+Parallelism Analysis:
+- Max parallel phases: 1
+- Recommended workers: 1
+- Sequential execution required: all phases modify overlapping files
+  (listing.json touched by phases 2,4,5; pim_product.json by phases 2,4,5;
+   hooks.py by phases 2,3,6; category.py by phases 1,3)
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 011 --parallel 1
+
+=== END SESSION 1 ===
+
+=== SESSION: subtask-1-3 ===
+
+Subtask 1-3: Add deactivation guard to category.py
+- Added validate_deactivation() method to Category class
+- Method checks for active sub-categories (parent_category=self.name, is_active=1)
+- Method checks for active listings (category=self.name, is_active=1)
+- Only triggers when transitioning from active to inactive (not on already-inactive saves)
+- Uses cint() for safe boolean checks, frappe.db.get_value for DB comparison
+- Called from validate() alongside existing validate_commission_rates and validate_parent_category
+- Follows existing code patterns (frappe.throw with _(), frappe.db.count for checks)
+- Verification: OK
+- Committed: 4d7c813
+
+Status: subtask-1-3 COMPLETED
+
+=== END subtask-1-3 ===
+
+=== SESSION: subtask-7-2 ===
+
+Subtask 7-2: Final hooks.py consolidation
+- Verified all permission_query_conditions: Seller Custom Category ✓, Category Proposal ✓
+- Verified all has_permission: Seller Custom Category ✓, Category Proposal ✓
+- Verified scheduler_events: hourly (media_processor) ✓, daily (ranking, remind_pending_proposals) ✓
+- Verified fixtures ordering: Workflow State → Workflow Action Master → Workflow (filtered) → Notification (filtered) ✓
+- Verified app_include_css: /assets/tradehub_catalog/css/category_icon.css ✓
+- Verified app_include_js: /assets/tradehub_catalog/js/category_icon.js ✓
+- Verified all referenced Python modules exist with correct functions:
+  - seller_custom_category.py: get_permission_query_conditions, has_permission ✓
+  - category_proposal.py: get_permission_query_conditions, has_permission, remind_pending_proposals ✓
+  - tasks.py: media_processor, ranking ✓
+- Verified all referenced assets exist:
+  - public/css/category_icon.css ✓
+  - public/js/category_icon.js ✓
+  - fixtures/ directory with 4 fixture files ✓
+- Python syntax check: Hooks syntax OK ✓
+- No changes needed — hooks.py was already properly configured from subtask-6-6
+
+Status: subtask-7-2 COMPLETED
+
+=== END subtask-7-2 ===
+
+=== SESSION: subtask-7-3 ===
+
+Subtask 7-3: End-to-end JSON validation
+- Validated 10 DocType JSON files across tradehub_catalog and tradehub_seller
+- All files parse as valid JSON ✓
+- Module values correct for all DocTypes:
+  - tradehub_catalog (8 DocTypes): Category, Product Category, Seller Custom Category,
+    Category Attribute Set, Product Attribute Set, Category Proposal,
+    TradeHub Catalog Settings, PIM Product ✓
+  - tradehub_seller (2 DocTypes): Listing, Listing Attribute Value ✓
+- Name values match expected DocType names for all 10 files ✓
+- field_order arrays match actual field definitions (no missing/extra entries) ✓
+- No duplicate field names or field_order entries ✓
+- All Link fields have valid options references ✓
+- All Table fields have valid child DocType references ✓
+- Cross-reference validation:
+  - Listing.category/subcategory -> Product Category ✓
+  - Listing.seller_custom_category -> Seller Custom Category ✓
+  - Listing.product_attribute_sets -> Product Attribute Set ✓
+  - PIM Product.primary_category -> Product Category ✓
+  - PIM Product.product_attribute_sets -> Product Attribute Set ✓
+  - Product Category.category_attribute_sets -> Category Attribute Set ✓
+  - Listing Attribute Value.attribute_set -> Attribute Set ✓
+  - Seller Custom Category.seller -> Seller Profile ✓
+  - Seller Custom Category.marketplace_category -> Product Category ✓
+  - Category Proposal.parent_category -> Product Category ✓
+  - Category Proposal.created_category -> Product Category ✓
+- Permission checks:
+  - Category: no 'All' role, has Seller+Buyer read-only ✓
+  - Category: show_name_in_global_search = 0 ✓
+  - Category: is_active has in_standard_filter ✓
+- Feature field checks:
+  - Icon fields (icon, icon_name, icon_class, icon_color) on both Category and Product Category ✓
+  - Condition field with 8 options on both Listing and PIM Product ✓
+  - condition_note on both Listing and PIM Product ✓
+  - Origin fields (country_of_origin, city_of_origin, manufactured_by) on Listing ✓
+  - Origin fields (city_of_origin, manufactured_by) on PIM Product ✓
+  - inherit_parent_attributes on Product Category ✓
+  - TradeHub Catalog Settings: issingle=1, all rate-limit fields present ✓
+  - Child tables (Category Attribute Set, Product Attribute Set, Listing Attribute Value) all istable=1 ✓
+- No errors or warnings found
+- Verification command: All JSONs valid ✓
+
+Status: subtask-7-3 COMPLETED
+
+=== END subtask-7-3 ===

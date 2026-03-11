@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "SPM-.#####",
+ "creation": "2026-02-12 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "seller_section",
+  "seller",
+  "column_break_1",
+  "status",
+  "accepted_methods_section",
+  "accepted_methods"
+ ],
+ "fields": [
+  {
+   "fieldname": "seller_section",
+   "fieldtype": "Section Break",
+   "label": "Seller Information"
+  },
+  {
+   "fieldname": "seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Seller",
+   "options": "Seller Profile",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nInactive",
+   "reqd": 1
+  },
+  {
+   "fieldname": "accepted_methods_section",
+   "fieldtype": "Section Break",
+   "label": "Accepted Payment Methods"
+  },
+  {
+   "fieldname": "accepted_methods",
+   "fieldtype": "Table",
+   "label": "Accepted Methods",
+   "options": "Seller Accepted Payment Method",
+   "reqd": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-02-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Commerce",
+ "name": "Seller Payment Method",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

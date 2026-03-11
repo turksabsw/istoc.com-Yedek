@@ -1,0 +1,249 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "CS-.YYYY.-.#####",
+ "creation": "2026-03-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "basic_info_section",
+  "cart",
+  "buyer",
+  "status",
+  "column_break_basic",
+  "checkout_started_at",
+  "expires_at",
+  "timer_extended",
+  "concurrent_lock",
+  "seller_groups_section",
+  "seller_groups",
+  "totals_tab",
+  "totals_section",
+  "subtotal",
+  "shipping_total",
+  "tax_total",
+  "column_break_totals",
+  "discount_total",
+  "grand_total",
+  "completion_section",
+  "completed_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Session Information"
+  },
+  {
+   "fieldname": "cart",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Cart",
+   "options": "Cart",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Buyer",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nPayment Processing\nCompleted\nExpired\nCancelled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Now",
+   "fieldname": "checkout_started_at",
+   "fieldtype": "Datetime",
+   "label": "Checkout Started At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expires_at",
+   "fieldtype": "Datetime",
+   "label": "Expires At"
+  },
+  {
+   "default": "0",
+   "fieldname": "timer_extended",
+   "fieldtype": "Check",
+   "label": "Timer Extended"
+  },
+  {
+   "fieldname": "concurrent_lock",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Concurrent Lock"
+  },
+  {
+   "fieldname": "seller_groups_section",
+   "fieldtype": "Section Break",
+   "label": "Seller Groups"
+  },
+  {
+   "fieldname": "seller_groups",
+   "fieldtype": "Table",
+   "label": "Seller Groups",
+   "options": "Checkout Seller Group"
+  },
+  {
+   "fieldname": "totals_tab",
+   "fieldtype": "Tab Break",
+   "label": "Totals"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Order Totals"
+  },
+  {
+   "default": "0",
+   "fieldname": "subtotal",
+   "fieldtype": "Currency",
+   "label": "Subtotal",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "shipping_total",
+   "fieldtype": "Currency",
+   "label": "Shipping Total",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "tax_total",
+   "fieldtype": "Currency",
+   "label": "Tax Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "discount_total",
+   "fieldtype": "Currency",
+   "label": "Discount Total",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "grand_total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Grand Total",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completion_section",
+   "fieldtype": "Section Break",
+   "label": "Completion"
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "Completed At",
+   "read_only": 1
+  }
+ ],
+ "has_web_view": 0,
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "group": "Related",
+   "link_doctype": "Cart",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Related",
+   "link_doctype": "Marketplace Order",
+   "link_fieldname": "cart"
+  }
+ ],
+ "modified": "2026-03-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Commerce",
+ "name": "Checkout Session",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 0,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "cancel": 0,
+   "create": 1,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "cart, buyer, status",
+ "show_name_in_global_search": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "blue",
+   "title": "Active"
+  },
+  {
+   "color": "orange",
+   "title": "Payment Processing"
+  },
+  {
+   "color": "green",
+   "title": "Completed"
+  },
+  {
+   "color": "gray",
+   "title": "Expired"
+  },
+  {
+   "color": "red",
+   "title": "Cancelled"
+  }
+ ],
+ "track_changes": 1
+}

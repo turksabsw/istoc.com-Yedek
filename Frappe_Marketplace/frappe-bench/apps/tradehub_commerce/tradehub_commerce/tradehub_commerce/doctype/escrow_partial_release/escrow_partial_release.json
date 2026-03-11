@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "creation": "2026-02-12 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "release_date",
+  "amount",
+  "column_break_1",
+  "released_by",
+  "reason",
+  "details_section",
+  "reference",
+  "column_break_2",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "release_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Release Date",
+   "reqd": 1,
+   "description": "When the partial release was made"
+  },
+  {
+   "default": "0",
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "options": "currency",
+   "reqd": 1,
+   "description": "Amount released in this partial release"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "released_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Released By",
+   "options": "User",
+   "description": "User who approved/initiated the release"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reason",
+   "description": "Reason for partial release"
+  },
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "label": "Reference",
+   "description": "External reference or transaction ID"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Completed",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nCompleted\nFailed",
+   "description": "Status of this partial release"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Commerce",
+ "name": "Escrow Partial Release",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "release_date",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

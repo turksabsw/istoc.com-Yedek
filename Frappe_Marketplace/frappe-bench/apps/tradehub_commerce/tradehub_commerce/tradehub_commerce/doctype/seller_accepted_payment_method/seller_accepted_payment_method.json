@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "creation": "2026-02-12 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "payment_method",
+  "column_break_1",
+  "compatible_term_types",
+  "is_enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Payment Method",
+   "options": "Payment Method",
+   "description": "Accepted payment method"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "compatible_term_types",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Compatible Term Types",
+   "description": "Comma-separated list of compatible payment term types"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Enabled",
+   "description": "Whether this payment method is currently enabled"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-12 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Commerce",
+ "name": "Seller Accepted Payment Method",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

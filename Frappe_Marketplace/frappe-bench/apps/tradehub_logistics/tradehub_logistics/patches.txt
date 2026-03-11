@@ -1,0 +1,1 @@
+tradehub_logistics.patches.migrate_json_to_child_tables

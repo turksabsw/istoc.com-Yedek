@@ -1,0 +1,80 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: TradeHub B2B Marketplace — Payment Terms, Checkout, Order Actions, Partial Shipment, Cart Protection, Seller Panel & Packing Slip
+Workspace: /home/ali/Masaüstü/Frappe_Marketplace
+Started: 2026-03-11
+
+Workflow Type: feature
+Rationale: Multi-subsystem additive feature build — 13 new DocTypes, 6 API modules (~40 whitelist methods), modifications to 6 existing DocTypes, Custom Fields on 6 ERPNext DocTypes, scheduler tasks, print format, JS files. All additive, no refactoring.
+
+Session 1 (Planner):
+- Created implementation_plan.json
+- Phases: 8
+- Total subtasks: 33
+- Created init.sh
+- Created project_index.json
+- Created context.json
+
+Phase Summary:
+- Phase 1a — Payment Terms DocTypes (117.md): 7 subtasks, depends on [] [PARALLEL-SAFE]
+- Phase 1b — Cart Protection & Stock Reservation (127.md): 6 subtasks, depends on [] [PARALLEL-SAFE]
+- Phase 2  — Checkout Session + API (123.md): 4 subtasks, depends on [Phase 1a, Phase 1b]
+- Phase 3  — Marketplace Order Actions + Custom Fields (125.md): 5 subtasks, depends on [Phase 2]
+- Phase 4  — Partial Shipment & Balance Tracking (126.md): 1 subtask, depends on [Phase 3]
+- Phase 5  — Seller Panel Sub Order Actions + Proforma Invoice (147.md): 5 subtasks, depends on [Phase 3, Phase 4]
+- Phase 6  — Packing Slip Print Format (148.md): 2 subtasks, depends on [Phase 4, Phase 5]
+- Phase 7  — Integration: hooks.py + Fixtures + Seed Data + Indexes: 3 subtasks, depends on [Phase 6]
+
+Services Involved:
+- tradehub_commerce: Primary app — all new DocTypes, APIs, hooks, JS, print format
+- erpnext: Integration target — Custom Fields on 6 DocTypes (SI, DN, DNI, PE, PR, Shipment)
+- tradehub_core: Existing dependency — tenant isolation, ECA, ERPNext sync
+- tradehub_seller: Existing dependency — Seller Profile for ownership validation
+- tradehub_catalog: Existing dependency — product/listing data for Cart & Stock Reservation
+
+Parallelism Analysis:
+- Max parallel phases: 2 (Phase 1a + Phase 1b)
+- Recommended workers: 2
+- Parallel groups: [Phase 1a + Phase 1b] — both have no dependencies, modify different file sets
+- Speedup estimate: ~1.3x (only first 13 subtasks can parallelize; remaining 17 are sequential)
+
+Critical Implementation Notes:
+- DocType naming: "Marketplace Payment Terms Template" (NOT "Payment Terms Template" — ERPNext collision)
+- Concurrency: Use frappe.get_doc(dt, name, for_update=True) (NOT frappe.lock_doc — doesn't exist)
+- Payment Entry: Use erpnext get_payment_entry(), NOT get_mapped_doc
+- Payment Request: Use erpnext make_payment_request(), NOT get_mapped_doc
+- Sub Order JS: Do NOT check frm.doc.docstatus !== 1 (non-submittable, always 0)
+- Dispute DocType: Does NOT exist — implement make_dispute() as no-op stub
+- shipped_qty/remaining_qty: Display fields only — SQL query is source of truth
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 014 --parallel 2
+
+Example:
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 014 --parallel 2
+
+=== END SESSION 1 ===
+
+=== SUBTASK 7-3: Seed Data + Performance Indexes + Smoke Test ===
+
+Changes made:
+1. install.py: Added create_default_checkout_settings() (delegates to setup/install.py) and create_performance_indexes() for DN custom field indexes. Updated after_install() to call all 4 setup functions.
+2. overrides/: Created package with marketplace_order_actions.py (re-exports + on_shipment_create) and partial_shipment.py (re-exports validate_over_shipment) to match hooks.py doc_event references.
+3. tasks/__init__.py: Updated to re-export all 6 scheduled functions from cart_protection.py + inline seller_payout stub, resolving tasks.py vs tasks/ package conflict.
+
+Verification status (sandbox-limited — bench commands must be run manually):
+- [x] install.py has create_default_payment_terms() with 12 templates
+- [x] install.py has create_default_checkout_settings() with defaults
+- [x] install.py has create_performance_indexes() for DN indexes
+- [x] overrides/ package matches hooks.py doc_event references
+- [x] tasks/__init__.py exports all scheduled functions
+- [x] Print Format 'Marketplace Packing Slip' exists (json + html)
+- [x] All 6 API modules exist: payment_terms_utils, cart_protection, checkout_api, marketplace_order_actions, partial_shipment, sub_order_seller_actions
+- [ ] bench migrate (requires live bench)
+- [ ] bench build (requires live bench)
+- [ ] bench doctor (requires live bench)
+
+=== END SUBTASK 7-3 ===

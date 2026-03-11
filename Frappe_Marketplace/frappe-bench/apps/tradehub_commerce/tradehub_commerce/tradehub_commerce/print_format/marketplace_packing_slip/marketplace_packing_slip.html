@@ -1,0 +1,361 @@
+{%- set is_partial = doc.get("custom_is_partial_shipment") or 0 -%}
+{%- set is_draft = doc.docstatus == 0 -%}
+{%- set is_cancelled = doc.docstatus == 2 -%}
+{%- set mo_reference = doc.get("custom_marketplace_order") or "" -%}
+{%- set shipment_number = doc.get("custom_shipment_number") or 1 -%}
+{%- set total_shipments = doc.get("custom_total_shipments") or 1 -%}
+{%- set carrier = doc.get("custom_carrier") or "" -%}
+{%- set tracking_number = doc.get("custom_tracking_number") or "" -%}
+{%- set buyer_name = doc.get("customer_name") or doc.get("customer") or "" -%}
+{%- set payment_status = doc.get("custom_payment_status") or "" -%}
+{%- set seller_name = doc.get("custom_seller_name") or "" -%}
+
+{#- Company info -#}
+{%- set company_doc = frappe.get_doc("Company", doc.company) if doc.company else None -%}
+{%- set company_name = company_doc.company_name if company_doc else (doc.company or "") -%}
+{%- set company_logo = company_doc.company_logo if company_doc else "" -%}
+{%- set company_address = company_doc.get("address") or company_doc.get("company_address") or "" if company_doc else "" -%}
+{%- set company_phone = company_doc.get("phone_no") or "" if company_doc else "" -%}
+{%- set company_tax_id = company_doc.get("tax_id") or "" if company_doc else "" -%}
+
+<style>
+    .packing-slip {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 12px;
+        color: #333;
+        position: relative;
+    }
+    .packing-slip .header {
+        border-bottom: 2px solid #333;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .packing-slip .header .company-logo {
+        max-height: 60px;
+        max-width: 200px;
+    }
+    .packing-slip .title {
+        font-size: 22px;
+        font-weight: bold;
+        text-align: center;
+        margin: 10px 0;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    .packing-slip .badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+        color: #fff;
+    }
+    .packing-slip .badge-partial {
+        background-color: #f0ad4e;
+    }
+    .packing-slip .badge-done {
+        background-color: #5cb85c;
+    }
+    .packing-slip .info-section {
+        margin-bottom: 15px;
+    }
+    .packing-slip .info-section table {
+        width: 100%;
+    }
+    .packing-slip .info-section td {
+        padding: 2px 5px;
+        vertical-align: top;
+    }
+    .packing-slip .info-section .label-col {
+        font-weight: bold;
+        width: 140px;
+        color: #555;
+    }
+    .packing-slip .address-block {
+        border: 1px solid #ccc;
+        padding: 10px;
+        min-height: 80px;
+        border-radius: 4px;
+    }
+    .packing-slip .address-block h4 {
+        margin: 0 0 5px 0;
+        font-size: 13px;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #555;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 3px;
+    }
+    .packing-slip .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+    }
+    .packing-slip .items-table th {
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        padding: 6px 8px;
+        text-align: left;
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #555;
+    }
+    .packing-slip .items-table td {
+        border: 1px solid #ccc;
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+    .packing-slip .items-table .text-right {
+        text-align: right;
+    }
+    .packing-slip .items-table .text-center {
+        text-align: center;
+    }
+    .packing-slip .progress-bar-container {
+        background-color: #e9ecef;
+        border-radius: 4px;
+        height: 20px;
+        margin: 10px 0;
+        overflow: hidden;
+    }
+    .packing-slip .progress-bar-fill {
+        background-color: #5cb85c;
+        height: 100%;
+        text-align: center;
+        color: #fff;
+        font-size: 11px;
+        line-height: 20px;
+        font-weight: bold;
+        border-radius: 4px;
+    }
+    .packing-slip .notes-section {
+        border: 1px solid #eee;
+        padding: 8px;
+        margin: 10px 0;
+        background-color: #fafafa;
+        border-radius: 4px;
+    }
+    .packing-slip .footer {
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+        margin-top: 15px;
+        font-size: 10px;
+        color: #777;
+    }
+    .packing-slip .watermark {
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 100px;
+        font-weight: bold;
+        opacity: 0.08;
+        z-index: 0;
+        pointer-events: none;
+        text-transform: uppercase;
+        letter-spacing: 10px;
+    }
+</style>
+
+<div class="packing-slip">
+    {#- Watermarks -#}
+    {% if is_draft %}
+    <div class="watermark">DRAFT</div>
+    {% endif %}
+    {% if is_cancelled %}
+    <div class="watermark">CANCELLED</div>
+    {% endif %}
+
+    {#- Company Header -#}
+    <div class="header">
+        <div class="row">
+            <div class="col-xs-6">
+                {% if company_logo %}
+                <img src="{{ company_logo }}" class="company-logo" alt="{{ company_name }}">
+                {% endif %}
+                <div style="margin-top: 5px;">
+                    <strong style="font-size: 16px;">{{ company_name }}</strong>
+                </div>
+                {% if company_address %}
+                <div>{{ company_address }}</div>
+                {% endif %}
+                {% if company_phone %}
+                <div>Tel: {{ company_phone }}</div>
+                {% endif %}
+                {% if company_tax_id %}
+                <div>Tax ID: {{ company_tax_id }}</div>
+                {% endif %}
+            </div>
+            <div class="col-xs-6 text-right">
+                <div class="title">Packing Slip</div>
+                {% if is_partial %}
+                <div>
+                    <span class="badge badge-partial">
+                        Shipment {{ shipment_number }} of {{ total_shipments }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {#- Order Info Section -#}
+    <div class="info-section">
+        <div class="row">
+            <div class="col-xs-6">
+                <table>
+                    {% if mo_reference %}
+                    <tr>
+                        <td class="label-col">Marketplace Order:</td>
+                        <td>{{ mo_reference }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="label-col">Order Date:</td>
+                        <td>{{ frappe.format_date(doc.get("custom_order_date") or doc.posting_date) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Buyer:</td>
+                        <td>{{ buyer_name }}</td>
+                    </tr>
+                    {% if payment_status %}
+                    <tr>
+                        <td class="label-col">Payment Status:</td>
+                        <td>{{ payment_status }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+            <div class="col-xs-6">
+                <table>
+                    {% if seller_name %}
+                    <tr>
+                        <td class="label-col">Seller:</td>
+                        <td>{{ seller_name }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="label-col">Delivery Note:</td>
+                        <td>{{ doc.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label-col">Shipment Date:</td>
+                        <td>{{ frappe.format_date(doc.posting_date) }}</td>
+                    </tr>
+                    {% if carrier %}
+                    <tr>
+                        <td class="label-col">Carrier:</td>
+                        <td>{{ carrier }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if tracking_number %}
+                    <tr>
+                        <td class="label-col">Tracking No:</td>
+                        <td>{{ tracking_number }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {#- Ship To / Bill To -#}
+    <div class="row" style="margin-bottom: 15px;">
+        <div class="col-xs-6">
+            <div class="address-block">
+                <h4>Ship To</h4>
+                {{ doc.shipping_address or doc.get("shipping_address_display") or doc.get("address_display") or "—" }}
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div class="address-block">
+                <h4>Bill To</h4>
+                {{ doc.get("company_address_display") or doc.get("billing_address") or doc.get("address_display") or "—" }}
+            </div>
+        </div>
+    </div>
+
+    {#- Items Table -#}
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 15%;">SKU</th>
+                <th style="width: {% if is_partial %}25{% else %}50{% endif %}%;">Product Name</th>
+                <th style="width: 10%;" class="text-right">Qty</th>
+                <th style="width: 8%;">UOM</th>
+                {% if is_partial %}
+                <th style="width: 10%;" class="text-right">Ordered</th>
+                <th style="width: 10%;" class="text-right">Prev. Shipped</th>
+                <th style="width: 10%;" class="text-right">Remaining</th>
+                {% endif %}
+                <th style="width: 7%;" class="text-center">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {%- for item in doc.items -%}
+            {%- set ordered_qty = item.get("custom_ordered_qty") or item.qty -%}
+            {%- set prev_shipped = item.get("custom_previously_shipped_qty") or 0 -%}
+            {%- set remaining = item.get("custom_remaining_after_this") if item.get("custom_remaining_after_this") is not none else (ordered_qty - prev_shipped - item.qty) -%}
+            {%- set remaining = remaining if remaining > 0 else 0 -%}
+            <tr>
+                <td>{{ item.idx }}</td>
+                <td>{{ item.item_code or "" }}</td>
+                <td>{{ item.item_name or item.item_code or "" }}</td>
+                <td class="text-right">{{ item.qty }}</td>
+                <td>{{ item.uom or item.stock_uom or "" }}</td>
+                {% if is_partial %}
+                <td class="text-right">{{ ordered_qty }}</td>
+                <td class="text-right">{{ prev_shipped }}</td>
+                <td class="text-right">{{ remaining }}</td>
+                {% endif %}
+                <td class="text-center">
+                    {% if remaining == 0 %}
+                    <span class="badge badge-done">Done</span>
+                    {% else %}
+                    <span class="badge badge-partial">Partial</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {%- endfor -%}
+        </tbody>
+    </table>
+
+    {#- Progress Bar (partial shipments only) -#}
+    {% if is_partial %}
+    {%- set fulfillment_pct = doc.get("custom_fulfillment_percentage") or 0 -%}
+    <div style="margin: 10px 0;">
+        <strong>Overall Fulfillment: {{ fulfillment_pct }}%</strong>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{ [fulfillment_pct, 100] | min }}%;">
+                {% if fulfillment_pct >= 10 %}{{ fulfillment_pct }}%{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {#- Notes Section -#}
+    {% if doc.get("instructions") or doc.get("custom_packing_notes") %}
+    <div class="notes-section">
+        <strong>Notes:</strong><br>
+        {{ doc.get("instructions") or doc.get("custom_packing_notes") or "" }}
+    </div>
+    {% endif %}
+
+    {#- Footer -#}
+    <div class="footer">
+        <div class="row">
+            <div class="col-xs-4">
+                {% if doc.get("custom_prepared_by") %}
+                <strong>Prepared by:</strong> {{ doc.custom_prepared_by }}
+                {% endif %}
+            </div>
+            <div class="col-xs-4 text-center">
+                <strong>Print Date:</strong> {{ frappe.format_date(frappe.utils.nowdate()) }}
+            </div>
+            <div class="col-xs-4 text-right">
+                <strong>Ref:</strong> {{ doc.name }}
+            </div>
+        </div>
+    </div>
+</div>

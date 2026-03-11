@@ -1,0 +1,876 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: TradeHub B2B Field Validation & Data Integrity Enhancement (Gorev 1-5)
+Workspace: /home/ali/Masaüstü/Frappe_Marketplace
+Spec: 010-002-field-validation
+Started: 2026-03-09
+
+Workflow Type: feature
+Rationale: Five interconnected data integrity enhancements spanning 7 apps: child table calculations,
+           role-based field authorization, cascading discounts, JSON-to-child-table migration, and
+           fetch_from completion. Adds new functionality while enhancing existing patterns.
+
+Session 1 (Planner):
+- Completed deep codebase investigation (Phase 0)
+  - Explored all 7 tradehub apps, 233+ DocTypes
+  - Identified 103 existing child DocTypes (all spec-mentioned ones already exist)
+  - Verified 19 DocTypes with _guard_system_fields
+  - Verified 9 DocTypes with refetch_denormalized_fields
+  - Verified 37 JS files with role-based checks
+  - Found 5 existing migration patches across apps
+  - Read canonical pattern files (order.py, order.js, sub_order.py, seller_profile.py, listing.js)
+- Created implementation_plan.json
+- Created/updated project_index.json
+- Created/updated context.json
+- Created init.sh
+- Phases: 6
+- Total subtasks: 34
+
+Phase Summary:
+- Phase 1 (Commerce JSON Schema): 5 subtasks, depends on nothing
+  - order/order_item, cart/cart_line, sub_order/marketplace_order, rfq/rfq_quote, quotation/commission_plan
+- Phase 2 (Non-Commerce JSON Schema): 6 subtasks, depends on nothing
+  - core (4 files), catalog (1 file), seller (2+2 files), compliance (3 files), marketing+logistics (3 files)
+- Phase 3 (Migration Patches & Schema Validation): 4 subtasks, depends on Phase 1+2
+  - Create discount migration patch, create Listing JSON migration patch, update patches.txt, run bench migrate
+- Phase 4 (Python Code): 9 subtasks, depends on Phase 3
+  - order.py, cart.py+sub_order.py, marketplace_order.py+quotation.py, rfq.py+rfq_quote.py,
+  - listing.py, seller_profile.py+sku_product.py, buyer_profile.py,
+  - shipping_rule.py+coupon.py, review.py+moderation_case.py+contract_instance.py
+- Phase 5 (JS Code): 8 subtasks, depends on Phase 3
+  - order.js, cart.js, sub_order.js+marketplace_order.js, rfq.js+rfq_quote.js+commission_plan.js+escrow_account.js,
+  - listing.js, seller_profile.js+buyer_profile.js, sku_product.js+seller_kpi.js,
+  - coupon.js+group_buy.js+wholesale_offer.js+marketplace_shipment.js
+- Phase 6 (Build & Integration): 2 subtasks, depends on Phase 4+5
+  - bench build + clear-cache, end-to-end verification
+
+Gorev Coverage:
+- Gorev 1 (Calculations):    Phases 4+5 (all calculate_totals in Python + JS)
+- Gorev 2 (Field Auth):      Phases 1+2 (JSON) + Phase 4 (Python guards) + Phase 5 (JS role checks)
+- Gorev 3 (Cascading Disc):  Phases 1+2 (JSON fields) + Phase 3 (migration) + Phases 4+5 (formula)
+- Gorev 4 (JSON Migration):  Phase 3 (Listing patch) + Phase 4 (Python code updates)
+- Gorev 5 (fetch_from):      Phases 1+2 (JSON) + Phase 4 (Python refetch) + Phase 5 (JS cascade)
+
+Services Involved:
+- tradehub_core: Foundation — Buyer Profile guards, refetch, tenant isolation
+- tradehub_catalog: Product fetch_from for Category/Brand
+- tradehub_commerce: Primary — Order/Cart/Sub Order calculations, cascading discounts, field auth
+- tradehub_seller: Primary — Listing/Seller Profile calculations, cascading discounts, JSON migration
+- tradehub_logistics: Integration — Shipping calculations, field auth
+- tradehub_marketing: Integration — Coupon after cascading discount, child table handlers
+- tradehub_compliance: Integration — Review/Moderation guards, Contract Instance refetch
+
+Parallelism Analysis:
+- Max parallel phases: 2
+- Recommended workers: 2
+- Parallel groups:
+  1. Phase 1 + Phase 2 (JSON schema for commerce vs non-commerce — different files)
+  2. Phase 4 + Phase 5 (Python vs JS — different file types, no conflicts)
+
+Key Findings from Investigation:
+- ALL 19 child DocTypes from @128 ALREADY EXIST — no new DocTypes needed
+- Existing migration patches handle most JSON-to-child-table work
+- Remaining migrations: Listing (attributes/images/bulk_pricing) + discount field copy
+- order.py calculate_totals needs flt() outer wrapping fix (currently missing)
+- quotation.py calculate_totals lacks flt() precision args
+- 37 JS files already have role-based checks — mostly verify, not create from scratch
+
+Risk Factors:
+- Schema changes across 7 apps — any JSON error breaks bench migrate
+- Cascading discount formula must match exactly in Python and JS
+- Data migration must not lose existing discount_percentage values
+- Multi-tenant isolation must remain intact
+- set_only_once must not be applied to amended_from fields
+- existing __init__.py files must never be deleted
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 010-002-field-validation --parallel 2
+
+Example:
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 010-002-field-validation --parallel 2
+
+=== END SESSION 1 ===
+
+=== SESSION 2 (subtask-1-2) ===
+
+Completed subtask-1-2: Update cart.json and cart_line.json
+
+Changes made:
+- cart.json (G2): Added read_only:1 to last_activity and naming_series system fields
+- cart_line.json (G2): Added read_only:1 to reserved_at and stock_reserved system fields
+- cart_line.json (G3): Added discount_1, show_discount_tiers, discount_2, discount_3, effective_discount_pct
+  - Follows order.json pattern exactly (Percent type, depends_on for D2/D3, read_only on effective_discount_pct)
+- cart_line.json (G5): Verified fetch_from already configured:
+  - title -> listing.title (read_only:1)
+  - primary_image -> listing.primary_image (read_only:1)
+  - seller_name -> seller.seller_name (read_only:1)
+
+Verification: All 20 checks passed
+Commit: c323580
+
+=== END SESSION 2 ===
+
+=== SESSION 3 (subtask-1-3) ===
+
+Completed subtask-1-3: Update sub_order, sub_order_item, marketplace_order, marketplace_order_item JSON schemas
+
+Changes made:
+- sub_order.json (G3): Added discount_1, show_discount_tiers, discount_2, discount_3, effective_discount_pct
+  in totals section before discount_amount, following order.json pattern exactly
+- sub_order.json (G2): Verified already in place - sub_order_id read_only:1,
+  marketplace_order/seller/buyer set_only_once:1
+- sub_order.json (G5): Verified fetch_from already configured for seller_name, seller_company,
+  tenant_name, buyer_name, marketplace_order_number - all with read_only:1
+
+- sub_order_item.json (G3): Added cascading discount fields in pricing section
+- sub_order_item.json (G5): Added fetch_from: "listing.sku" to sku field (was missing)
+  Verified title, seller_name fetch_from already configured
+
+- marketplace_order.json (G3): Added cascading discount fields in totals section
+- marketplace_order.json (G2): Verified order_id read_only:1, buyer/organization set_only_once:1
+- marketplace_order.json (G5): Verified buyer_name, buyer_email, organization_name,
+  tenant_name fetch_from all with read_only:1
+
+- marketplace_order_item.json (G3): Added cascading discount fields in pricing section
+- marketplace_order_item.json (G5): Verified seller_name, title, sku fetch_from all with read_only:1
+
+Verification: All field existence, type, property, and depends_on checks passed for all 4 files
+Commit: 6bb2a92
+
+=== END SESSION 3 ===
+
+=== SESSION 4 (subtask-1-4) ===
+
+Completed subtask-1-4: Update rfq.json, rfq_quote.json, rfq_quote_item.json
+
+Changes made:
+- rfq.json: All changes already in place from prior work
+  - (G2) buyer already has set_only_once:1
+  - (G5) buyer_name has fetch_from:"buyer.buyer_name" read_only:1
+  - (G5) tenant_name has fetch_from:"tenant.tenant_name" read_only:1
+
+- rfq_quote.json: All changes already in place from prior work
+  - (G2) seller has set_only_once:1, rfq has set_only_once:1
+  - (G5) seller_name has fetch_from:"seller.seller_name" read_only:1
+  - (G5) rfq_title has fetch_from:"rfq.title" read_only:1
+  - (G5) tenant_name has fetch_from:"tenant.tenant_name" read_only:1
+
+- rfq_quote_item.json (G3): Added cascading discount fields in pricing section
+  after total_price, following order.json pattern exactly:
+  - discount_1 (Percent, default "0")
+  - show_discount_tiers (Check, default "0")
+  - discount_2 (Percent, depends_on show_discount_tiers)
+  - discount_3 (Percent, depends_on show_discount_tiers)
+  - effective_discount_pct (Percent, read_only:1)
+  - discount_amount (Currency, options:"currency", read_only:1)
+
+Verification: All 13 checks passed (buyer set_only_once, fetch_from fields, all 6 discount fields)
+Commit: fd84561
+
+=== END SESSION 4 ===
+
+=== SESSION 5 (subtask-1-5) ===
+
+Completed subtask-1-5: Update quotation.json, quotation_item.json, commission_plan.json, escrow_account.json
+
+Changes made:
+- quotation.json (G2): Added permlevel:1 to buyer_evaluation_score, buyer_evaluation_notes,
+  and rejection_reason (admin/buyer evaluation fields - not seller-editable).
+  Verified: quotation_number read_only:1, status permlevel:1, rfq/seller set_only_once:1,
+  all fetch_from fields (rfq_title, rfq_type, rfq_deadline, rfq_buyer, rfq_buyer_company,
+  seller_name, seller_company, seller_email, seller_phone, tenant, tenant_name) already have read_only:1.
+  Computed fields (subtotal, discount_amount, tax_amount, total_amount, advance_amount) already read_only:1.
+  Date fields (created_date, submitted_date, reviewed_date, decided_date) already read_only:1.
+
+- quotation_item.json (G3): Added cascading discount fields following order_item.json pattern:
+  - discount_section (Section Break, collapsible)
+  - discount_1 (Percent, default "0")
+  - show_discount_tiers (Check, default "0")
+  - discount_2 (Percent, depends_on show_discount_tiers)
+  - discount_3 (Percent, depends_on show_discount_tiers)
+  - column_break_discount (Column Break)
+  - effective_discount_pct (Percent, read_only:1)
+  - discount_amount (Currency, read_only:1)
+
+- commission_plan.json (G2): No changes needed - already fully protected:
+  - All stats fields (total_sellers, total_gmv_processed, total_commission_earned,
+    average_commission_rate, last_calculation_date, current_seller_count) have read_only:1
+  - Timestamp fields (created_by, created_at, modified_by, modified_at) have read_only:1
+  - status has permlevel:1, tenant has read_only:1
+  - tenant_name has fetch_from + read_only:1
+
+- escrow_account.json (G2): Added read_only:1 to 8 system/computed fields:
+  - platform_fee (computed fee)
+  - processing_fee (computed fee)
+  - delivery_confirmed_at (system timestamp)
+  - payout_error (system-set)
+  - payout_reference (system-set from payment gateway)
+  - original_release_date (system-set)
+  - extended_release_date (system-set)
+  - erpnext_sync_error (system-set)
+  Verified: escrow_id, closed_at, created_at, held_amount, released_amount, refunded_amount,
+  pending_release_amount, total_fees, net_amount_to_seller, payout_date, payout_amount already read_only:1.
+  seller/buyer/marketplace_order/sub_order/payment_intent already set_only_once:1.
+
+Verification: All checks passed - 4 valid JSON files, all G2/G3 fields confirmed
+Commit: 8315a8b
+
+=== END SESSION 5 ===
+
+=== SESSION 6 (subtask-2-2) ===
+
+Completed subtask-2-2: Verify/update product.json in tradehub_catalog
+
+Changes made:
+- product.json (G5): Verified all fetch_from fields already correctly configured:
+  - brand_name: fetch_from="brand.brand_name", read_only:1 ✓
+  - category_name: fetch_from="category.category_name", read_only:1 ✓
+  - family_name: fetch_from="product_family.family_name", read_only:1 ✓
+- Confirmed Category DocType has category_name as title/display field
+- Confirmed Brand DocType has brand_name as title/display field
+- Updated modified timestamp to 2026-03-09
+
+Verification: 3 fetch_from fields - OK (all have read_only:1)
+
+=== END SESSION 6 ===
+
+=== SESSION 7 (subtask-2-4) ===
+
+Completed subtask-2-4: Update buy_box_entry.json and seller_application.json field protections
+
+Analysis:
+- buy_box_entry.json: Thorough review of all fields. All system/computed fields already
+  properly protected:
+  - 27 fields with read_only:1 (all fetch_from fields, scoring fields, system dates)
+  - 2 primary links with set_only_once:1 (sku_product, seller)
+  - 2 admin fields with permlevel:1 (status, internal_notes)
+  - No changes needed — already fully protected
+
+- seller_application.json: Found 1 missing protection:
+  - Added read_only:1 to erpnext_supplier (system-assigned ERPNext Supplier link,
+    created upon approval/integration, should not be manually editable)
+  - Verified all 18 read_only, 1 set_only_once, 10 permlevel fields correct
+
+Comprehensive verification: All field protections validated across both files
+Commit: 7254a96
+
+=== END SESSION 7 ===
+
+=== SESSION 8 (subtask-2-6) ===
+
+Completed subtask-2-6: Update marketing and logistics JSONs with field protections
+
+Analysis:
+- coupon.json: Reviewed all fields. Already fully protected:
+  - 6 read_only fields (status, seller_name, tenant, tenant_name, used_count, campaign_name)
+  - 2 set_only_once fields (seller, campaign)
+  - 1 permlevel:1 field (is_active)
+  - No changes needed
+
+- campaign.json: Reviewed all fields. Already fully protected:
+  - 12 read_only fields (all analytics, budget tracking, fetch_from fields)
+  - 1 set_only_once field (seller)
+  - 4 permlevel:1 fields (status, priority, is_featured, internal_notes)
+  - No changes needed
+
+- marketplace_shipment.json: Added read_only:1 to 16 system/carrier-managed fields:
+  Delivery tracking: delivery_status, delivery_attempts, actual_delivery_date, delivery_time
+  Delivery proof: delivered_to, delivery_signature, proof_of_delivery
+  Label/shipping: label_generated, label_url
+  System operational: manifest_id, batch_id
+  Computed: total_volume
+  Newer system fields: pod_verified, received_by, receiver_signature, signature_captured_at
+  Total after changes: 31 read_only, 4 set_only_once, 2 permlevel:1
+
+Verification: All 3 files valid JSON with correct field protections
+Commit: b6cef13
+
+=== END SESSION 8 ===
+
+=== SESSION 9 (subtask-3-4) ===
+
+Completed subtask-3-4: Validate schema changes and migration patches for bench migrate readiness
+
+NOTE: bench migrate cannot be executed in isolated worktree (no database, no Frappe
+virtual environment, no site_config.json). Performed comprehensive pre-flight validation instead.
+
+Validation Results:
+
+1. JSON Schema Validity (23 modified files):
+   - All 23 DocType JSON files parse as valid JSON ✓
+   - Every field has required properties (fieldname, fieldtype, label) ✓
+   - Zero duplicate fieldname values in any DocType ✓
+   - All depends_on references resolve to fields in the same DocType ✓
+   - All fetch_from values use correct link_field.target_field format ✓
+   - All Table field options reference existing child DocType names ✓
+   - All __init__.py files intact across all 7 apps ✓
+
+2. Cascading Discount Fields (G3) - 8 DocTypes verified:
+   - order, cart_line, sub_order, sub_order_item ✓
+   - marketplace_order, marketplace_order_item ✓
+   - rfq_quote_item, quotation_item ✓
+   - All 5 fields (discount_1/2/3, show_discount_tiers, effective_discount_pct) present ✓
+   - All fields present in both fields array and field_order array ✓
+
+3. Field Protection (G2) - verified:
+   - order: buyer/seller set_only_once:1, order_number read_only:1 ✓
+   - rfq: buyer set_only_once:1 ✓
+   - rfq_quote: seller/rfq set_only_once:1 ✓
+   - listing: seller set_only_once:1 ✓
+   - seller_profile/buyer_profile: tenant_name read_only:1 ✓
+
+4. fetch_from (G5) - 9 key fields verified:
+   - All have fetch_from with read_only:1 ✓
+
+5. Migration Patches (6 files validated):
+   - All have def execute() ✓
+   - All call frappe.reload_doc() before accessing new fields ✓
+   - All are idempotent (safe to run multiple times) ✓
+   - All use flags.ignore_validate=True + flags.ignore_permissions=True ✓
+   - All call frappe.db.commit() ✓
+   - All wrap records in try/except with frappe.log_error() ✓
+   - JSON patches use parse_json_field() with null/empty/malformed handling ✓
+
+6. patches.txt Files (4 apps):
+   - tradehub_commerce: 2 entries, both files exist ✓
+   - tradehub_seller: 2 entries, both files exist ✓
+   - tradehub_compliance: 2 entries, both files exist ✓
+   - tradehub_logistics: 1 entry, file exists ✓
+
+Non-blocking warnings:
+- 8 DocTypes have field_order/fields mismatches (all pre-existing from main branch)
+- Patches use frappe.log_error() for success summaries (works but not ideal)
+- has_child_rows() helper defined but unused in 2 patches (dead code)
+
+Conclusion: All schema changes and migration patches are properly structured
+and should apply cleanly during bench migrate. Actual migration must be run
+in the full Frappe bench environment (not isolated worktree).
+
+=== END SESSION 9 ===
+
+=== SESSION 10 (subtask-4-1) ===
+
+Completed subtask-4-1: Update order.py (Phase 4 - Python Server-Side Code)
+
+Changes made:
+- order.py calculate_totals() (G1): Fixed item.amount calculation to use
+  flt(flt(item.quantity, 2) * flt(item.unit_price, 2), 2) with outer wrapping.
+  Fixed subtotal aggregation: subtotal += flt(item.amount, 2).
+  Fixed self.subtotal = flt(subtotal, 2).
+  All numeric ops now properly wrapped in flt(..., 2).
+
+- order.py validate() (G2): Verified _guard_system_fields and _guard_primary_links
+  are called first in validate() - already correctly ordered per Pattern 9.
+
+- order.py calculate_totals() (G3): Replaced single discount_percentage calculation
+  with cascading formula:
+    price_after_d1 = flt(subtotal * (1 - d1/100), 2)
+    price_after_d2 = flt(price_after_d1 * (1 - d2/100), 2)
+    final_price = flt(price_after_d2 * (1 - d3/100), 2)
+  Added discount validation (0-100 range).
+  Computes effective_discount_pct for display.
+
+- order.py refetch_denormalized_fields() (G5): Fixed field name mismatches:
+  - seller_tier_name -> seller_tier (matches order.json fieldname)
+  - quotation_total -> quotation_amount (matches order.json fieldname)
+
+Verification: 16/16 pattern checks passed, syntax OK, Pattern 9 ordering verified
+Commit: 80a6aac
+
+=== END SESSION 10 ===
+
+=== SESSION 11 (subtask-4-2) ===
+
+Completed subtask-4-2: Update cart.py and sub_order.py (Phase 4 - Python Server-Side Code)
+
+Changes made to cart.py:
+- validate() reordered per Pattern 9: moved check_expiry() before calculate_totals()
+  so status validation happens before calculations
+- calculate_totals() (G1): All numeric ops wrapped with flt(value, 2):
+  - subtotal/tax_amount aggregation: flt(item.line_total, 2), flt(item.tax_amount, 2)
+  - self.subtotal = flt(subtotal, 2), self.tax_amount = flt(tax_amount, 2)
+  - discount_amount, total_savings, grand_total all wrapped with flt(..., 2)
+  - savings calculation uses flt(item.compare_at_price, 2), flt(item.unit_price, 2)
+  - Added if self.items guard before iterating
+- calculate_totals() (G3): Added cascading discount per cart line item
+  (discount_1/2/3 fields are on CartLine child table):
+  - Validates 0-100 range for each discount tier
+  - Formula: base * (1-d1/100) * (1-d2/100) * (1-d3/100)
+  - Sets item.discount_amount, item.effective_discount_pct, item.discounted_price
+  - Recalculates item.line_total with cascading discount applied
+
+Changes made to sub_order.py:
+- validate() already follows Pattern 9 correctly - no changes needed
+- calculate_totals() (G1): Fixed missing flt precision:
+  - flt(item.discount_value) -> flt(item.discount_value, 2)
+  - flt(taxable_amount * flt(item.tax_rate) / 100, 2) ->
+    flt(flt(taxable_amount, 2) * flt(item.tax_rate, 2) / 100, 2)
+  - flt(taxable_amount + flt(item.tax_amount, 2), 2) ->
+    flt(flt(taxable_amount, 2) + flt(item.tax_amount, 2), 2)
+  - Same fixes for commission_rate
+- calculate_totals() (G3): Added cascading discount at parent level:
+  - Validates 0-100 range for discount_1/2/3
+  - Cascading formula identical to order.py
+  - Total discount = item-level discounts + cascading parent discount
+  - Computes effective_discount_pct for display
+  - Zero-division guard on subtotal
+
+Verification: Syntax OK, AST parse OK, formula tests passed (10/5/2% = 16.21%)
+
+=== END SESSION 11 ===
+
+=== SESSION 12 (subtask-4-4) ===
+
+Completed subtask-4-4: Update rfq.py and rfq_quote.py (Phase 4 - Python Server-Side Code)
+
+Changes made to rfq.py:
+- G1: Added flt to imports from frappe.utils
+- G1: Implemented calculate_totals():
+  - Normalizes budget_min and budget_max with flt(value, 2)
+  - Validates budget range (budget_min <= budget_max)
+  - Normalizes item quantities and target_prices with flt(value, 2)
+  - Added if self.items guard before iterating
+- G1: Added calculate_totals() call at end of validate() (Pattern 9)
+- G2: Verified _guard_system_fields - correctly guards rfq_code, published_at,
+  closed_at, quote_count, current_views. Uses is_new() check, has_value_changed(),
+  and frappe.PermissionError. Follows order.py pattern ✓
+- G5: Verified refetch_denormalized_fields covers:
+  - buyer_name (from Buyer Profile) ✓
+  - buyer_company (from Buyer Profile) ✓
+  - buyer_email (from Buyer Profile) ✓
+  - tenant_name (from Tenant) ✓
+  - No seller on RFQ (correct - it's a buyer's request document)
+
+Changes made to rfq_quote.py:
+- G1: Added flt to imports from frappe.utils
+- G1: Implemented calculate_totals():
+  - Normalizes price, unit_price, qty with flt(value, 2)
+  - Calculates total_price = flt(flt(qty, 2) * flt(unit_price, 2), 2) with outer wrapping
+  - Falls back to price as total when qty/unit_price not provided
+  - Normalizes discount_amount with flt(value, 2)
+  - Calculates total_amount = total_price - discount_amount
+  - Sets final_amount = total_amount
+- G1: Added calculate_totals() call at end of validate() (Pattern 9)
+- G2: Verified _guard_system_fields - correctly guards submitted_at, revision_count,
+  last_revised_at, accepted_at, rejected_at, discount_amount, total_amount.
+  Uses is_new() check, has_value_changed(), and frappe.PermissionError ✓
+- G5: Verified refetch_denormalized_fields covers:
+  - seller_name (from Seller Profile) ✓
+  - tenant (from Seller Profile) ✓
+  - rfq_title (from RFQ) ✓
+  - rfq_buyer (from RFQ) ✓
+  - tenant_name (from Tenant) ✓
+
+Verification: 18/18 checks passed - syntax OK, all G1/G2/G5 requirements met
+Commit: 14d89b0
+
+=== END SESSION 12 ===
+
+=== SESSION 13 (subtask-4-5) ===
+
+Completed subtask-4-5: Update listing.py in tradehub_seller (Phase 4 - Python Server-Side Code)
+
+Changes made:
+
+- G1: Implemented calculate_totals() with flt(value, 2):
+  - Normalizes pricing tier values (price, min_qty, max_qty, discount_percentage)
+  - Added calculate_totals() call in validate() before update_status_based_on_inventory
+  - Follows Pattern 9 ordering (calculations come after validation)
+
+- G2: Verified _guard_system_fields and _guard_primary_links:
+  - _guard_system_fields guards 16 fields (listing_code, erpnext_item, view_count,
+    wishlist_count, order_count, last_sold_at, average_rating, review_count,
+    quality_score, ranking_score, ranking_updated_at, conversion_rate,
+    click_through_rate, seller_score, moderated_by/at, published_at, created_by)
+  - _guard_primary_links guards ['seller'] - correctly set_only_once
+  - Both called first in validate() per Pattern 9 ✓
+
+- G3: Added cascading discount formula:
+  - Validates discount_1/2/3 in 0-100 range
+  - Formula: base * (1-d1/100) * (1-d2/100) * (1-d3/100)
+  - Computes discount_amount and effective_discount_pct
+  - Zero-division guard on base_price
+  - Uses flt(value, 2) on all operations
+
+- G4: Replaced all json.loads/json.dumps with child table operations:
+  - Removed import json (no longer needed)
+  - before_insert: Removed deprecated JSON field initializations
+    (images="[]", attributes="{}", bulk_pricing_tiers="[]")
+  - validate_b2b_settings: self.bulk_pricing_tiers -> self.pricing_tiers
+  - validate_bulk_pricing_tiers: Rewritten to iterate self.pricing_tiers child table
+    instead of json.loads(self.bulk_pricing_tiers)
+  - validate_images: Rewritten to check self.listing_images child table
+    instead of json.loads(self.images)
+  - calculate_quality_score: Uses self.listing_images and self.attribute_values
+    instead of json.loads(self.images) and json.loads(self.attributes)
+  - get_price/get_bulk_tier_price: Uses self.pricing_tiers child table
+    instead of json.loads(self.bulk_pricing_tiers)
+  - get_listing API: Serializes child tables (listing_images, attribute_values)
+    to list/dict format instead of json.loads on deprecated fields
+
+- G5: Verified refetch_denormalized_fields covers:
+  - seller_name (from Seller Profile) ✓
+  - seller_company (from Seller Profile via company_name) ✓
+  - tenant (from Seller Profile) ✓
+  - tenant_name (from Tenant) ✓
+  - category_name (from Category) ✓
+
+Verification: Syntax OK, AST check passed (no json imports remain),
+zero json.loads/json.dumps references in file
+Commit: fba7aa7
+
+=== END SESSION 13 ===
+
+=== SESSION 14 (subtask-4-6) ===
+
+Completed subtask-4-6: Update seller_profile.py and sku_product.py (Phase 4 - Python Server-Side Code)
+
+seller_profile.py - Verified (no changes needed):
+- G2: _guard_system_fields correctly guards 16 system fields (verified_at, verified_by,
+  seller_score, total_sales_count, total_sales_amount, average_rating, total_reviews,
+  order_fulfillment_rate, on_time_delivery_rate, return_rate, response_time_hours,
+  cancellation_rate, complaint_rate, positive_feedback_rate, last_metrics_update,
+  joined_at, created_by). Called first in validate() per Pattern 9. ✓
+- G4: Badge methods use seller_badges child table throughout:
+  - add_badge() uses self.append("seller_badges", {...})
+  - remove_badge() filters self.seller_badges list
+  - has_badge() uses any() on self.seller_badges
+  - API endpoints (get_seller_profile, get_seller_statistics, award_badge) iterate
+    seller.seller_badges - no json.loads/json.dumps anywhere ✓
+- G5: refetch_denormalized_fields covers all 6 fetch_from fields:
+  - organization_name from Organization ✓
+  - tenant from Organization ✓
+  - tier_name from Seller Tier ✓
+  - district_name from District ✓
+  - neighborhood_name from Neighborhood ✓
+  - tenant_name from Tenant ✓
+
+sku_product.py - Updated:
+- G2: Added _guard_system_fields() guarding erpnext_item_code (system-set from ERPNext sync)
+  Uses is_new() check, has_value_changed(), frappe.PermissionError. Follows Pattern 3. ✓
+- G2: Added _guard_primary_links() guarding seller (set_only_once primary link)
+  Server-side enforcement matching set_only_once:1 in JSON schema. ✓
+- G5: Added refetch_denormalized_fields() covering all 5 fetch_from fields:
+  - seller_name from Seller Profile ✓
+  - tenant from Seller Profile ✓
+  - tenant_name from Tenant ✓
+  - category_name from Category ✓
+  - brand_name from Brand ✓
+- Reordered validate() per Pattern 9:
+  1. Guards (_guard_system_fields, _guard_primary_links)
+  2. Field validation (sku_code, pricing, inventory, etc.)
+  3. Refetch (refetch_denormalized_fields)
+  4. Status validation (tenant_isolation, status_transition)
+
+Verification: Syntax OK, AST parse OK, Pattern 9 ordering confirmed, all methods present
+Commit: 6061fef
+
+=== END SESSION 14 ===
+
+=== SESSION 15 (subtask-4-7) ===
+
+Completed subtask-4-7: Verify buyer_profile.py in tradehub_core (Phase 4 - Python Server-Side Code)
+
+This was a verification subtask — all required code was already in place. No code changes needed.
+
+buyer_profile.py - Verified (no changes needed):
+- G2: _guard_system_fields correctly guards 12 system fields (total_orders, total_spent,
+  average_order_value, last_order_date, total_group_buys, total_commitments,
+  total_commitment_amount, successful_group_buys, total_purchase_value,
+  payment_on_time_rate, joined_at, created_by). Called first in validate() per Pattern 9.
+  Uses is_new() check, has_value_changed(), and frappe.PermissionError. ✓
+- G5: refetch_denormalized_fields covers all 3 required fetch_from fields:
+  - buyer_category_name from Buyer Category (via category_name) ✓
+  - tenant_name from Tenant (via tenant_name) ✓
+  - organization_name from Organization (via organization_name) ✓
+  Also covers user_full_name from User.
+- Pattern 9 ordering verified: _guard_system_fields → _validate_user →
+  refetch_denormalized_fields → _set_display_name → _validate_interest_categories →
+  _validate_addresses ✓
+
+Verification: 11/11 AST checks passed (syntax, method existence, call ordering,
+field coverage, source DocType correctness)
+
+=== END SESSION 15 ===
+
+=== SESSION 16 (subtask-4-8) ===
+
+Completed subtask-4-8: Update shipping_rule.py (logistics) and coupon.py (marketing)
+
+Changes made to shipping_rule.py (G1 - Rate tier calculation with flt(value, 2)):
+- validate_rate_tiers(): Added flt(value, 2) normalization of tier.threshold_from,
+  tier.threshold_to, and tier.rate during validation. All comparison ops use flt(value, 2).
+- calculate_shipping(): All intermediate calculations wrapped with flt(value, 2):
+  shipping_amount, handling, packaging, insurance, express_surcharge, subtotal, tax, total.
+  Breakdown dict values all use flt(value, 2). Weight charge calculation fixed.
+- calculate_base_shipping(): All 7 calculation methods now use flt(value, 2):
+  - Fixed: flt(self.base_rate, 2)
+  - Weight Based: flt(flt(base, 2) + flt(weight * flt(per_kg, 2), 2), 2)
+  - Price Percentage: flt(flt(amount, 2) * flt(rate, 2) / 100, 2)
+  - Item Count: flt(flt(base, 2) + flt(count * flt(per_item, 2), 2), 2)
+  - Weight/Price Tiered: flt(get_tiered_rate(value), 2)
+  - Combined: flt(base + weight_charge + item_charge, 2)
+- get_tiered_rate(): All tier thresholds and rates use flt(value, 2)
+- get_percentage_rate(): Same pattern as get_tiered_rate
+- calculate_handling_fee(): flt(amount * rate / 100, 2)
+- calculate_insurance(): flt(amount * rate / 100, 2)
+
+Changes made to coupon.py (G3 - Coupon discount AFTER cascading):
+- Added flt import from frappe.utils
+- calculate_discount(): Added flt(value, 2) to all calculations:
+  - Percentage: flt(applicable * discount_value / 100, 2) with max cap
+  - Fixed: flt(min(value, applicable), 2)
+  - BOGO: flt(calculate_bogo_discount(items), 2)
+  - Added clear docstring about discount ordering: cascading first, then coupon
+- calculate_discount_after_cascading(): NEW METHOD
+  - Takes subtotal + discount_1/2/3 + optional applicable_amount/cart_items
+  - Applies cascading formula: base * (1-d1/100) * (1-d2/100) * (1-d3/100)
+  - Then applies coupon discount on post-cascading amount
+  - Returns dict with cascading_discount_amount, post_cascading_amount,
+    coupon_discount_amount, final_amount, total_discount_amount
+  - Guards against negative final amount
+- calculate_bogo_discount(): All item rates and discount calculations use flt(value, 2)
+  - Same-product BOGO: flt(discounted_items * flt(rate, 2) * flt(get_discount, 2), 2)
+  - Multi-product BOGO: flt accumulation with flt(value, 2) on each step
+- apply_coupon_to_order API: Updated to use flt(order.total_amount, 2) and flt on
+  discount_amount. Added clear documentation that total_amount already includes
+  cascading discounts, so coupon applies after them.
+
+Verification: Syntax OK (AST parse), all required methods present,
+flt imported in coupon.py, functional tests passed (tier lookup, weight calc,
+tax calc, cascading + coupon ordering), Import OK verified
+Commit: 909c2df
+
+=== END SESSION 16 ===
+
+=== SESSION 17 (subtask-5-1) ===
+
+Completed subtask-5-1: Update order.js (Phase 5 - JavaScript Client-Side Code)
+
+Changes made:
+
+- G1 (Verified - no changes needed):
+  - calculate_totals() uses flt() on all 25 numeric operations ✓
+  - items_add and items_remove handlers call calculate_totals(frm) ✓
+  - quantity and unit_price handlers compute row.amount with flt() and call calculate_totals ✓
+  - Row amount: flt(row.quantity) * flt(row.unit_price) ✓
+
+- G2 (Verified - no changes needed):
+  - Role-based auth in refresh handler with Turkish role names ✓
+  - is_admin check: Satici Admin || Alici Admin || System Manager ✓
+  - 7 set_df_property calls locking admin fields (status, payment_status,
+    internal_notes, cancelled_by, refund_status) and hiding internal_notes ✓
+
+- G3 (Changes made):
+  - Replaced discount_percentage handler with discount_1, discount_2, discount_3 handlers
+  - Added show_discount_tiers toggle handler:
+    - Clears discount_2 and discount_3 to 0 when toggled off
+    - Calls calculate_totals after clearing
+  - Updated calculate_totals() with cascading discount formula:
+    - var d1/d2/d3 = flt(frm.doc.discount_1/2/3)
+    - price_after_d1 = flt(flt(subtotal) * (1 - d1 / 100))
+    - price_after_d2 = flt(price_after_d1 * (1 - d2 / 100))
+    - final_price = flt(price_after_d2 * (1 - d3 / 100))
+    - discount_amount = flt(flt(subtotal) - final_price)
+    - effective_discount_pct = flt(discount_amount / flt(subtotal) * 100)
+  - Zero-division guard: if (flt(subtotal) > 0) before discount calc
+  - All set_value calls wrapped with flt() for subtotal, discount_amount,
+    effective_discount_pct, tax_amount, total_amount
+  - Removed all references to discount_percentage
+
+Verification: grep -c 'discount_1' = 2 ✓, 25 flt() calls ✓, all G1/G2/G3 checks passed
+Commit: d3da83e
+
+=== END SESSION 17 ===
+
+=== SESSION 18 (subtask-5-2) ===
+
+Completed subtask-5-2: Update cart.js (Phase 5 - JavaScript Client-Side Code)
+
+Changes made:
+
+- G1 (flt() wrapping fixed):
+  - calculate_line_totals(): All intermediate calculations now wrapped in flt():
+    - discount_amount_per_unit = flt(flt(unit_price) * flt(discount_value) / 100)
+    - discounted_price = flt(Math.max(0, flt(unit_price) - flt(discount_amount_per_unit)))
+    - total_discount = flt(flt(discount_amount_per_unit) * flt(qty))
+    - line_subtotal = flt(flt(qty) * flt(discounted_price))
+    - taxable_amount, tax_amount, line_total all wrapped in flt()
+    - All frappe.model.set_value calls wrapped in flt()
+    - Added zero-division guard: if (flt(tax_rate) > 0) before tax calculations
+  - calculate_cart_totals(): All operations wrapped in flt():
+    - line_subtotal = flt(flt(item.qty) * flt(item.discounted_price || item.unit_price))
+    - subtotal += flt(line_subtotal)
+    - total_weight += flt(flt(item.weight) * flt(item.qty))
+    - order_discount = flt(flt(coupon_discount) + flt(promotion_discount))
+    - grand_total = flt(flt(subtotal) - flt(order_discount) + flt(total_tax) + flt(shipping_total))
+    - All frm.set_value calls wrapped in flt()
+  - Total flt() calls: 55 (up from ~20 before)
+
+- G1 (Child table handlers verified):
+  - qty, unit_price, discount_value, discount_type, tax_rate → calculate_line_totals ✓
+  - items_add, items_remove → calculate_cart_totals ✓
+
+- G3 (Cascading discount formula added to Cart Line):
+  - Added discount_1, discount_2, discount_3 handlers on Cart Line → calculate_line_totals
+  - Added show_discount_tiers handler → clears D2/D3 to 0 when toggled off
+  - Updated calculate_line_totals() with cascading formula:
+    - Applied AFTER regular discount (discount_type/discount_value)
+    - var price_after_d1 = flt(flt(base_price) * (1 - flt(d1) / 100))
+    - var price_after_d2 = flt(flt(price_after_d1) * (1 - flt(d2) / 100))
+    - var final_price = flt(flt(price_after_d2) * (1 - flt(d3) / 100))
+    - Computes cascading_discount_per_unit, total_discount, effective_discount_pct
+    - Sets effective_discount_pct via frappe.model.set_value
+    - Zero-division guard: if (flt(unit_price) > 0) for effective_discount_pct
+
+Verification: 23 calculate references ✓, 55 flt() calls ✓, 15 cascading discount references ✓,
+0 console.log ✓
+
+=== END SESSION 18 ===
+
+=== SESSION 19 (subtask-6-1) ===
+
+Completed subtask-6-1: Build & Integration Verification
+
+NOTE: bench build/migrate/clear-cache cannot be executed in isolated worktree
+(no Frappe virtual environment, no database, no site_config.json).
+Performed comprehensive pre-flight validation instead.
+
+Validation Results:
+
+1. Modified File Syntax (30 files changed across 20 commits):
+   - 16 JS files: ALL pass node --check syntax validation ✓
+   - 12 Python files: ALL pass AST parse validation ✓
+   - 2 metadata JSON files: valid ✓
+
+2. Full App-Wide Validation (simulates bench build):
+   - 227 DocType JSON schemas: ALL valid, zero duplicate fieldnames ✓
+   - 227 Python controllers: ALL pass AST syntax check ✓
+   - 52 JS controller files: ALL pass node --check ✓
+   - 233 __init__.py files: ALL intact across 7 apps ✓
+   - 7/7 triple-nested directory structures: intact ✓
+   - 7/7 hooks.py files: valid Python syntax ✓
+   - 4 patches.txt files: ALL referenced patch files exist ✓
+
+3. Cascading Discount Fields (G3) - 8 DocTypes verified:
+   - order, cart_line, sub_order, sub_order_item ✓
+   - marketplace_order, marketplace_order_item ✓
+   - rfq_quote_item, quotation_item ✓
+   - All 5 fields present in each (discount_1/2/3, show_discount_tiers, effective_discount_pct) ✓
+
+4. Field Protection (G2) - verified:
+   - set_only_once: order.buyer, order.seller, rfq.buyer, rfq_quote.seller,
+     rfq_quote.rfq, listing.seller — all set_only_once:1 ✓
+   - fetch_from + read_only: order.buyer_name, seller_profile.tenant_name,
+     buyer_profile.tenant_name, listing.seller_name — all correctly configured ✓
+
+5. Python Code Patterns:
+   - _guard_system_fields: 8/8 controllers have guards called from validate() ✓
+   - calculate_totals: 6/6 controllers implement with flt() ✓
+   - Cascading discount formula: 4/4 controllers (order, cart, sub_order, listing) ✓
+
+6. JS Code Patterns:
+   - calculate_totals/calculate_order_totals/calculate_line_totals: all main controllers ✓
+   - flt() usage: all controllers ✓
+   - Cascading discount handlers: 4/4 controllers (order, cart, sub_order, marketplace_order) ✓
+
+7. Structural Integrity:
+   - No __init__.py files deleted or emptied ✓
+   - Triple-nested directory structure preserved for all 7 apps ✓
+   - hooks.py files intact (not overwritten) ✓
+   - patches.txt files reference valid patch files ✓
+
+Conclusion: All pre-flight validations pass. The codebase is structurally sound
+and should build cleanly with bench build. Actual bench build/migrate must be
+executed in the full Frappe bench environment (not isolated worktree).
+
+=== END SESSION 19 ===
+
+=== SESSION 20 (subtask-6-2) ===
+
+Completed subtask-6-2: End-to-End Verification (FINAL)
+
+All 6 verification categories passed:
+
+1. __init__.py Files Intact:
+   - 233 __init__.py files found across all 7 tradehub apps ✓
+   - Zero missing __init__.py in any doctype subdirectory ✓
+   - (2 missing in erpnext stock/doctype - pre-existing, read-only app, not our concern)
+
+2. Triple-Nested Directory Structure:
+   - tradehub_core: 30 DocTypes ✓
+   - tradehub_catalog: 54 DocTypes ✓
+   - tradehub_commerce: 52 DocTypes ✓
+   - tradehub_seller: 39 DocTypes ✓
+   - tradehub_logistics: 12 DocTypes ✓
+   - tradehub_marketing: 14 DocTypes ✓
+   - tradehub_compliance: 32 DocTypes ✓
+   - All 7/7 triple-nested directories verified ✓
+
+3. No json.loads in Migrated Fields:
+   - listing.py: 0 json.loads ✓ (migrated to child tables)
+   - seller_profile.py: 0 json.loads ✓ (uses child tables)
+   - commission_plan.py: 1 json.loads ✓ (API parameter parsing, NOT migrated field)
+   - moderation_case.py: 1 json.loads ✓ (API parameter parsing, NOT migrated field)
+   - review.py: 0 json.loads ✓
+
+4. All fetch_from Fields Have read_only:1:
+   - 30 fetch_from fields checked across 10 key DocTypes ✓
+   - seller_profile: tenant_name, tier_name, district_name, neighborhood_name, organization_name ✓
+   - buyer_profile: buyer_category_name, tenant_name, organization_name ✓
+   - listing: seller_name, category_name, tenant_name ✓
+   - order: buyer_name, seller_name, tenant_name ✓
+   - sub_order: seller_name, buyer_name, tenant_name ✓
+   - cart_line: title, primary_image, seller_name ✓
+   - rfq: buyer_name, tenant_name ✓
+   - rfq_quote: seller_name, rfq_title, tenant_name ✓
+   - contract_instance: template_name, tenant_name ✓
+   - product: brand_name, category_name, family_name ✓
+   - ALL 30/30 have read_only:1 ✓
+
+5. Cascading Discount Fields in All Target DocTypes:
+   - 9/9 DocTypes have ALL 5 fields (discount_1/2/3, show_discount_tiers, effective_discount_pct) ✓
+   - order, cart_line, sub_order, sub_order_item ✓
+   - marketplace_order, marketplace_order_item ✓
+   - rfq_quote_item, quotation_item ✓
+   - listing ✓
+
+6. flt() Usage Spot-Check in Modified Python Files:
+   - order.py calculate_totals: 17 flt() calls ✓
+   - cart.py calculate_totals: 34 flt() calls ✓
+   - sub_order.py calculate_totals: 39 flt() calls ✓
+   - listing.py calculate_totals: 12 flt() calls ✓
+   - shipping_rule.py: 85 flt() calls ✓
+   - All 11 Python files: AST syntax check PASS ✓
+   - All 8 JS files: node --check PASS ✓
+   - order.js: Cascading discount formula verified (discount_1/2/3 handlers + calculate_totals) ✓
+   - cart.js: Cascading discount formula verified (discount_1/2/3 handlers + calculate_line_totals) ✓
+
+Additional Checks:
+   - patches.txt: commerce(2), seller(2), compliance(2), logistics(1) entries ✓
+   - All patch files referenced in patches.txt exist on disk ✓
+
+Conclusion: ALL end-to-end verification checks PASS. The implementation is complete
+and structurally sound. All 32 subtasks across 6 phases are now completed.
+Actual bench migrate/build/test must be run in the full Frappe bench environment.
+
+=== END SESSION 20 ===
+
+=== BUILD COMPLETE ===
+
+Total commits: 35 (from main branch)
+Total subtasks: 32 completed
+Total phases: 6 completed
+Total files modified: ~50+ across 7 apps
+
+Gorev Completion Summary:
+- Gorev 1 (Child Table Calculations): ✓ All calculate_totals in Python + JS with flt()
+- Gorev 2 (Field Authorization): ✓ read_only, set_only_once, permlevel, _guard_system_fields
+- Gorev 3 (Cascading Discounts): ✓ 9 DocTypes with discount_1/2/3, formula in Python + JS
+- Gorev 4 (JSON to Child Tables): ✓ listing.py migrated, no json.loads for migrated fields
+- Gorev 5 (fetch_from): ✓ 30+ fields with fetch_from + read_only:1, refetch_denormalized_fields
+
+=== END BUILD ===

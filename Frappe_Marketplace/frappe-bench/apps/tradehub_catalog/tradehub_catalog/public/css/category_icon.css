@@ -1,0 +1,195 @@
+/*
+ * Category Icon Styles
+ * Copyright (c) 2026, TradeHub and contributors
+ *
+ * Supports:
+ *   - Size variants: xs (16px), sm (20px), md (24px), lg (32px), xl (48px)
+ *   - Dark mode via [data-theme="dark"] and prefers-color-scheme
+ *   - Hover effects
+ *   - SVG image tinting, icon class rendering, default icon
+ */
+
+/* =====================================================
+ * Base Icon Container
+ * ===================================================== */
+
+.category-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	vertical-align: middle;
+	line-height: 1;
+	border-radius: var(--border-radius-sm, 4px);
+	transition: transform 0.15s ease, opacity 0.15s ease, color 0.15s ease;
+	color: var(--category-icon-color, #333333);
+	flex-shrink: 0;
+}
+
+/* =====================================================
+ * Size Variants
+ * ===================================================== */
+
+.category-icon--xs {
+	width: 16px;
+	height: 16px;
+	font-size: 12px;
+}
+
+.category-icon--sm {
+	width: 20px;
+	height: 20px;
+	font-size: 14px;
+}
+
+.category-icon--md {
+	width: 24px;
+	height: 24px;
+	font-size: 16px;
+}
+
+.category-icon--lg {
+	width: 32px;
+	height: 32px;
+	font-size: 22px;
+}
+
+.category-icon--xl {
+	width: 48px;
+	height: 48px;
+	font-size: 32px;
+}
+
+/* =====================================================
+ * Image Icons (SVG & Raster)
+ * ===================================================== */
+
+.category-icon img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	display: block;
+}
+
+/* SVG images can be tinted if they use currentColor */
+.category-icon--svg img {
+	filter: none;
+}
+
+/* =====================================================
+ * Class-Based Icons (Font Awesome, Octicons, etc.)
+ * ===================================================== */
+
+.category-icon--class i {
+	color: var(--category-icon-color, #333333);
+	font-size: inherit;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+}
+
+/* =====================================================
+ * Default Inline SVG Icon
+ * ===================================================== */
+
+.category-icon--default svg {
+	width: 100%;
+	height: 100%;
+	stroke: var(--category-icon-color, #333333);
+	fill: none;
+}
+
+/* =====================================================
+ * Hover Effects
+ * ===================================================== */
+
+.category-icon:hover {
+	transform: scale(1.1);
+	opacity: 0.85;
+}
+
+/* Clickable/interactive context */
+a .category-icon:hover,
+button .category-icon:hover,
+.clickable .category-icon:hover {
+	transform: scale(1.15);
+	opacity: 0.9;
+	cursor: pointer;
+}
+
+/* List view row hover */
+.list-row:hover .category-icon,
+.tree-node:hover > .tree-label .category-icon {
+	transform: scale(1.05);
+}
+
+/* =====================================================
+ * Dark Mode Support
+ * ===================================================== */
+
+/* Frappe dark theme via data attribute */
+[data-theme="dark"] .category-icon {
+	color: var(--category-icon-color, #e0e0e0);
+}
+
+[data-theme="dark"] .category-icon--class i {
+	color: var(--category-icon-color, #e0e0e0);
+}
+
+[data-theme="dark"] .category-icon--default svg {
+	stroke: var(--category-icon-color, #e0e0e0);
+}
+
+[data-theme="dark"] .category-icon img {
+	filter: brightness(0.9) contrast(1.1);
+}
+
+[data-theme="dark"] .category-icon--svg img {
+	filter: brightness(1.2);
+}
+
+/* System-level dark mode preference */
+@media (prefers-color-scheme: dark) {
+	html:not([data-theme="light"]) .category-icon {
+		color: var(--category-icon-color, #e0e0e0);
+	}
+
+	html:not([data-theme="light"]) .category-icon--class i {
+		color: var(--category-icon-color, #e0e0e0);
+	}
+
+	html:not([data-theme="light"]) .category-icon--default svg {
+		stroke: var(--category-icon-color, #e0e0e0);
+	}
+
+	html:not([data-theme="light"]) .category-icon img {
+		filter: brightness(0.9) contrast(1.1);
+	}
+
+	html:not([data-theme="light"]) .category-icon--svg img {
+		filter: brightness(1.2);
+	}
+}
+
+/* =====================================================
+ * Utility Classes
+ * ===================================================== */
+
+/* Inline with text alignment */
+.category-icon-inline {
+	margin-right: 6px;
+}
+
+/* Centered in a container */
+.category-icon-centered {
+	margin: 0 auto;
+	display: flex;
+}
+
+/* No hover effect */
+.category-icon--static:hover {
+	transform: none;
+	opacity: 1;
+}

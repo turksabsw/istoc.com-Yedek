@@ -1,0 +1,704 @@
+// Copyright (c) 2024, TR TradeHub and contributors
+// For license information, please see license.txt
+
+frappe.ui.form.on('Marketplace Order', {
+    refresh: function(frm) {
+        // =====================================================
+        // P1: Tenant Isolation Filters
+        // =====================================================
+        // Organization - filter by tenant
+        frm.set_query('organization', function() {
+            if (frm.doc.tenant) {
+                return {
+                    filters: {
+                        'tenant': frm.doc.tenant
+                    }
+                };
+            }
+            return {};
+        });
+
+        // Cart - filter by tenant and buyer
+        frm.set_query('cart', function() {
+            let filters = {};
+            if (frm.doc.tenant) {
+                filters['tenant'] = frm.doc.tenant;
+            }
+            if (frm.doc.buyer) {
+                filters['buyer'] = frm.doc.buyer;
+            }
+            return {
+                filters: filters
+            };
+        });
+
+        // Payment Intent - filter by tenant
+        frm.set_query('payment_intent', function() {
+            if (frm.doc.tenant) {
+                return {
+                    filters: {
+                        'tenant': frm.doc.tenant
+                    }
+                };
+            }
+            return {};
+        });
+
+        // Escrow Account - filter by tenant
+        frm.set_query('escrow_account', function() {
+            if (frm.doc.tenant) {
+                return {
+                    filters: {
+                        'tenant': frm.doc.tenant
+                    }
+                };
+            }
+            return {};
+        });
+
+        // Ensure buyer detail fields are read-only when buyer is set
+        if (frm.doc.buyer) {
+            frm.set_df_property('buyer_name', 'read_only', 1);
+            frm.set_df_property('buyer_email', 'read_only', 1);
+            frm.set_df_property('buyer_phone', 'read_only', 1);
+        }
+
+        // Ensure organization fields are read-only when organization is set
+        if (frm.doc.organization) {
+            frm.set_df_property('buyer_tax_id', 'read_only', 1);
+            frm.set_df_property('buyer_company_name', 'read_only', 1);
+            frm.set_df_property('tenant', 'read_only', 1);
+        }
+
+        // Add "Get Items From Cart" button for new or draft orders
+        // Show for new orders or saved but not submitted orders (docstatus === 0)
+        if (frm.is_new() || frm.doc.docstatus === 0) {
+            // Add the button if buyer is selected
+            if (frm.doc.buyer) {
+                frm.add_custom_button(__('Get Items From Cart'), function() {
+                    get_items_from_cart(frm);
+                }, __('Actions'));
+            }
+        }
+
+        // Show cart validation warnings if cart is linked
+        if (frm.doc.cart) {
+            show_cart_info(frm);
+        }
+
+        // =====================================================
+        // P3: Create Buttons (submitted orders only)
+        // =====================================================
+        if (frm.doc.docstatus === 1) {
+            let status = frm.doc.status;
+
+            // Sales Invoice - Confirmed/Invoiced/Processing/Packed, no existing SI
+            if (['Confirmed', 'Invoiced', 'Processing', 'Packed'].includes(status)) {
+                frappe.db.count('Sales Invoice', {
+                    'marketplace_order': frm.doc.name,
+                    'docstatus': ['!=', 2]
+                }).then(count => {
+                    if (!count) {
+                        frm.add_custom_button(__('Sales Invoice'), function() {
+                            frappe.model.open_mapped_doc({
+                                method: 'tradehub_commerce.tradehub_commerce.doctype.marketplace_order.marketplace_order.make_sales_invoice',
+                                frm: frm
+                            });
+                        }, __('Create'));
+                    }
+                });
+            }
+
+            // Delivery Note - Invoiced/Processing/Packed
+            if (['Invoiced', 'Processing', 'Packed'].includes(status)) {
+                frm.add_custom_button(__('Delivery Note'), function() {
+                    frappe.model.open_mapped_doc({
+                        method: 'tradehub_commerce.tradehub_commerce.doctype.marketplace_order.marketplace_order.make_delivery_note',
+                        frm: frm
+                    });
+                }, __('Create'));
+            }
+
+            // Payment Entry - not Cancelled/Refunded/Completed
+            if (!['Cancelled', 'Refunded', 'Completed'].includes(status)) {
+                frm.add_custom_button(__('Payment Entry'), function() {
+                    frappe.new_doc('Payment Entry', {
+                        'payment_type': 'Receive',
+                        'party_type': 'Customer',
+                        'marketplace_order': frm.doc.name,
+                        'paid_amount': frm.doc.grand_total
+                    });
+                }, __('Create'));
+            }
+
+            // Payment Request - Confirmed/Invoiced/Await Payment
+            if (['Confirmed', 'Invoiced', 'Await Payment'].includes(status)) {
+                frm.add_custom_button(__('Payment Request'), function() {
+                    frappe.new_doc('Payment Request', {
+                        'reference_doctype': 'Marketplace Order',
+                        'reference_name': frm.doc.name,
+                        'grand_total': frm.doc.grand_total,
+                        'currency': frm.doc.currency
+                    });
+                }, __('Create'));
+            }
+
+            // Shipment - Processing/Packed
+            if (['Processing', 'Packed'].includes(status)) {
+                frm.add_custom_button(__('Shipment'), function() {
+                    frappe.model.open_mapped_doc({
+                        method: 'tradehub_commerce.tradehub_commerce.doctype.marketplace_order.marketplace_order.make_shipment',
+                        frm: frm
+                    });
+                }, __('Create'));
+            }
+
+            // Return / Credit Note - Delivered/Completed
+            if (['Delivered', 'Completed'].includes(status)) {
+                frm.add_custom_button(__('Return / Credit Note'), function() {
+                    frappe.model.open_mapped_doc({
+                        method: 'tradehub_commerce.tradehub_commerce.doctype.marketplace_order.marketplace_order.make_return_credit_note',
+                        frm: frm
+                    });
+                }, __('Create'));
+            }
+
+            // Dispute - Delivered/Completed/Shipped/In Transit
+            if (['Delivered', 'Completed', 'Shipped', 'In Transit'].includes(status)) {
+                frm.add_custom_button(__('Dispute'), function() {
+                    frappe.new_doc('Dispute', {
+                        'marketplace_order': frm.doc.name,
+                        'buyer': frm.doc.buyer,
+                        'tenant': frm.doc.tenant
+                    });
+                }, __('Create'));
+            }
+        }
+
+        // =====================================================
+        // Role-Based Field Authorization
+        // =====================================================
+        var is_admin = frappe.user_roles.includes('Satici Admin')
+            || frappe.user_roles.includes('Alici Admin')
+            || frappe.user_roles.includes('System Manager');
+
+        if (!is_admin) {
+            // Lock admin-editable fields for non-admin users
+            frm.set_df_property('status', 'read_only', 1);
+            frm.set_df_property('payment_status', 'read_only', 1);
+            frm.set_df_property('escrow_status', 'read_only', 1);
+            frm.set_df_property('fulfillment_status', 'read_only', 1);
+            frm.set_df_property('e_invoice_status', 'read_only', 1);
+            frm.set_df_property('commission_status', 'read_only', 1);
+            frm.set_df_property('cancellation_approved', 'read_only', 1);
+            frm.set_df_property('cancellation_approved_by', 'read_only', 1);
+            frm.set_df_property('refund_status', 'read_only', 1);
+            frm.set_df_property('internal_notes', 'read_only', 1);
+
+            // Hide internal notes from non-admin users
+            frm.set_df_property('internal_notes', 'hidden', 1);
+        }
+    },
+
+    buyer: function(frm) {
+        // When buyer is selected, fetch user details
+        if (frm.doc.buyer) {
+            frappe.db.get_value('User', frm.doc.buyer, ['full_name', 'email', 'mobile_no'], function(r) {
+                if (r) {
+                    if (r.full_name) {
+                        frm.set_value('buyer_name', r.full_name);
+                    }
+                    if (r.email) {
+                        frm.set_value('buyer_email', r.email);
+                    }
+                    if (r.mobile_no) {
+                        frm.set_value('buyer_phone', r.mobile_no);
+                    }
+                    // Make buyer detail fields read-only after auto-populating
+                    frm.set_df_property('buyer_name', 'read_only', 1);
+                    frm.set_df_property('buyer_email', 'read_only', 1);
+                    frm.set_df_property('buyer_phone', 'read_only', 1);
+                }
+            });
+
+            // Check if buyer has an active cart
+            check_buyer_cart(frm);
+        } else {
+            // Clear buyer details when buyer is cleared
+            frm.set_value('buyer_name', '');
+            frm.set_value('buyer_email', '');
+            frm.set_value('buyer_phone', '');
+            frm.set_df_property('buyer_name', 'read_only', 0);
+            frm.set_df_property('buyer_email', 'read_only', 0);
+            frm.set_df_property('buyer_phone', 'read_only', 0);
+        }
+    },
+
+    organization: function(frm) {
+        // When organization is selected, fetch organization details
+        if (frm.doc.organization) {
+            frappe.db.get_value('Organization', frm.doc.organization,
+                ['organization_name', 'tax_id', 'tenant'], function(r) {
+                if (r) {
+                    if (r.organization_name) {
+                        frm.set_value('buyer_company_name', r.organization_name);
+                    }
+                    if (r.tax_id) {
+                        frm.set_value('buyer_tax_id', r.tax_id);
+                    }
+                    if (r.tenant) {
+                        frm.set_value('tenant', r.tenant);
+                    }
+                    // Make organization fields read-only after auto-populating
+                    frm.set_df_property('buyer_company_name', 'read_only', 1);
+                    frm.set_df_property('buyer_tax_id', 'read_only', 1);
+                    frm.set_df_property('tenant', 'read_only', 1);
+                }
+            });
+        } else {
+            // Clear organization details and fetch_from fields when organization is cleared
+            frm.set_value('buyer_company_name', '');
+            frm.set_value('buyer_tax_id', '');
+            frm.set_value('organization_name', '');
+            frm.set_value('tenant', '');
+            frm.set_value('tenant_name', '');
+            frm.set_df_property('buyer_company_name', 'read_only', 0);
+            frm.set_df_property('buyer_tax_id', 'read_only', 0);
+            frm.set_df_property('tenant', 'read_only', 0);
+        }
+    },
+
+    tenant: function(frm) {
+        // Clear fetch_from field dependent on tenant
+        if (!frm.doc.tenant) {
+            frm.set_value('tenant_name', '');
+        }
+    },
+
+    buyer_type: function(frm) {
+        // Clear organization-related fields when buyer type changes from Organization
+        if (frm.doc.buyer_type !== 'Organization') {
+            frm.set_value('organization', '');
+            frm.set_value('organization_name', '');
+            frm.set_value('buyer_company_name', '');
+            frm.set_value('buyer_tax_id', '');
+            frm.set_value('tenant', '');
+            frm.set_value('tenant_name', '');
+            frm.set_df_property('buyer_company_name', 'read_only', 0);
+            frm.set_df_property('buyer_tax_id', 'read_only', 0);
+            frm.set_df_property('tenant', 'read_only', 0);
+        }
+    },
+
+    /**
+     * Discount 1 change handler - recalculates totals with cascading discounts
+     */
+    discount_1: function(frm) {
+        calculate_order_totals(frm);
+    },
+
+    /**
+     * Discount 2 change handler - recalculates totals with cascading discounts
+     */
+    discount_2: function(frm) {
+        calculate_order_totals(frm);
+    },
+
+    /**
+     * Discount 3 change handler - recalculates totals with cascading discounts
+     */
+    discount_3: function(frm) {
+        calculate_order_totals(frm);
+    },
+
+    /**
+     * Show discount tiers toggle handler - shows/hides discount 2 and 3 fields
+     */
+    show_discount_tiers: function(frm) {
+        if (!frm.doc.show_discount_tiers) {
+            // Clear discount 2 and 3 when hiding tiers
+            frm.set_value('discount_2', 0);
+            frm.set_value('discount_3', 0);
+        }
+        calculate_order_totals(frm);
+    }
+});
+
+/**
+ * Check if the buyer has an active cart and show notification
+ */
+function check_buyer_cart(frm) {
+    frappe.call({
+        method: 'tr_tradehub.tr_tradehub.doctype.marketplace_order.marketplace_order.get_buyer_active_cart',
+        args: {
+            buyer: frm.doc.buyer
+        },
+        callback: function(r) {
+            if (r.message) {
+                let cart = r.message;
+                let msg = __('Buyer has an active cart with {0} item(s). Total: {1}', [
+                    cart.item_count,
+                    format_currency(cart.grand_total, frm.doc.currency || 'TRY')
+                ]);
+
+                // Show indicator based on cart status
+                let indicator = 'green';
+                if (cart.has_price_changes || cart.has_stock_issues) {
+                    indicator = 'orange';
+                    msg += ' ' + __('(Has warnings)');
+                }
+
+                frappe.show_alert({
+                    message: msg,
+                    indicator: indicator
+                }, 5);
+
+                // Add button to get items from this cart
+                frm.page.set_inner_btn_group_as_primary(__('Actions'));
+            }
+        }
+    });
+}
+
+/**
+ * Get items from buyer's cart and populate order items
+ */
+function get_items_from_cart(frm) {
+    if (!frm.doc.buyer) {
+        frappe.msgprint(__('Please select a buyer first'));
+        return;
+    }
+
+    // First, check if buyer has an active cart
+    frappe.call({
+        method: 'tr_tradehub.tr_tradehub.doctype.marketplace_order.marketplace_order.get_buyer_active_cart',
+        args: {
+            buyer: frm.doc.buyer
+        },
+        callback: function(r) {
+            if (!r.message) {
+                frappe.msgprint(__('No active cart found for this buyer'));
+                return;
+            }
+
+            let cart = r.message;
+
+            // Confirm with user
+            let msg = __('Found cart with {0} item(s). Total: {1}', [
+                cart.item_count,
+                format_currency(cart.grand_total, frm.doc.currency || 'TRY')
+            ]);
+
+            if (cart.has_price_changes) {
+                msg += '<br><span class="text-warning">' + __('Warning: Cart has price changes') + '</span>';
+            }
+            if (cart.has_stock_issues) {
+                msg += '<br><span class="text-warning">' + __('Warning: Cart has stock issues') + '</span>';
+            }
+
+            // Check if order already has items
+            if (frm.doc.items && frm.doc.items.length > 0) {
+                msg += '<br><br><strong>' + __('This will replace existing order items.') + '</strong>';
+            }
+
+            frappe.confirm(
+                msg,
+                function() {
+                    // User confirmed - fetch cart items
+                    fetch_and_populate_cart_items(frm, cart.name);
+                },
+                function() {
+                    // User cancelled
+                }
+            );
+        }
+    });
+}
+
+/**
+ * Fetch cart items and populate order
+ */
+function fetch_and_populate_cart_items(frm, cart_name) {
+    frappe.call({
+        method: 'tr_tradehub.tr_tradehub.doctype.marketplace_order.marketplace_order.get_cart_items_for_order',
+        args: {
+            cart_name: cart_name
+        },
+        freeze: true,
+        freeze_message: __('Loading cart items...'),
+        callback: function(r) {
+            if (r.message) {
+                let data = r.message;
+
+                // Clear existing items
+                frm.clear_table('items');
+
+                // Add items from cart
+                data.items.forEach(function(item) {
+                    let row = frm.add_child('items');
+                    Object.assign(row, {
+                        listing: item.listing,
+                        listing_variant: item.listing_variant,
+                        seller: item.seller,
+                        title: item.title,
+                        sku: item.sku,
+                        primary_image: item.primary_image,
+                        qty: item.qty,
+                        stock_uom: item.stock_uom,
+                        currency: item.currency || frm.doc.currency,
+                        unit_price: item.unit_price,
+                        compare_at_price: item.compare_at_price,
+                        tax_rate: item.tax_rate || 18,
+                        commission_rate: item.commission_rate,
+                        weight: item.weight,
+                        weight_uom: item.weight_uom,
+                        fulfillment_status: 'Pending'
+                    });
+                });
+
+                // Update cart reference and related fields
+                frm.set_value('cart', cart_name);
+                frm.set_value('source_channel', data.cart.source_channel || 'Website');
+
+                // Copy buyer info from cart if not set
+                if (!frm.doc.buyer_type && data.cart.buyer_type) {
+                    frm.set_value('buyer_type', data.cart.buyer_type);
+                }
+                if (!frm.doc.organization && data.cart.organization) {
+                    frm.set_value('organization', data.cart.organization);
+                }
+
+                // Copy coupon/promotion info
+                if (data.cart.coupon_code) {
+                    frm.set_value('coupon_code', data.cart.coupon_code);
+                    frm.set_value('coupon_discount', data.cart.coupon_discount || 0);
+                }
+                if (data.cart.promotion_code) {
+                    frm.set_value('promotion_code', data.cart.promotion_code);
+                    frm.set_value('promotion_discount', data.cart.promotion_discount || 0);
+                }
+
+                // Copy shipping info
+                if (data.cart.shipping_country) {
+                    frm.set_value('shipping_country', data.cart.shipping_country);
+                }
+                if (data.cart.shipping_postal_code) {
+                    frm.set_value('shipping_postal_code', data.cart.shipping_postal_code);
+                }
+
+                // Refresh the items table
+                frm.refresh_field('items');
+
+                // Show success message
+                let msg = __('Added {0} item(s) from cart', [data.items.length]);
+
+                if (!data.can_checkout) {
+                    frappe.msgprint({
+                        title: __('Cart Items Added'),
+                        message: msg + '<br><br><span class="text-warning">' +
+                            __('Note: {0}', [data.error]) + '</span>',
+                        indicator: 'orange'
+                    });
+                } else {
+                    frappe.show_alert({
+                        message: msg,
+                        indicator: 'green'
+                    }, 5);
+                }
+
+                // Mark form as dirty
+                frm.dirty();
+            }
+        }
+    });
+}
+
+/**
+ * Show cart information if cart is linked
+ */
+function show_cart_info(frm) {
+    if (!frm.doc.cart) return;
+
+    frappe.db.get_value('Cart', frm.doc.cart,
+        ['status', 'validation_status', 'has_price_changes', 'has_stock_issues', 'converted_to_order'],
+        function(r) {
+            if (r) {
+                if (r.converted_to_order && r.status === 'Converted') {
+                    frm.dashboard.add_comment(
+                        __('This order was created from cart {0}', [frm.doc.cart]),
+                        'blue',
+                        true
+                    );
+                }
+            }
+        }
+    );
+}
+
+// =============================================================================
+// Marketplace Order Item Child Table - Dynamic Calculations
+// =============================================================================
+
+frappe.ui.form.on('Marketplace Order Item', {
+    // Trigger calculation when qty changes
+    qty: function(frm, cdt, cdn) {
+        calculate_item_amounts(frm, cdt, cdn);
+    },
+
+    // Trigger calculation when unit_price changes
+    unit_price: function(frm, cdt, cdn) {
+        calculate_item_amounts(frm, cdt, cdn);
+    },
+
+    // Trigger calculation when discount_value (percentage) changes
+    discount_value: function(frm, cdt, cdn) {
+        calculate_item_amounts(frm, cdt, cdn);
+    },
+
+    // Trigger calculation when tax_rate changes
+    tax_rate: function(frm, cdt, cdn) {
+        calculate_item_amounts(frm, cdt, cdn);
+    },
+
+    // Trigger calculation when commission_rate changes
+    commission_rate: function(frm, cdt, cdn) {
+        calculate_item_amounts(frm, cdt, cdn);
+    },
+
+    // Trigger calculation when shipping_amount changes
+    shipping_amount: function(frm, cdt, cdn) {
+        calculate_item_amounts(frm, cdt, cdn);
+    },
+
+    // When row is added, recalculate totals
+    items_add: function(frm, cdt, cdn) {
+        calculate_order_totals(frm);
+    },
+
+    // When row is removed, recalculate totals
+    items_remove: function(frm) {
+        calculate_order_totals(frm);
+    }
+});
+
+/**
+ * Calculate amounts for a single order item row
+ * Formula:
+ *   line_subtotal = qty * unit_price
+ *   discount_amount = line_subtotal * (discount_value / 100)
+ *   taxable_amount = line_subtotal - discount_amount
+ *   tax_amount = taxable_amount * (tax_rate / 100)
+ *   commission_amount = taxable_amount * (commission_rate / 100)
+ *   line_total = taxable_amount + tax_amount + shipping_amount
+ */
+function calculate_item_amounts(frm, cdt, cdn) {
+    let row = locals[cdt][cdn];
+
+    // Get values with flt() to handle null/undefined → 0
+    let qty = flt(row.qty);
+    let unit_price = flt(row.unit_price);
+    let discount_value = flt(row.discount_value);  // Percentage
+    let tax_rate = flt(row.tax_rate);
+    let commission_rate = flt(row.commission_rate);
+    let shipping_amount = flt(row.shipping_amount);
+
+    // Calculate line subtotal (before discount)
+    let line_subtotal = flt(qty * unit_price);
+
+    // Calculate discount amount
+    let discount_amount = flt(line_subtotal * (discount_value / 100));
+
+    // Taxable amount (after discount)
+    let taxable_amount = flt(line_subtotal - discount_amount);
+
+    // Calculate tax amount
+    let tax_amount = flt(taxable_amount * (tax_rate / 100));
+
+    // Calculate commission amount
+    let commission_amount = flt(taxable_amount * (commission_rate / 100));
+
+    // Calculate line total (taxable + tax + shipping)
+    let line_total = flt(taxable_amount + tax_amount + shipping_amount);
+
+    // Update all calculated fields using frappe.model.set_value
+    // CRITICAL: Always use frappe.model.set_value() for child table updates, never direct assignment
+    frappe.model.set_value(cdt, cdn, 'line_subtotal', flt(line_subtotal));
+    frappe.model.set_value(cdt, cdn, 'discount_amount', flt(discount_amount));
+    frappe.model.set_value(cdt, cdn, 'tax_amount', flt(tax_amount));
+    frappe.model.set_value(cdt, cdn, 'commission_amount', flt(commission_amount));
+    frappe.model.set_value(cdt, cdn, 'line_total', flt(line_total));
+
+    // Recalculate order totals
+    calculate_order_totals(frm);
+}
+
+/**
+ * Calculate order totals from all items
+ */
+function calculate_order_totals(frm) {
+    let items = frm.doc.items || [];
+
+    let subtotal = 0;
+    let item_discount = 0;
+    let total_tax = 0;
+    let total_commission = 0;
+    let total_shipping = 0;
+    let total_qty = 0;
+    let total_weight = 0;
+
+    items.forEach(function(item) {
+        subtotal += flt(item.line_subtotal);
+        item_discount += flt(item.discount_amount);
+        total_tax += flt(item.tax_amount);
+        total_commission += flt(item.commission_amount);
+        total_shipping += flt(item.shipping_amount);
+        total_qty += flt(item.qty);
+        total_weight += flt(flt(item.weight) * flt(item.qty));
+    });
+
+    // Calculate cascading discount: base * (1-d1/100) * (1-d2/100) * (1-d3/100)
+    var cascading_discount = 0;
+    var effective_discount_pct = 0;
+    var d1 = flt(frm.doc.discount_1);
+    var d2 = flt(frm.doc.discount_2);
+    var d3 = flt(frm.doc.discount_3);
+
+    if (flt(subtotal) > 0) {
+        var price_after_d1 = flt(flt(subtotal) * (1 - d1 / 100));
+        var price_after_d2 = flt(price_after_d1 * (1 - d2 / 100));
+        var final_price = flt(price_after_d2 * (1 - d3 / 100));
+        cascading_discount = flt(flt(subtotal) - final_price);
+    }
+
+    // Apply order-level discounts (coupon, promotion) AFTER cascading discounts
+    let coupon_discount = flt(frm.doc.coupon_discount);
+    let promotion_discount = flt(frm.doc.promotion_discount);
+    let order_discount = flt(coupon_discount + promotion_discount);
+
+    // Total discount = item-level + cascading + coupon/promotion
+    let total_discount = flt(flt(item_discount) + flt(cascading_discount) + flt(order_discount));
+
+    // Effective discount percentage for display
+    if (flt(subtotal) > 0) {
+        effective_discount_pct = flt(total_discount / flt(subtotal) * 100);
+    }
+    frm.set_value('effective_discount_pct', effective_discount_pct);
+
+    // Calculate grand total
+    let grand_total = flt(flt(subtotal) - flt(total_discount) + flt(total_tax) + flt(total_shipping));
+
+    // Update parent totals using frm.set_value
+    frm.set_value('subtotal', flt(subtotal));
+    frm.set_value('total_discount', flt(total_discount));
+    frm.set_value('tax_total', flt(total_tax));
+    frm.set_value('shipping_total', flt(total_shipping));
+    frm.set_value('grand_total', flt(grand_total));
+    frm.set_value('total_commission', flt(total_commission));
+    frm.set_value('item_count', items.length);
+    frm.set_value('total_qty', flt(total_qty));
+    frm.set_value('total_weight', flt(total_weight));
+
+    // Calculate seller payout (grand_total - commission)
+    let seller_payout = flt(flt(grand_total) - flt(total_commission));
+    frm.set_value('seller_payout', flt(seller_payout));
+}
