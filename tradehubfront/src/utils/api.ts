@@ -24,6 +24,21 @@ export interface FrappeResponse<T> {
   message: T
 }
 
+/**
+ * Custom error class for Frappe API errors.
+ * Preserves the `title` field from `_server_messages` so callers can
+ * distinguish error types (e.g. title="email_not_verified") without
+ * parsing the human-readable message text.
+ */
+export class FrappeError extends Error {
+  title?: string
+  constructor(message: string, title?: string) {
+    super(message)
+    this.name = 'FrappeError'
+    this.title = title
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -63,17 +78,23 @@ async function handleError(res: Response): Promise<never> {
   if (res.status === 403) {
     clearAuth()
     window.location.href = `${getBaseUrl()}pages/auth/login.html`
-    throw new Error('Session expired')
+    throw new FrappeError('Session expired')
   }
 
   let detail: string
+  let errorTitle: string | undefined
   try {
     const body = await res.json() as { exc_type?: string; _server_messages?: string }
     // Frappe sometimes returns structured error info
     if (body._server_messages) {
       const msgs = JSON.parse(body._server_messages) as string[]
       detail = msgs.map(m => {
-        try { return (JSON.parse(m) as { message: string }).message } catch { return m }
+        try {
+          const parsed = JSON.parse(m) as { message: string; title?: string }
+          // Capture the title from the first message that has one
+          if (parsed.title && !errorTitle) errorTitle = parsed.title
+          return parsed.message
+        } catch { return m }
       }).join('; ')
     } else {
       detail = body.exc_type ?? res.statusText
@@ -82,7 +103,7 @@ async function handleError(res: Response): Promise<never> {
     detail = await res.text().catch(() => res.statusText)
   }
 
-  throw new Error(detail)
+  throw new FrappeError(detail, errorTitle)
 }
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,8 @@
 import type { LocaleOption, CurrencyOption } from '../../types/navigation';
 import { megaCategories } from './MegaMenu';
 import { cartStore } from '../cart/state/CartStore';
-import { isLoggedIn, getUser, logout } from '../../utils/auth';
+import { isLoggedIn, getUser, logout, clearAuth } from '../../utils/auth';
+import { apiPost } from '../../utils/api';
 import { mockConversations } from '../../data/mockMessages';
 import { t, getCurrentLang, updatePageTranslations } from '../../i18n';
 import type { SupportedLang } from '../../i18n';
@@ -1446,7 +1447,13 @@ document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
   if (target.id === 'logout-btn' || target.closest('#logout-btn')) {
     e.preventDefault();
-    logout();
+    // Call backend logout to invalidate server session (fire-and-forget).
+    // We clear local auth and redirect immediately regardless of API result.
+    apiPost('tr_tradehub.api.v1.auth.logout', {}).catch(() => {
+      // Backend logout failed (network error, session expired, etc.).
+      // Client-side cleanup still proceeds below.
+    });
+    clearAuth();
     window.location.href = getBaseUrl();
   }
 });

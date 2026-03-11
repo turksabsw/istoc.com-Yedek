@@ -311,7 +311,7 @@ Alpine.data('welcomePage', () => ({
       const baseUrl = getBaseUrl()
       setTimeout(() => {
         if (this.userType === 'supplier') {
-          window.location.href = `${baseUrl}pages/seller/seller-dashboard.html`
+          window.location.href = `${baseUrl}pages/seller/sell.html`
         } else {
           window.location.href = `${baseUrl}pages/dashboard/buyer-dashboard.html`
         }

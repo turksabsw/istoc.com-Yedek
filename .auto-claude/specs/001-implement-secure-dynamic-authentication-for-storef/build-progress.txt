@@ -184,3 +184,154 @@ Session 6 (Builder - subtask-6-1):
 - Updated implementation_plan.json: subtask-6-1 status → completed
 
 === END SESSION 6 ===
+
+Session 7 (Builder - subtask-6-3):
+- End-to-end integration verification of all auth flows
+- CRITICAL INTEGRATION BUGS FOUND AND FIXED:
+
+  BUG 1: LoginPage.ts — API response type mismatch (CRITICAL)
+    Issue: Frontend LoginResponse expected flat api_key/api_secret/expires_in
+           but backend nests them under token: {api_key, api_secret, token_type}
+    Impact: Login would silently fail — no redirect, no error, no token storage
+    Fix: Updated LoginResponse interface to use nested token object,
+         updated handleLoginSuccess to extract from result.token
+
+  BUG 2: VerifyPage.ts — Same token nesting mismatch (CRITICAL)
+    Issue: VerifyEmailResponse expected flat api_key/api_secret
+    Impact: Email verification would fail to store tokens
+    Fix: Updated response type, added token extraction from result.token
+
+  BUG 3: Verify2FAResponse — Same issue for 2FA flow (CRITICAL)
+    Issue: 2FA response expected flat tokens
+    Impact: 2FA verification would fail to store tokens
+    Fix: Updated type and extraction
+
+  BUG 4: api.ts — FrappeError title not preserved (MEDIUM)
+    Issue: Frappe _server_messages contain title field (e.g. "email_not_verified")
+           but handleError only extracted message text, losing the title
+    Impact: Login with unverified email would show error toast instead of
+           redirecting to verify page (email_not_verified detection failed)
+    Fix: Added FrappeError class that preserves title, updated handleError
+         to extract title from _server_messages
+
+  BUG 5: Dashboard redirect paths — all wrong (MEDIUM)
+    Issue: LoginPage, VerifyPage, WelcomePage, and backend used non-existent paths:
+           - pages/supplier-dashboard.html (doesn't exist)
+           - pages/buyer-dashboard.html (doesn't exist)
+           - pages/seller/seller-dashboard.html (doesn't exist)
+    Fix: Updated all to use actual paths:
+           - Buyer: pages/dashboard/buyer-dashboard.html
+           - Supplier: pages/seller/sell.html
+
+  BUG 6: Backend-to-frontend user field name mismatch (MEDIUM)
+    Issue: Backend returns is_email_verified (number), frontend AuthUser expects
+           is_verified (boolean). Backend doesn't send roles array.
+    Impact: Stored user profile would have wrong field names, causing
+           middleware checks to behave incorrectly
+    Fix: Added BackendUser interface and mapBackendUser() mapping function
+         to auth.ts. Updated LoginPage and VerifyPage to use mapping.
+
+  BUG 7: Token refresh could corrupt tokens (LOW)
+    Issue: middleware.ts refreshAuthToken expected api_key/api_secret in response
+           but refresh_token endpoint (Keycloak) only returns expires_in.
+           Would store undefined values, corrupting localStorage tokens.
+    Fix: Added null checks — only update tokens if response has valid data,
+         otherwise extend existing token expiry.
+
+  BUG 8: Logout doesn't invalidate server session (MEDIUM)
+    Issue: TopBar.ts logout handler only called clearAuth() (localStorage),
+           never called backend tr_tradehub.api.v1.auth.logout endpoint.
+    Impact: Server-side session remained active after client-side logout
+    Fix: Added fire-and-forget apiPost to backend logout endpoint before
+         clearing local auth. Error is silently caught.
+
+- FILES MODIFIED (9 files):
+  1. tradehubfront/src/utils/api.ts — Added FrappeError class, updated handleError
+  2. tradehubfront/src/utils/auth.ts — Added BackendUser interface, mapBackendUser()
+  3. tradehubfront/src/utils/middleware.ts — Fixed refreshAuthToken null safety
+  4. tradehubfront/src/components/auth/LoginPage.ts — Fixed response types, token extraction,
+     error detection, dashboard paths, user mapping
+  5. tradehubfront/src/components/auth/VerifyPage.ts — Fixed response type, token extraction,
+     dashboard paths, user mapping
+  6. tradehubfront/src/components/onboarding/WelcomePage.ts — Fixed supplier dashboard path
+  7. tradehubfront/src/components/header/TopBar.ts — Added backend logout API call
+  8. Frappe_Marketplace/.../auth.py — Fixed complete_onboarding redirect paths
+  9. .auto-claude/.../implementation_plan.json — Updated subtask-6-3 status
+
+- E2E FLOW VERIFICATION (static analysis):
+
+  (1) Registration flow ✅
+      Frontend: RegisterPage → check_email_exists → register → verify_email
+      API contracts: alpine/auth.ts uses correct nested token.api_key format
+      Token storage: setTokens with 86400s default expiry
+      User storage: Manual mapping with correct field names
+      Redirect: register-complete event → entry point handles redirect
+      Rate limiting: All endpoints have check_rate_limit at start
+
+  (2) Login flow ✅
+      Frontend: LoginPage → login → handleLoginSuccess
+      API contracts: FIXED — now correctly reads result.token.api_key
+      Token storage: setTokens with 86400s expiry
+      User storage: FIXED — uses mapBackendUser() for correct field mapping
+      Redirect: Return URL validation (isSafeReturnUrl) → dashboard by user_type
+      Error handling: Error toasts for failures
+
+  (3) Login with unverified email ✅
+      Backend: login() throws with title="email_not_verified"
+      Frontend: FIXED — FrappeError preserves title, handleLoginError checks
+               title === 'email_not_verified' || message includes 'verify your email'
+      Redirect: FIXED — correctly navigates to /pages/auth/verify.html?email=...
+      OTP auto-send: Backend generates new OTP and sends verification email
+
+  (4) Password reset flow ✅
+      Frontend: forgotPasswordPage → forgot_password → verify_reset_otp → reset_password
+      API contracts: Correct — forgot_password returns success, verify_reset_otp returns
+                     reset_token, reset_password takes reset_token + new_password
+      reset_token security: Stored in component state only, cleared after use/destroy
+      Anti-enumeration: forgot_password always returns same message
+      Redirect: After reset → login.html?message=password_reset_success
+
+  (5) Middleware ✅
+      Public paths: login, register, forgot-password, verify — correctly skipped
+      Token check: Redirects to login with return URL if getTokens() null
+      Token refresh: FIXED — null-safe, won't corrupt tokens
+      Onboarding: Redirects to welcome.html if has_completed_onboarding is false
+      Cross-tab: Storage event listener detects logout in other tabs
+
+  (6) Logout ✅
+      Frontend: FIXED — calls apiPost('...logout') fire-and-forget, then clearAuth()
+      Backend: logout() clears refresh token, ends Frappe session
+      Cross-tab: Other tabs detect token removal via storage event
+
+  (7) Social login buttons ✅
+      Frontend: SocialLoginButtons fetches get_social_providers,
+               calls get_login_url for SSO redirect
+      Backend: get_login_url generates Keycloak authorization URL with CSRF state
+      Graceful degradation: If Keycloak down, SSO buttons hidden, email stays visible
+      Callback: sso_callback handles authorization code exchange
+
+  (8) Existing Keycloak SSO ✅
+      Backend: All existing endpoints preserved (get_sso_status, get_login_url,
+               sso_callback, refresh_token, get_session_user, etc.)
+      No conflicts: New auth endpoints (register, login, etc.) added alongside
+               existing SSO endpoints in same file
+      SSO cache keys: Unchanged (trade_hub:sso:* prefix)
+
+- VERIFICATION RESULTS:
+  ✅ TypeScript compilation: 0 new errors (only pre-existing 3 in SearchArea.ts)
+  ✅ Python compilation: auth.py compiles without errors
+  ✅ All API method names match between frontend and backend
+  ✅ All response types now match backend response structure
+  ✅ Dashboard redirect paths now match actual HTML files
+  ✅ User field mapping handles is_email_verified → is_verified conversion
+  ✅ Rate limiting present on all auth endpoints
+  ✅ Zero frappe.db.sql() in auth code
+  ✅ OTP single-use enforced (delete_value after verification)
+  ✅ Reset token single-use enforced
+  ✅ Anti-enumeration on forgot_password
+  ✅ No password in any response or log
+
+- Updated implementation_plan.json: subtask-6-3 status → completed
+- All 21/21 subtasks complete — feature implementation DONE
+
+=== END SESSION 7 ===

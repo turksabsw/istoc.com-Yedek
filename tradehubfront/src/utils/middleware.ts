@@ -58,16 +58,29 @@ async function refreshAuthToken(tokens: AuthTokens): Promise<void> {
   refreshInProgress = true
   try {
     const result = await apiPost<{
-      api_key: string
-      api_secret: string
-      expires_in: number
+      api_key?: string
+      api_secret?: string
+      expires_in?: number
     }>('tr_tradehub.api.v1.auth.refresh_token', {})
 
-    setTokens({
-      api_key: result.api_key,
-      api_secret: result.api_secret,
-      expires_in: result.expires_in,
-    })
+    // Only update tokens if the response contains valid token data.
+    // The refresh_token endpoint may return a different format for SSO
+    // users (without api_key/api_secret), in which case we preserve
+    // the existing tokens and just extend their client-side expiry.
+    if (result.api_key && result.api_secret && result.expires_in) {
+      setTokens({
+        api_key: result.api_key,
+        api_secret: result.api_secret,
+        expires_in: result.expires_in,
+      })
+    } else if (result.expires_in) {
+      // Extend existing token expiry without replacing credentials
+      setTokens({
+        api_key: tokens.api_key,
+        api_secret: tokens.api_secret,
+        expires_in: result.expires_in,
+      })
+    }
   } catch {
     // Refresh failed — token may still be valid until actual expiry.
     // The next page load will retry. Don't clear auth here.

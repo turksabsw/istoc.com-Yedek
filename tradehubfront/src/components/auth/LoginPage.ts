@@ -6,9 +6,9 @@
  */
 
 import { getBaseUrl } from './AuthLayout';
-import { setTokens, setUser } from '../../utils/auth';
-import type { AuthTokens, AuthUser } from '../../utils/auth';
-import { apiPost } from '../../utils/api';
+import { setTokens, setUser, mapBackendUser } from '../../utils/auth';
+import type { AuthTokens, AuthUser, BackendUser } from '../../utils/auth';
+import { apiPost, FrappeError } from '../../utils/api';
 import { showToast } from '../../utils/toast';
 import { EmailVerification, initEmailVerification, cleanupEmailVerification } from './EmailVerification';
 import type { EmailVerificationState } from './EmailVerification';
@@ -21,24 +21,30 @@ export interface LoginPageOptions {
   onCreateAccount?: () => void;
 }
 
+/** Token object nested in auth API responses */
+interface AuthTokenResponse {
+  api_key: string;
+  api_secret: string;
+  token_type: string;
+}
+
 /** Login API success response */
 interface LoginResponse {
+  success: boolean;
   requires_2fa: boolean;
   session_id?: string;
+  method?: string;
   /** Token data (when 2FA is not required) */
-  api_key?: string;
-  api_secret?: string;
-  expires_in?: number;
+  token?: AuthTokenResponse;
   /** User profile (when 2FA is not required) */
-  user?: AuthUser;
+  user?: BackendUser;
 }
 
 /** 2FA verification API response */
 interface Verify2FAResponse {
-  api_key: string;
-  api_secret: string;
-  expires_in: number;
-  user: AuthUser;
+  success: boolean;
+  token: AuthTokenResponse;
+  user: BackendUser;
 }
 
 /* ── Component HTML ─────────────────────────────────── */
@@ -184,9 +190,9 @@ export function initLoginPage(options: LoginPageOptions = {}): void {
           show2FAStep(email, result.session_id, baseUrl, (state) => {
             verificationState = state;
           });
-        } else if (result.api_key && result.api_secret && result.user) {
+        } else if (result.token && result.user) {
           // Direct login success (no 2FA)
-          handleLoginSuccess(result as Required<Pick<LoginResponse, 'api_key' | 'api_secret' | 'expires_in' | 'user'>>, baseUrl);
+          handleLoginSuccess({ token: result.token, user: result.user }, baseUrl);
         }
       } catch (err) {
         handleLoginError(err, email, baseUrl);
@@ -250,18 +256,19 @@ function isSafeReturnUrl(url: string): boolean {
  * Handle successful login — store tokens/user and redirect
  */
 function handleLoginSuccess(
-  data: { api_key: string; api_secret: string; expires_in: number; user: AuthUser },
+  data: { token: AuthTokenResponse; user: BackendUser },
   baseUrl: string,
 ): void {
-  // Store auth tokens
+  // Store auth tokens (no server-side expiry for API tokens, default 24h)
   setTokens({
-    api_key: data.api_key,
-    api_secret: data.api_secret,
-    expires_in: data.expires_in,
+    api_key: data.token.api_key,
+    api_secret: data.token.api_secret,
+    expires_in: 86400,
   });
 
-  // Store user profile
-  setUser(data.user);
+  // Map backend user to frontend AuthUser format and store
+  const user = mapBackendUser(data.user);
+  setUser(user);
 
   // Determine redirect destination
   const params = new URLSearchParams(window.location.search);
@@ -271,11 +278,11 @@ function handleLoginSuccess(
     window.location.href = returnUrl;
   } else {
     // Redirect based on user_type
-    const userType = data.user.user_type;
+    const userType = user.user_type;
     if (userType === 'supplier') {
-      window.location.href = `${baseUrl}pages/supplier-dashboard.html`;
+      window.location.href = `${baseUrl}pages/seller/sell.html`;
     } else {
-      window.location.href = `${baseUrl}pages/buyer-dashboard.html`;
+      window.location.href = `${baseUrl}pages/dashboard/buyer-dashboard.html`;
     }
   }
 }
@@ -286,8 +293,14 @@ function handleLoginSuccess(
 function handleLoginError(err: unknown, email: string, baseUrl: string): void {
   const message = err instanceof Error ? err.message : String(err);
 
-  // Check for email_not_verified error — redirect to verify page
-  if (message.toLowerCase().includes('email_not_verified') || message.toLowerCase().includes('email not verified')) {
+  // Check for email_not_verified error — redirect to verify page.
+  // The backend throws with title="email_not_verified", which FrappeError preserves.
+  const title = err instanceof FrappeError ? err.title : undefined;
+  if (
+    title === 'email_not_verified' ||
+    message.toLowerCase().includes('email_not_verified') ||
+    message.toLowerCase().includes('verify your email')
+  ) {
     window.location.href = `${baseUrl}pages/auth/verify.html?email=${encodeURIComponent(email)}`;
     return;
   }
@@ -343,7 +356,7 @@ function show2FAStep(
           { email, otp, session_id: sessionId },
         );
 
-        handleLoginSuccess(result, baseUrl);
+        handleLoginSuccess({ token: result.token, user: result.user }, baseUrl);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         showToast({ message, type: 'error' });

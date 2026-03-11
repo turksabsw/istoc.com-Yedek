@@ -73,6 +73,38 @@ export function setUser(user: AuthUser): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+/**
+ * User profile as returned by the Frappe backend auth endpoints.
+ * Field names and types may differ from the frontend AuthUser interface.
+ */
+export interface BackendUser {
+  email: string;
+  full_name: string;
+  first_name: string;
+  last_name: string;
+  user_type: string;
+  is_email_verified: number;
+  has_completed_onboarding: number;
+}
+
+/**
+ * Map a backend user response to the frontend AuthUser interface.
+ * Handles field name differences (is_email_verified → is_verified)
+ * and type coercion (number → boolean).
+ */
+export function mapBackendUser(backendUser: BackendUser): AuthUser {
+  return {
+    email: backendUser.email,
+    full_name: backendUser.full_name,
+    first_name: backendUser.first_name,
+    last_name: backendUser.last_name || '',
+    roles: [],
+    user_type: backendUser.user_type || 'buyer',
+    is_verified: Boolean(backendUser.is_email_verified),
+    has_completed_onboarding: Boolean(backendUser.has_completed_onboarding),
+  };
+}
+
 /** Check if user is logged in (has non-expired tokens) */
 export function isLoggedIn(): boolean {
   return getTokens() !== null;

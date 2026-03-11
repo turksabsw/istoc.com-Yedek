@@ -2182,9 +2182,9 @@ def complete_onboarding() -> Dict[str, Any]:
         # Determine redirect URL based on user type
         user_type = frappe.db.get_value("User", user, "tradehub_user_type")
         if user_type == "supplier":
-            redirect_path = "/pages/supplier-dashboard.html"
+            redirect_path = "/pages/seller/sell.html"
         else:
-            redirect_path = "/pages/buyer-dashboard.html"
+            redirect_path = "/pages/dashboard/buyer-dashboard.html"
 
         return {
             "success": True,

@@ -7,8 +7,8 @@
  */
 
 import { getBaseUrl } from './AuthLayout';
-import { setTokens, setUser } from '../../utils/auth';
-import type { AuthUser } from '../../utils/auth';
+import { setTokens, setUser, mapBackendUser } from '../../utils/auth';
+import type { AuthUser, BackendUser } from '../../utils/auth';
 import { apiPost } from '../../utils/api';
 import { showToast } from '../../utils/toast';
 import {
@@ -30,10 +30,13 @@ export interface VerifyPageOptions {
 
 /** verify_email API response */
 interface VerifyEmailResponse {
-  api_key: string;
-  api_secret: string;
-  expires_in: number;
-  user: AuthUser;
+  success: boolean;
+  token: {
+    api_key: string;
+    api_secret: string;
+    token_type: string;
+  };
+  user: BackendUser;
 }
 
 /* ── Component HTML ─────────────────────────────────── */
@@ -97,26 +100,27 @@ export function initVerifyPage(options: VerifyPageOptions = {}): void {
           { email, otp },
         );
 
-        // Store auth tokens
+        // Store auth tokens (no server-side expiry for API tokens, default 24h)
         setTokens({
-          api_key: result.api_key,
-          api_secret: result.api_secret,
-          expires_in: result.expires_in,
+          api_key: result.token.api_key,
+          api_secret: result.token.api_secret,
+          expires_in: 86400,
         });
 
-        // Store user profile
-        setUser(result.user);
+        // Map backend user and store profile
+        const user = mapBackendUser(result.user);
+        setUser(user);
 
         // Redirect or call success callback
         if (options.onSuccess) {
           options.onSuccess();
         } else {
           // Redirect based on user_type
-          const userType = result.user.user_type;
+          const userType = user.user_type;
           if (userType === 'supplier') {
-            window.location.href = `${baseUrl}pages/supplier-dashboard.html`;
+            window.location.href = `${baseUrl}pages/seller/sell.html`;
           } else {
-            window.location.href = `${baseUrl}pages/buyer-dashboard.html`;
+            window.location.href = `${baseUrl}pages/dashboard/buyer-dashboard.html`;
           }
         }
       } catch (err) {
