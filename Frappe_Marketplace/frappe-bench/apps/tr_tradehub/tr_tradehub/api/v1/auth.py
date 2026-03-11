@@ -602,7 +602,7 @@ def send_verification_email(email: str, otp: str, first_name: str) -> None:
             template="email_verification",
             args={
                 "first_name": first_name or _("User"),
-                "otp_code": otp,
+                "otp": otp,
                 "valid_minutes": VERIFICATION_OTP_EXPIRY_SECONDS // 60,
             },
             now=True,
@@ -630,7 +630,7 @@ def send_password_reset_email(email: str, otp: str, first_name: str) -> None:
             template="password_reset",
             args={
                 "first_name": first_name or _("User"),
-                "otp_code": otp,
+                "otp": otp,
                 "valid_minutes": PASSWORD_RESET_OTP_EXPIRY_SECONDS // 60,
             },
             now=True,

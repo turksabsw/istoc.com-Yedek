@@ -562,24 +562,22 @@ Alpine.data('forgotPasswordPage', () => ({
     const pw = (this.$refs as Record<string, HTMLInputElement>).newPassword?.value || '';
     const touched = pw.length > 0;
 
-    // Rule 1: 6-20 characters
-    const lengthOk = pw.length >= 6 && pw.length <= 20;
+    // Rule 1: At least 8 characters (matching backend PASSWORD_REQUIREMENTS.min_length)
+    const lengthOk = pw.length >= 8;
     this.reqLength = touched ? lengthOk : null;
 
-    // Rule 2: At least 2 of: letters, digits, special chars
-    const hasLetters = /[a-zA-Z]/.test(pw);
-    const hasDigits = /[0-9]/.test(pw);
-    const hasSpecial = /[^a-zA-Z0-9\s]/.test(pw);
-    const typesCount = [hasLetters, hasDigits, hasSpecial].filter(Boolean).length;
-    const charsOk = typesCount >= 2;
+    // Rule 2: Must contain uppercase + lowercase + digit (matching backend)
+    const hasUppercase = /[A-Z]/.test(pw);
+    const hasLowercase = /[a-z]/.test(pw);
+    const hasDigit = /[0-9]/.test(pw);
+    const charsOk = hasUppercase && hasLowercase && hasDigit;
     this.reqChars = touched ? charsOk : null;
 
-    // Rule 3: No emoji
+    // Rule 3: No emoji (frontend-only UX rule)
     const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
     const noEmoji = !emojiRegex.test(pw);
     this.reqEmoji = touched ? noEmoji : null;
 
-    // Enable/disable submit
     this.passwordValid = lengthOk && charsOk && noEmoji;
   },
 
