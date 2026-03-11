@@ -304,6 +304,21 @@ const en = {
         agreeTerms: "I have read and agree to the",
         createAccount: 'Create Account',
       },
+      // ── SupplierSetupForm ──
+      supplierSetup: {
+        title: 'Create your supplier account',
+        subtitle: 'Complete your registration to start selling on TradeHub',
+        businessName: 'Business Name',
+        businessNamePlaceholder: 'Your company or business name',
+        sellerType: 'Seller Type',
+        selectSellerType: 'Select seller type',
+        sellerTypeIndividual: 'Individual',
+        sellerTypeBusiness: 'Business',
+        sellerTypeEnterprise: 'Enterprise',
+        taxId: 'Tax ID',
+        taxIdPlaceholder: 'Your tax identification number',
+        createSupplierAccount: 'Create Supplier Account',
+      },
       social: {
         google: 'Continue with Google',
         facebook: 'Continue with Facebook',

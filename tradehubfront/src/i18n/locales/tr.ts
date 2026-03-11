@@ -304,6 +304,21 @@ const tr = {
         agreeTerms: "\'nı okudum ve kabul ediyorum.",
         createAccount: 'Hesap Oluştur',
       },
+      // ── SupplierSetupForm ──
+      supplierSetup: {
+        title: 'Tedarikçi hesabınızı oluşturun',
+        subtitle: 'TradeHub\'da satış yapmak için kaydınızı tamamlayın',
+        businessName: 'İşletme Adı',
+        businessNamePlaceholder: 'Şirket veya işletme adınız',
+        sellerType: 'Satıcı Türü',
+        selectSellerType: 'Satıcı türü seçin',
+        sellerTypeIndividual: 'Bireysel',
+        sellerTypeBusiness: 'İşletme',
+        sellerTypeEnterprise: 'Kurumsal',
+        taxId: 'Vergi Numarası',
+        taxIdPlaceholder: 'Vergi kimlik numaranız',
+        createSupplierAccount: 'Tedarikçi Hesabı Oluştur',
+      },
       social: {
         google: 'Google ile devam et',
         facebook: 'Facebook ile devam et',
