@@ -1,14 +1,24 @@
 import { t } from '../../i18n';
 
-function getTabCategories(): string[] {
+interface TabCategory {
+  label: string;
+  key: string;
+}
+
+interface SubTabFilter {
+  label: string;
+  key: string;
+}
+
+function getTabCategories(): TabCategory[] {
   return [
-    t('mfr.allCategories'),
-    t('mfr.cat.luggageBagsCases'),
-    t('mfr.cat.sportswearOutdoor'),
-    t('mfr.cat.personalElectronics'),
-    t('mfr.cat.jewelryEyewearWatches'),
-    t('mfr.cat.motherChildToys'),
-    t('mfr.cat.shoesAccessories'),
+    { label: t('mfr.allCategories'), key: '' },
+    { label: t('mfr.cat.luggageBagsCases'), key: 'luggage_bags_cases' },
+    { label: t('mfr.cat.sportswearOutdoor'), key: 'sportswear_outdoor' },
+    { label: t('mfr.cat.personalElectronics'), key: 'personal_electronics' },
+    { label: t('mfr.cat.jewelryEyewearWatches'), key: 'jewelry_eyewear_watches' },
+    { label: t('mfr.cat.motherChildToys'), key: 'mother_child_toys' },
+    { label: t('mfr.cat.shoesAccessories'), key: 'shoes_accessories' },
   ];
 }
 
@@ -67,24 +77,24 @@ function getAllCategories(): string[] {
 // Column header indices (first item of each column is bold)
 const COLUMN_HEADERS = [0, 11, 22, 33];
 
-function getSubTabFilters(): string[] {
+function getSubTabFilters(): SubTabFilter[] {
   return [
-    t('mfr.filter.lowMoqCustomization'),
-    t('mfr.filter.sampleCustomization'),
-    t('mfr.filter.qualityCertified'),
-    t('mfr.filter.smallCustomization'),
+    { label: t('mfr.filter.lowMoqCustomization'), key: 'low_moq' },
+    { label: t('mfr.filter.sampleCustomization'), key: 'samples' },
+    { label: t('mfr.filter.qualityCertified'), key: 'quality_control' },
+    { label: t('mfr.filter.smallCustomization'), key: 'small_customization' },
   ];
 }
 
-function getSubTabMoreFilters(): string[] {
+function getSubTabMoreFilters(): SubTabFilter[] {
   return [
-    t('mfr.filter.lowMoqCustomization'),
-    t('mfr.filter.sampleCustomization'),
-    t('mfr.filter.qualityCertified'),
-    t('mfr.filter.smallCustomization'),
-    t('mfr.filter.fullCustomization'),
-    t('mfr.filter.highRdCapacity'),
-    t('mfr.filter.fortune500Collab'),
+    { label: t('mfr.filter.lowMoqCustomization'), key: 'low_moq' },
+    { label: t('mfr.filter.sampleCustomization'), key: 'samples' },
+    { label: t('mfr.filter.qualityCertified'), key: 'quality_control' },
+    { label: t('mfr.filter.smallCustomization'), key: 'small_customization' },
+    { label: t('mfr.filter.fullCustomization'), key: 'full_customization' },
+    { label: t('mfr.filter.highRdCapacity'), key: 'high_rd' },
+    { label: t('mfr.filter.fortune500Collab'), key: 'fortune_500' },
   ];
 }
 
@@ -104,8 +114,8 @@ export function HorizontalCategoryBar(): string {
           ${TAB_CATEGORIES.map((cat, i) => `
             <li class="whitespace-nowrap cursor-pointer px-5 h-[61px] leading-[61px] text-base transition-colors
                        ${i === 0 ? 'factory-tab-active font-bold text-[#222]' : 'font-normal text-[#222] hover:text-[#666]'}"
-                data-tab-index="${i}">
-              ${cat}
+                data-tab-index="${i}" data-category-key="${cat.key}">
+              ${cat.label}
             </li>
           `).join('')}
         </ul>
@@ -142,8 +152,9 @@ export function HorizontalCategoryBar(): string {
       <!-- Sub Tab Filter Chips -->
       <ul class="flex items-center h-[48px] px-5 list-none m-0 p-0 overflow-x-auto" data-factory-sub-tab>
         ${SUB_TAB_FILTERS.map(filter => `
-          <li class="flex-shrink-0 flex items-center h-8 mr-3 mt-0 px-4 border border-[#767676] rounded-full text-xs text-[#222] text-center cursor-pointer whitespace-nowrap hover:border-[#222] hover:font-medium transition-colors">
-            ${filter}
+          <li class="flex-shrink-0 flex items-center h-8 mr-3 mt-0 px-4 border border-[#767676] rounded-full text-xs text-[#222] text-center cursor-pointer whitespace-nowrap hover:border-[#222] hover:font-medium transition-colors"
+              data-filter-key="${filter.key}">
+            ${filter.label}
           </li>
         `).join('')}
         <!-- Sub-tab view more -->
@@ -159,8 +170,9 @@ export function HorizontalCategoryBar(): string {
       <div id="sub-tab-dropdown" class="hidden absolute left-0 right-0 top-[110px] z-50 bg-white rounded-b-lg py-6 px-5" style="box-shadow: rgba(0,0,0,0.12) 0 8px 20px 0">
         <ul class="flex flex-wrap list-none m-0 p-0">
           ${SUB_TAB_MORE_FILTERS.map(filter => `
-            <li class="w-1/4 mb-3 pr-4 text-sm text-[#222] cursor-pointer hover:text-primary-600 transition-colors">
-              ${filter}
+            <li class="w-1/4 mb-3 pr-4 text-sm text-[#222] cursor-pointer hover:text-primary-600 transition-colors"
+                data-filter-key="${filter.key}">
+              ${filter.label}
             </li>
           `).join('')}
         </ul>
@@ -239,7 +251,7 @@ export function initHorizontalCategoryBar(): void {
     if (subDropdown && subBtn && !subDropdown.contains(target) && !subBtn.contains(target)) closeSub();
   });
 
-  // Tab switching + dropdown active sync
+  // Tab switching + dropdown active sync + category-change event dispatch
   const tabs = Array.from(tabUl.querySelectorAll<HTMLElement>('[data-tab-index]'));
   const dropdownItems = menu.querySelectorAll<HTMLElement>('[data-dropdown-cat]');
 
@@ -267,8 +279,88 @@ export function initHorizontalCategoryBar(): void {
       tab.classList.remove('font-normal');
 
       const idx = parseInt(tab.dataset.tabIndex || '0');
+      const categoryKey = tab.dataset.categoryKey || '';
       const TAB_CATEGORIES = getTabCategories();
-      syncDropdownActive(TAB_CATEGORIES[idx]);
+      syncDropdownActive(TAB_CATEGORIES[idx].label);
+
+      // Dispatch category change event
+      document.dispatchEvent(new CustomEvent('mfr:category-change', {
+        detail: { category: categoryKey },
+      }));
     });
+  });
+
+  // Dropdown category click → dispatch category change + close menu
+  dropdownItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const catName = item.dataset.dropdownCat || '';
+      closeMain();
+
+      // Dispatch category change with the category name (backend can match by name)
+      document.dispatchEvent(new CustomEvent('mfr:category-change', {
+        detail: { category: catName },
+      }));
+    });
+  });
+
+  // Filter chip toggle + filter-change event dispatch
+  const filterChips = document.querySelectorAll<HTMLElement>('[data-factory-sub-tab] [data-filter-key]');
+  const dropdownFilterChips = subDropdown
+    ? subDropdown.querySelectorAll<HTMLElement>('[data-filter-key]')
+    : [];
+
+  const activeFilters = new Set<string>();
+
+  function dispatchFilterChange() {
+    document.dispatchEvent(new CustomEvent('mfr:filter-change', {
+      detail: { filters: Array.from(activeFilters).join(',') },
+    }));
+  }
+
+  function toggleFilter(chip: HTMLElement) {
+    const key = chip.dataset.filterKey || '';
+    if (!key) return;
+
+    if (activeFilters.has(key)) {
+      activeFilters.delete(key);
+      chip.classList.remove('bg-[#222]', 'text-white', 'border-[#222]');
+      chip.classList.add('border-[#767676]', 'text-[#222]');
+    } else {
+      activeFilters.add(key);
+      chip.classList.add('bg-[#222]', 'text-white', 'border-[#222]');
+      chip.classList.remove('border-[#767676]', 'text-[#222]');
+    }
+
+    // Sync toggle state across main and dropdown filter chips
+    syncFilterChipState(key);
+    dispatchFilterChange();
+  }
+
+  function syncFilterChipState(key: string) {
+    const isActive = activeFilters.has(key);
+    const allChips = [
+      ...Array.from(filterChips),
+      ...Array.from(dropdownFilterChips),
+    ];
+    allChips.forEach(c => {
+      if (c.dataset.filterKey === key) {
+        if (isActive) {
+          c.classList.add('bg-[#222]', 'text-white', 'border-[#222]');
+          c.classList.remove('border-[#767676]', 'text-[#222]');
+        } else {
+          c.classList.remove('bg-[#222]', 'text-white', 'border-[#222]');
+          c.classList.add('border-[#767676]', 'text-[#222]');
+        }
+      }
+    });
+  }
+
+  filterChips.forEach(chip => {
+    chip.addEventListener('click', () => toggleFilter(chip));
+  });
+
+  dropdownFilterChips.forEach(chip => {
+    chip.addEventListener('click', () => toggleFilter(chip));
   });
 }

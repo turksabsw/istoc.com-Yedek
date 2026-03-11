@@ -2472,7 +2472,32 @@ const en = {
         next: 'Next',
         addToFavorites: 'Add to favorites',
         odmService: 'ODM service available',
+        noManufacturers: 'No manufacturers found',
+        noProducts: 'No products',
       },
+
+      // Sort options
+      sort: {
+        label: 'Sort by',
+        popular: 'Most popular',
+        bestSeller: 'Best sellers',
+        leader: 'Leading factories',
+        fastResponse: 'Quick response',
+      },
+
+      // Pagination
+      pagination: {
+        showing: 'Showing {{from}}\u2013{{to}} of {{total}} manufacturers',
+        page: 'Page {{current}} of {{total}}',
+        prev: 'Previous',
+        next: 'Next',
+      },
+
+      // Loading & error states
+      loadingText: 'Loading manufacturers...',
+      errorText: 'Failed to load manufacturers. Please try again.',
+      retry: 'Retry',
+      resultsCount: '{{count}} manufacturers found',
     },
 
     // ============================================================

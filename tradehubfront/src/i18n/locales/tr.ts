@@ -2463,7 +2463,32 @@ const tr = {
         next: 'Sonraki',
         addToFavorites: 'Favorilere ekle',
         odmService: 'ODM hizmeti olanağı',
+        noManufacturers: 'Üretici bulunamadı',
+        noProducts: 'Ürün yok',
       },
+
+      // Sort options
+      sort: {
+        label: 'Sırala',
+        popular: 'En popüler',
+        bestSeller: 'En çok satanlar',
+        leader: 'Lider fabrikalar',
+        fastResponse: 'Hızlı yanıtlama',
+      },
+
+      // Pagination
+      pagination: {
+        showing: '{{total}} üreticiden {{from}}\u2013{{to}} gösteriliyor',
+        page: 'Sayfa {{current}} / {{total}}',
+        prev: 'Önceki',
+        next: 'Sonraki',
+      },
+
+      // Loading & error states
+      loadingText: 'Üreticiler yükleniyor...',
+      errorText: 'Üreticiler yüklenirken hata oluştu. Lütfen tekrar deneyin.',
+      retry: 'Tekrar dene',
+      resultsCount: '{{count}} üretici bulundu',
     },
 
     // ============================================================
