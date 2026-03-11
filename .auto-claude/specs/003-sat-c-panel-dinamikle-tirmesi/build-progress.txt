@@ -137,3 +137,74 @@ Verification Date: 2026-03-11
 - Python syntax (storefront.py): PASS
 
 === END SUBTASK 6-1 ===
+
+=== SUBTASK 6-2: Edge Case & Error Handling Verification ===
+
+Verification Date: 2026-03-11
+
+--- Edge Case Checks & Fixes ---
+
+1. Invalid slug (store=nonexistent): PASS
+   - Backend: frappe.throw(_("Storefront not found")) returns error
+   - Frontend: catch block calls renderErrorState() with friendly message
+   - No JS crash — graceful error page with icon, message, and CTA link
+
+2. Missing ?store= param: PASS
+   - Early return before DOMContentLoaded listener
+   - renderErrorState() shows localized error message
+   - CTA link to /pages/manufacturers.html
+
+3. Empty states verification: PASS
+   - No factory images: ManufacturerList.ts hasFactoryImages check hides slider section
+   - No products: ManufacturerList.ts renders "No products" placeholder text
+   - No categories: renderStorefront() now handles empty array gracefully
+   - No badges: null-safe check added for seller.badges array
+   - No capabilities: null-safe check for storefront.capabilities array
+
+4. Guest vs authenticated behavior: FIXED
+   - Added data-auth-action="chat" to StoreHeader chat button
+   - Added data-auth-action="favorite" and data-auth-action="chat" to ManufacturerList buttons
+   - New wireGuestAuthHandlers() function checks localStorage.tradehub_auth
+   - Guests see toast notification with login link instead of action
+   - Added i18n keys: loginToChat, loginToFavorite for both EN and TR locales
+
+5. Mobile responsive layout: PASS
+   - StoreHeader: lg/xl breakpoints for layout switching, mobile-first design
+   - ManufacturerList: hidden lg: classes for desktop-only content, mobile layout below
+   - HorizontalCategoryBar: separate mobile/desktop layouts with lg: breakpoint
+   - Pagination: flex-col sm:flex-row for mobile stacking
+   - Text truncation: truncate max-w-[350px] patterns prevent overflow
+
+6. No JS errors: PASS
+   - All DOM queries check element existence before access
+   - Array operations use defensive (arr || []) checks
+   - No console.log/debug statements in pages
+   - TypeScript compilation: 0 errors
+   - Vite build: success
+
+7. i18n verification: FIXED
+   - FIXED: Hardcoded "Verified by" in renderStorefront() → now uses t('seller.sf.verifiedBy')
+   - FIXED: Hardcoded "Factory Video" alt text → now uses t('seller.sf.factoryVideoAlt')
+   - FIXED: Hardcoded "Intertek" placeholder in CompanyProfile.ts → removed (overwritten by renderStorefront)
+   - FIXED: Hardcoded "Verified by TÜVRheinland" in StoreHeader.ts → cleared (overwritten by renderStorefront)
+   - ADDED: Missing i18n keys to both EN and TR locales:
+     · storefrontNotFound, browseManufacturers, missingStoreParam, loadError
+     · factoryVideoAlt, noFactoryVideo
+     · loginRequired, loginToChat, loginToFavorite
+   - All user-facing text in both pages now uses t() function
+
+--- Mock Data Cleanup ---
+- FIXED: Removed Unsplash placeholder URL from CompanyProfile.ts factory video section
+- Factory video section now hidden by default (class="hidden"), shown only when API provides factory_video_url
+- No mock Unsplash URLs remain in rendered HTML for seller storefront or manufacturers pages
+
+--- Null Safety Improvements ---
+- mapSellerProfile(): All fields default to empty string/array/0 on undefined
+- renderStorefront(): seller.badges, seller.categories, storefront.capabilities use (arr || [])
+- renderStorefront(): verified_by empty string hides verification row
+
+--- Build Checks ---
+- TypeScript compilation: PASS (0 errors)
+- Vite production build: PASS (2.08s)
+
+=== END SUBTASK 6-2 ===

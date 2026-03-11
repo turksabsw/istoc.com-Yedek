@@ -174,12 +174,12 @@ function renderFactoryCard(mfg: Manufacturer, cardIndex: number): string {
 
         <!-- Right: Action Buttons -->
         <div class="flex items-center gap-2 xl:gap-5 shrink-0">
-          <button type="button" class="text-gray-400 hover:text-red-500 transition-colors" aria-label="${t('mfr.list.addToFavorites')}">
+          <button type="button" class="text-gray-400 hover:text-red-500 transition-colors" aria-label="${t('mfr.list.addToFavorites')}" data-auth-action="favorite">
             <svg class="w-[20px] h-[20px] xl:w-[25px] xl:h-[25px]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
-          <button type="button" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap">
+          <button type="button" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap" data-auth-action="chat">
             ${t('mfr.list.chatNow')}
           </button>
           <button type="button" class="h-8 xl:h-10 px-3 xl:px-4 border border-[#222] rounded-full text-[12px] xl:text-[14px] font-bold text-[#222] bg-white hover:bg-gray-50 transition-colors whitespace-nowrap">
@@ -345,6 +345,51 @@ export function initFactorySliders(): void {
       const name = card.dataset.factoryName || '';
       const images: string[] = JSON.parse(card.dataset.factoryImages || '[]');
       openLightbox(name, images);
+    });
+  });
+
+  // Wire guest auth handlers for chat/favorite buttons
+  wireGuestAuthHandlers();
+}
+
+/**
+ * Wire click handlers on buttons with data-auth-action attributes.
+ * For guests (no tradehub_auth token), shows a login prompt alert
+ * instead of performing the action.
+ */
+export function wireGuestAuthHandlers(): void {
+  document.querySelectorAll<HTMLButtonElement>('[data-auth-action]').forEach(btn => {
+    // Skip if already wired
+    if (btn.dataset.authWired) return;
+    btn.dataset.authWired = '1';
+
+    btn.addEventListener('click', (e) => {
+      const token = localStorage.getItem('tradehub_auth');
+      if (token) return; // Authenticated — let default behavior proceed
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const action = btn.dataset.authAction;
+      const message = action === 'favorite'
+        ? t('seller.sf.loginToFavorite')
+        : t('seller.sf.loginToChat');
+
+      // Show login prompt via a non-blocking toast/alert
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg z-[9999] text-sm flex items-center gap-3 animate-fade-slide-up';
+      toast.innerHTML = `
+        <span>${message}</span>
+        <a href="/pages/auth/login.html" class="underline font-medium text-blue-300 hover:text-blue-200 whitespace-nowrap">${t('header.signIn')}</a>
+      `;
+      document.body.appendChild(toast);
+
+      // Auto-remove toast after 4 seconds
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
     });
   });
 }

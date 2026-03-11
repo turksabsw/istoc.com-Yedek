@@ -1829,6 +1829,18 @@ const en = {
         // CategoryProductListing extras
         minOrder: 'Min. Order',
         sold: 'sold',
+        // Error states
+        storefrontNotFound: 'Storefront not found',
+        browseManufacturers: 'Browse Manufacturers',
+        missingStoreParam: 'No store identifier was provided. Please select a seller from the manufacturers page.',
+        loadError: 'Could not load storefront data. Please try again later.',
+        // Factory video
+        factoryVideoAlt: 'Factory video',
+        noFactoryVideo: 'No factory video available',
+        // Guest auth
+        loginRequired: 'Please log in to use this feature',
+        loginToChat: 'Please log in to chat with this supplier',
+        loginToFavorite: 'Please log in to add to favorites',
       },
     },
 

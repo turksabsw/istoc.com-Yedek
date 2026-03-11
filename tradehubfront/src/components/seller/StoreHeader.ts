@@ -100,10 +100,8 @@ export function StoreHeader(seller: SellerProfile): string {
               ${assessmentBadge}
             </div>
 
-            <!-- TÜV Verification Note -->
+            <!-- TÜV Verification Note — placeholder text overwritten by renderStorefront() -->
             <p data-verified-by class="store-header__tuv text-[11px] text-(--color-text-muted) dark:text-gray-500 mt-1">
-              Verified by TÜVRheinland — ${seller.verificationDate}
-              <span class="inline-block ml-1 cursor-help" data-tooltip-target="tuv-tooltip" data-tooltip-placement="top">&oplus;</span>
             </p>
             <div id="tuv-tooltip" role="tooltip" class="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip">
               ${t('seller.sf.verifiedByTuv')}
@@ -118,7 +116,7 @@ export function StoreHeader(seller: SellerProfile): string {
                   onclick="document.getElementById('contact-form')?.scrollIntoView({behavior:'smooth'})">
             ${t('seller.sf.contactSupplierBtn')}
           </button>
-          <button class="store-header__chat-btn w-full lg:w-auto th-btn-outline">
+          <button class="store-header__chat-btn w-full lg:w-auto th-btn-outline" data-auth-action="chat">
             ${t('seller.sf.chatNow')}
           </button>
         </div>

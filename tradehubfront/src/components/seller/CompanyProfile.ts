@@ -169,7 +169,7 @@ function OverviewTab(stats: SellerPerformanceStats, mainProducts: SimpleProduct[
 
             <div class="pt-4 border-t border-gray-100">
               <h4 class="text-[13px] font-bold text-gray-900 mb-3 flex items-center gap-2">
-                ${t('seller.sf.supplierCapacity')} <span data-capability-verifier class="text-[11px] font-normal text-gray-500">${t('seller.sf.verifiedBy')} <strong>Intertek</strong></span>
+                ${t('seller.sf.supplierCapacity')} <span data-capability-verifier class="text-[11px] font-normal text-gray-500"></span>
               </h4>
               <ul data-capabilities class="space-y-2 text-[13px] text-gray-600">
                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> ${t('seller.sf.minorCustomization')}</li>
@@ -180,9 +180,9 @@ function OverviewTab(stats: SellerPerformanceStats, mainProducts: SimpleProduct[
             </div>
           </div>
           
-          <!-- Video / Images Gallery -->
-          <div data-factory-video class="relative rounded-lg overflow-hidden bg-gray-100 aspect-video group cursor-pointer company-profile__video-trigger">
-            <img src="https://images.unsplash.com/photo-1581091226825-acb28bd45c61?q=80&w=800&auto=format&fit=crop" alt="Factory Video" class="w-full h-full object-cover">
+          <!-- Video / Images Gallery — hidden by default, shown by renderStorefront() when factory_video_url exists -->
+          <div data-factory-video class="relative rounded-lg overflow-hidden bg-gray-100 aspect-video group cursor-pointer company-profile__video-trigger hidden">
+            <img src="" alt="${t('seller.sf.factoryVideoAlt')}" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                <div class="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
                  <svg class="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>

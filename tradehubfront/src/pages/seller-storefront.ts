@@ -48,6 +48,9 @@ import type {
 // Interactions
 import { initSellerStorefront } from '../utils/seller/interactions';
 
+// Guest auth handler
+import { wireGuestAuthHandlers } from '../components/manufacturers/ManufacturerList';
+
 // i18n
 import { t } from '../i18n';
 
@@ -58,24 +61,25 @@ import { t } from '../i18n';
  */
 function mapSellerProfile(apiData: SellerStorefrontApiData, slug: string): SellerProfile {
   const { seller } = apiData;
-  const deliveryBadge = seller.badges.find(b => b.type === 'fast_delivery');
-  const assessmentBadge = seller.badges.find(b => b.type === 'certified');
+  const badges = seller.badges || [];
+  const deliveryBadge = badges.find(b => b.type === 'fast_delivery');
+  const assessmentBadge = badges.find(b => b.type === 'certified');
 
   return {
-    name: seller.display_name,
+    name: seller.display_name || '',
     slug,
-    logo: seller.logo,
+    logo: seller.logo || '',
     verificationType: seller.is_verified
       ? (seller.verification_label as 'Verified' | 'Verified PRO') || 'Verified'
       : 'Verified',
     verificationBadgeType: 'standard',
-    yearsOnPlatform: seller.years_active,
-    location: `${seller.city}, ${seller.country}`,
-    mainCategories: seller.categories,
-    email: seller.contact_email,
+    yearsOnPlatform: seller.years_active || 0,
+    location: `${seller.city || ''}, ${seller.country || ''}`,
+    mainCategories: seller.categories || [],
+    email: seller.contact_email || '',
     deliveryBadge: deliveryBadge?.label,
     assessmentBadge: assessmentBadge?.label,
-    verificationDate: seller.verified_at,
+    verificationDate: seller.verified_at || '',
   };
 }
 
@@ -164,7 +168,10 @@ function renderStorefront(apiData: SellerStorefrontApiData): void {
   // 6. [data-categories] — Categories text
   const categoriesEl = document.querySelector<HTMLElement>('[data-categories]');
   if (categoriesEl) {
-    categoriesEl.textContent = `${t('seller.sf.mainCategoriesLabel')} ${seller.categories.join(', ')}`;
+    const categories = seller.categories || [];
+    categoriesEl.textContent = categories.length > 0
+      ? `${t('seller.sf.mainCategoriesLabel')} ${categories.join(', ')}`
+      : '';
   }
 
   // 7. [data-email] — Email text
@@ -181,7 +188,7 @@ function renderStorefront(apiData: SellerStorefrontApiData): void {
 
   // 8. [data-badges] — Badge container (user-provided content, use safeInnerHTML)
   const badgesEl = document.querySelector<HTMLElement>('[data-badges]');
-  if (badgesEl && seller.badges.length > 0) {
+  if (badgesEl && (seller.badges || []).length > 0) {
     const badgesHtml = seller.badges.map(b => {
       if (b.type === 'fast_delivery') {
         return `<a class="store-header__delivery-badge inline-flex items-center border border-(--color-border-strong) dark:border-gray-600 rounded-sm px-2.5 py-1 text-[12px] text-[#374151] dark:text-gray-300 underline hover:bg-(--color-surface-muted) focus:ring-1 focus:ring-[#d1d5db] transition-colors cursor-pointer max-w-[260px] lg:max-w-none truncate" href="#">${b.label}</a>`;
@@ -194,7 +201,11 @@ function renderStorefront(apiData: SellerStorefrontApiData): void {
   // 9. [data-verified-by] — Verification info
   const verifiedByEl = document.querySelector<HTMLElement>('[data-verified-by]');
   if (verifiedByEl) {
-    verifiedByEl.innerHTML = `Verified by ${seller.verified_by} &mdash; ${seller.verified_at} <span class="inline-block ml-1 cursor-help" data-tooltip-target="tuv-tooltip" data-tooltip-placement="top">&oplus;</span>`;
+    if (seller.verified_by) {
+      verifiedByEl.innerHTML = `${t('seller.sf.verifiedBy')} ${seller.verified_by} &mdash; ${seller.verified_at} <span class="inline-block ml-1 cursor-help" data-tooltip-target="tuv-tooltip" data-tooltip-placement="top">&oplus;</span>`;
+    } else {
+      verifiedByEl.classList.add('hidden');
+    }
   }
 
   // 10. [data-rating] — Rating number
@@ -217,16 +228,23 @@ function renderStorefront(apiData: SellerStorefrontApiData): void {
   const ordersEl = document.querySelector<HTMLElement>('[data-total-orders]');
   if (ordersEl) ordersEl.textContent = `${performance.total_orders}+`;
 
-  // 15. [data-factory-video] — Video container
+  // 15. [data-factory-video] — Video container (hidden by default in HTML)
   const factoryVideoEl = document.querySelector<HTMLElement>('[data-factory-video]');
-  if (factoryVideoEl && storefront.factory_video_url) {
-    const imgEl = factoryVideoEl.querySelector('img');
-    if (imgEl) imgEl.setAttribute('src', storefront.factory_video_url);
+  if (factoryVideoEl) {
+    if (storefront.factory_video_url) {
+      factoryVideoEl.classList.remove('hidden');
+      const imgEl = factoryVideoEl.querySelector('img');
+      if (imgEl) {
+        imgEl.setAttribute('src', storefront.factory_video_url);
+        imgEl.setAttribute('alt', t('seller.sf.factoryVideoAlt'));
+      }
+    }
+    // If no factory_video_url, leave it hidden (default state)
   }
 
   // 16. [data-capabilities] — Capability list (user-provided content, use safeInnerHTML)
   const capabilitiesEl = document.querySelector<HTMLElement>('[data-capabilities]');
-  if (capabilitiesEl && storefront.capabilities.length > 0) {
+  if (capabilitiesEl && (storefront.capabilities || []).length > 0) {
     const checkIcon = '<svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
     const capsHtml = storefront.capabilities.map(c =>
       `<li class="flex items-center gap-2">${checkIcon} ${c}</li>`
@@ -259,9 +277,12 @@ function renderErrorState(appEl: HTMLDivElement, message: string): void {
     ${TopBar()}
     <main class="seller-storefront flex flex-col min-h-screen">
       <div class="max-w-(--container-lg) mx-auto px-6 py-20 text-center">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-4">${t('seller.sf.storefrontNotFound') || 'Storefront not found'}</h1>
+        <svg class="w-16 h-16 text-gray-300 mx-auto mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.15c0 .415.336.75.75.75z" />
+        </svg>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-50 mb-4">${t('seller.sf.storefrontNotFound')}</h1>
         <p class="text-gray-500 dark:text-gray-400 mb-6">${message}</p>
-        <a href="/pages/manufacturers.html" class="th-btn inline-block">${t('seller.sf.browseManufacturers') || 'Browse Manufacturers'}</a>
+        <a href="/pages/manufacturers.html" class="th-btn inline-block">${t('seller.sf.browseManufacturers')}</a>
       </div>
     </main>
   `;
@@ -279,7 +300,7 @@ if (!slug) {
   // Missing slug — show error state
   renderErrorState(
     appEl,
-    t('seller.sf.missingStoreParam') || 'No store identifier was provided. Please select a seller from the manufacturers page.'
+    t('seller.sf.missingStoreParam')
   );
 } else {
   // Load storefront data from API
@@ -320,13 +341,14 @@ if (!slug) {
       initFlowbite();
       initLanguageSelector();
       initSellerStorefront();
+      wireGuestAuthHandlers();
 
       // Start Alpine.js (must be called AFTER innerHTML is set)
       startAlpine();
     } catch (err) {
       renderErrorState(
         appEl,
-        t('seller.sf.loadError') || 'Could not load storefront data. Please try again later.'
+        t('seller.sf.loadError')
       );
     }
   });

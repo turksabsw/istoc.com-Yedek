@@ -1820,6 +1820,18 @@ const tr = {
         // CategoryProductListing extras
         minOrder: 'Min. Sipariş',
         sold: 'satıldı',
+        // Error states
+        storefrontNotFound: 'Mağaza bulunamadı',
+        browseManufacturers: 'Üreticilere Göz At',
+        missingStoreParam: 'Mağaza tanımlayıcısı belirtilmedi. Lütfen üreticiler sayfasından bir satıcı seçin.',
+        loadError: 'Mağaza verileri yüklenemedi. Lütfen daha sonra tekrar deneyin.',
+        // Factory video
+        factoryVideoAlt: 'Fabrika videosu',
+        noFactoryVideo: 'Fabrika videosu mevcut değil',
+        // Guest auth
+        loginRequired: 'Bu özelliği kullanmak için lütfen giriş yapın',
+        loginToChat: 'Bu tedarikçi ile sohbet etmek için lütfen giriş yapın',
+        loginToFavorite: 'Favorilere eklemek için lütfen giriş yapın',
       },
     },
 
