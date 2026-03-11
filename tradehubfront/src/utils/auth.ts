@@ -1,6 +1,9 @@
 /**
  * Authentication utility — Real Frappe API integration
  * Replaces mock localStorage auth with session-based Frappe auth.
+ *
+ * Provides both async API (getSessionUser) for fresh server checks
+ * and sync accessors (getUser, isLoggedIn) for template rendering.
  */
 
 const FRAPPE_BASE = 'http://marketplace.local:8000';
@@ -27,6 +30,14 @@ export interface AuthUser {
     status: string;
   } | null;
 }
+
+/** Backward-compatible user shape for sync consumers (includes .name alias) */
+export interface AuthUserCompat extends AuthUser {
+  name: string;
+}
+
+/** Cached session user — populated by getSessionUser(), read by sync helpers */
+let _cachedUser: AuthUser | null = null;
 
 /** Frappe API fetch wrapper with credentials and CSRF */
 async function frappeCall(path: string, options: RequestInit = {}): Promise<Response> {
@@ -59,12 +70,20 @@ export async function login(email: string, password: string): Promise<void> {
 export async function getSessionUser(): Promise<AuthUser | null> {
   try {
     const res = await frappeCall('/api/method/tr_tradehub.api.v1.auth.get_session_user');
-    if (!res.ok) return null;
+    if (!res.ok) {
+      _cachedUser = null;
+      return null;
+    }
     const data = await res.json();
     const result = data.message;
-    if (!result?.success || !result?.logged_in) return null;
-    return result.user as AuthUser;
+    if (!result?.success || !result?.logged_in) {
+      _cachedUser = null;
+      return null;
+    }
+    _cachedUser = result.user as AuthUser;
+    return _cachedUser;
   } catch {
+    _cachedUser = null;
     return null;
   }
 }
@@ -83,14 +102,20 @@ export function getRedirectUrl(user: AuthUser): string {
   return '/';
 }
 
-/** Check if user is logged in by querying session */
-export async function isLoggedIn(): Promise<boolean> {
-  const user = await getSessionUser();
-  return user !== null;
+/** Sync: Check if user is logged in (based on cached session data) */
+export function isLoggedIn(): boolean {
+  return _cachedUser !== null;
 }
 
-/** Logout — call Frappe logout endpoint */
+/** Sync: Get cached user info with backward-compatible .name property */
+export function getUser(): AuthUserCompat | null {
+  if (!_cachedUser) return null;
+  return { ..._cachedUser, name: _cachedUser.full_name };
+}
+
+/** Logout — call Frappe logout endpoint and clear cache */
 export async function logout(): Promise<void> {
+  _cachedUser = null;
   await frappeCall('/api/method/logout', { method: 'POST' });
 }
 

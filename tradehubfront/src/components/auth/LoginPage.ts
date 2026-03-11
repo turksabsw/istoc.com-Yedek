@@ -120,15 +120,20 @@ export function initLoginPage(options: LoginPageOptions = {}): void {
     });
   }
 
-  // Handle Form Submission
+  // Handle Form Submission (fallback — pages/login.ts attaches its own handler first)
   const loginForm = document.getElementById('login-form') as HTMLFormElement;
   if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = (document.getElementById('email') as HTMLInputElement)?.value;
-      if (email) {
-        login(email);
-        window.location.href = getBaseUrl();
+      const password = (document.getElementById('password') as HTMLInputElement)?.value;
+      if (email && password) {
+        try {
+          await login(email, password);
+          window.location.href = getBaseUrl();
+        } catch {
+          // Error handling deferred to pages/login.ts handler
+        }
       }
     });
   }
