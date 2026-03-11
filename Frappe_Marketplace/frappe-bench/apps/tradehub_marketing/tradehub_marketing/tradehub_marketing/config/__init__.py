@@ -1,1 +1,0 @@
-# TradeHub Marketing config module

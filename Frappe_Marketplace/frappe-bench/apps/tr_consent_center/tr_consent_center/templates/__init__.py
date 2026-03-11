@@ -1,1 +1,0 @@
-# TR Consent Center Templates

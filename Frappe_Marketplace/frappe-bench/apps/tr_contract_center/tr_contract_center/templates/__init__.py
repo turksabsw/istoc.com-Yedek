@@ -1,1 +1,0 @@
-# TR Contract Center Templates

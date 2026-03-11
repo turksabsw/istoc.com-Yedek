@@ -1,2 +1,0 @@
-tradehub_seller.patches.migrate_json_to_child_tables
-tradehub_seller.patches.migrate_listing_json_fields
