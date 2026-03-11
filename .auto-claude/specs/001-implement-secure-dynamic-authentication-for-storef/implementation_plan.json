@@ -488,8 +488,9 @@
             "type": "manual",
             "instructions": "Code review of all modified frontend files focusing on: (1) grep for 'fetch(' — verify credentials:'include' present. (2) grep for 'Authorization' — verify 'token ' prefix (lowercase). (3) Verify reset_token not in localStorage. (4) Verify all buttons have loading state during API calls. (5) Verify storage event listener for cross-tab logout."
           },
-          "status": "pending",
-          "notes": "This subtask may require minor fixes to frontend files if security issues are found. The coder agent should fix them inline."
+          "status": "completed",
+          "notes": "Frontend security verification complete. All 8 criteria verified:\n1. ✅ credentials:'include' on all fetch() calls (api.ts apiGet/apiPost)\n2. ✅ Token format 'token api_key:api_secret' (lowercase, no base64)\n3. ✅ CSRF token X-Frappe-CSRF-Token on POST requests via buildHeaders(true)\n4. ✅ XSS prevention — FIXED: added escapeHtml() to EmailVerification.ts maskEmail() to prevent innerHTML XSS injection\n5. ✅ Loading/disabled states on all submit buttons across LoginPage, RegisterPage, ForgotPasswordPage, VerifyPage, WelcomePage\n6. ✅ reset_token in Alpine component state only (not localStorage), cleared after use and on destroy()\n7. ✅ Cross-tab logout via storage event listener in middleware.ts for 'tradehub_tokens' key\n8. ✅ Middleware redirects correct — FIXED: added isSafeReturnUrl() to LoginPage.ts to prevent open-redirect via ?return= query parameter",
+          "updated_at": "2026-03-11T06:31:31.432039+00:00"
         },
         {
           "id": "subtask-6-3",
@@ -513,8 +514,9 @@
               "Verify existing SSO endpoints still respond: GET /api/method/tr_tradehub.api.v1.auth.get_sso_status"
             ]
           },
-          "status": "pending",
-          "notes": "This requires both services running. If the backend isn't available, use curl to test API endpoints independently. Check browser console for errors on each page. Verify no CORS errors when frontend calls backend."
+          "status": "completed",
+          "notes": "End-to-end integration verification complete. Found and fixed 8 critical integration bugs: (1) LoginPage/VerifyPage/2FA response type mismatch — frontend expected flat api_key/api_secret but backend nests under token:{}, causing silent login failure; (2) FrappeError class added to preserve error title from _server_messages, fixing email_not_verified redirect detection; (3) All dashboard redirect paths fixed to actual existing pages (buyer-dashboard.html, sell.html); (4) BackendUser→AuthUser mapping added for field name differences (is_email_verified→is_verified, number→boolean); (5) Token refresh null-safety prevents localStorage corruption; (6) Logout now calls backend API to invalidate server session; (7) Backend complete_onboarding redirect paths fixed; (8) handleLoginError updated to check FrappeError.title for email_not_verified. All 21/21 subtasks now complete.",
+          "updated_at": "2026-03-11T06:47:49.442825+00:00"
         }
       ]
     }
@@ -742,12 +744,12 @@
   "planStatus": "in_progress",
   "xstateState": "coding",
   "executionPhase": "coding",
-  "updated_at": "2026-03-11T06:25:54.176Z",
+  "updated_at": "2026-03-11T06:32:03.815Z",
   "lastEvent": {
     "eventId": "d94e4552-9807-4bc9-84cb-f749336ceac9",
     "sequence": 0,
     "type": "PLANNING_COMPLETE",
     "timestamp": "2026-03-10T14:19:58.706162+00:00"
   },
-  "last_updated": "2026-03-11T06:24:47.313268+00:00"
+  "last_updated": "2026-03-11T06:47:49.442834+00:00"
 }
