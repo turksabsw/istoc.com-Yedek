@@ -2,9 +2,15 @@
  * SocialLoginButtons Component
  * Reusable social login buttons (Google, Facebook, LinkedIn, Email) for authentication flows.
  * Supports full-width buttons or a row of icons.
+ *
+ * SSO providers are fetched dynamically from the backend. When Keycloak is
+ * unavailable, SSO buttons are hidden gracefully and only the email login
+ * option remains visible.
  */
 
 import { t } from '../../i18n';
+import { apiGet } from '../../utils/api';
+import { getBaseUrl } from '../../utils/url';
 
 /* ── Types ──────────────────────────────────────────── */
 
@@ -13,10 +19,23 @@ export type LoginProvider = 'google' | 'facebook' | 'linkedin' | 'apple' | 'emai
 export interface SocialLoginButtonsOptions {
   /** Container element ID for event binding */
   containerId?: string;
-  /** Callback when a provider is selected */
+  /** Callback when a provider is selected (overrides default SSO redirect) */
   onProviderSelect?: (provider: LoginProvider) => void;
   /** Display mode: 'full' (default) or 'icons' */
   mode?: 'full' | 'icons';
+}
+
+/** Response from tr_tradehub.api.v1.auth.get_social_providers */
+interface SocialProvidersResponse {
+  success: boolean;
+  providers: Array<{ id: string; name: string; icon: string }>;
+}
+
+/** Response from tr_tradehub.api.v1.auth.get_login_url */
+interface LoginUrlResponse {
+  success: boolean;
+  authorization_url: string;
+  state: string;
 }
 
 /* ── Button HTML ─────────────────────────────────────── */
@@ -101,19 +120,112 @@ export function SocialLoginButtons(options: { mode?: 'full' | 'icons' } = {}): s
 /* ── Init logic ──────────────────────────────────────── */
 
 /**
- * Initialize social login buttons with click handlers.
- * Uses event delegation for efficient event handling.
+ * Redirect the user to the Keycloak login page for the given SSO provider.
+ *
+ * Calls the backend `get_login_url` endpoint, which generates a secure
+ * authorization URL with CSRF state protection, then navigates to it.
  */
-export function initSocialLoginButtons(options: SocialLoginButtonsOptions = {}): void {
-  const { containerId, onProviderSelect } = options;
+async function redirectToSSOProvider(provider: LoginProvider, button: HTMLElement): Promise<void> {
+  // Disable button to prevent double-clicks
+  if (button instanceof HTMLButtonElement) {
+    button.disabled = true;
+  }
 
-  // Find container - either by ID or find the first social login buttons container
-  // Note: we might have multiple containers (e.g. if we have both modes), so this might need refinement if used multiple times on same page
+  const baseUrl = getBaseUrl();
+
+  try {
+    const result = await apiGet<LoginUrlResponse>(
+      'tr_tradehub.api.v1.auth.get_login_url',
+      {
+        redirect_uri: window.location.origin + baseUrl + 'pages/auth/login.html',
+        success_url: '/',
+      },
+    );
+
+    if (result.success && result.authorization_url) {
+      window.location.href = result.authorization_url;
+    }
+  } catch {
+    // Re-enable button on failure so user can retry
+    if (button instanceof HTMLButtonElement) {
+      button.disabled = false;
+    }
+  }
+}
+
+/**
+ * Fetch available social providers from the backend and hide buttons
+ * for providers that are not configured in Keycloak.
+ *
+ * When Keycloak is unreachable the entire SSO button container is hidden
+ * so the user only sees the email/password login form.
+ */
+export async function fetchAvailableProviders(containerId?: string): Promise<void> {
   const container = containerId
     ? document.getElementById(containerId)
     : document.querySelector('.rv-social-login-buttons');
 
   if (!container) return;
+
+  try {
+    const result = await apiGet<SocialProvidersResponse>(
+      'tr_tradehub.api.v1.auth.get_social_providers',
+    );
+
+    if (!result.success || !result.providers || result.providers.length === 0) {
+      // No SSO providers available — hide the entire container
+      (container as HTMLElement).style.display = 'none';
+      return;
+    }
+
+    // Build a set of enabled provider IDs for fast lookup
+    const enabledIds = new Set(result.providers.map(p => p.id));
+
+    // Hide buttons for providers that are not enabled
+    const buttons = container.querySelectorAll<HTMLElement>('[data-login-provider]');
+    buttons.forEach(btn => {
+      const id = btn.getAttribute('data-login-provider');
+      // Email is always visible (not an SSO provider)
+      if (id && id !== 'email' && !enabledIds.has(id)) {
+        btn.style.display = 'none';
+      }
+    });
+  } catch {
+    // Keycloak is down or unreachable — hide SSO buttons gracefully.
+    // Only hide SSO provider buttons; email button stays visible.
+    const buttons = container.querySelectorAll<HTMLElement>('[data-login-provider]');
+    buttons.forEach(btn => {
+      const id = btn.getAttribute('data-login-provider');
+      if (id && id !== 'email') {
+        btn.style.display = 'none';
+      }
+    });
+  }
+}
+
+/**
+ * Initialize social login buttons with click handlers.
+ * Uses event delegation for efficient event handling.
+ *
+ * When no custom `onProviderSelect` callback is provided, clicking an SSO
+ * provider button will call the Keycloak `get_login_url` endpoint and
+ * redirect the user to the authorization URL.
+ *
+ * Also fetches available providers from the backend to dynamically
+ * show/hide buttons based on Keycloak configuration.
+ */
+export function initSocialLoginButtons(options: SocialLoginButtonsOptions = {}): void {
+  const { containerId, onProviderSelect } = options;
+
+  // Find container - either by ID or find the first social login buttons container
+  const container = containerId
+    ? document.getElementById(containerId)
+    : document.querySelector('.rv-social-login-buttons');
+
+  if (!container) return;
+
+  // Dynamically show/hide providers based on backend configuration
+  fetchAvailableProviders(containerId);
 
   // Use event delegation for button clicks
   container.addEventListener('click', (e) => {
@@ -122,9 +234,14 @@ export function initSocialLoginButtons(options: SocialLoginButtonsOptions = {}):
 
     if (button) {
       const provider = button.getAttribute('data-login-provider') as LoginProvider;
+      if (!provider) return;
 
-      if (provider && onProviderSelect) {
+      if (onProviderSelect) {
+        // Use caller-provided handler
         onProviderSelect(provider);
+      } else if (provider !== 'email') {
+        // Default behaviour: redirect to Keycloak SSO for non-email providers
+        redirectToSSOProvider(provider, button);
       }
 
       // Dispatch custom event for external listeners
