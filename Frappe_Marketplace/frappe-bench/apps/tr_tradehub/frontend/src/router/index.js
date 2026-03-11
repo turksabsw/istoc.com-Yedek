@@ -197,6 +197,9 @@ const router = createRouter({
   routes,
 })
 
+// Storefront URL for cross-origin redirect of non-seller/non-admin users
+const STOREFRONT_URL = 'http://localhost:5173/'
+
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore()
   if (!auth.isAuthenticated && !to.meta.guest) {
@@ -207,6 +210,11 @@ router.beforeEach(async (to, from, next) => {
   }
   if (to.meta.guest && auth.isAuthenticated) {
     return next('/dashboard')
+  }
+  // Seller dashboard guard: only sellers and admins can access protected routes
+  if (!to.meta.guest && auth.isAuthenticated && !auth.isSeller && !auth.isAdmin) {
+    window.location.href = STOREFRONT_URL
+    return
   }
   next()
 })
