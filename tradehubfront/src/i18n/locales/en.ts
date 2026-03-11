@@ -3701,6 +3701,104 @@ const en = {
     ratingSupplierService: 'Supplier Service',
     ratingOnTime: 'On-time Shipment',
     ratingQuality: 'Product Quality',
+
+    // ============================================================
+    // SELLER APPLICATION FORM
+    // ============================================================
+    sellerApplication: {
+      // Page
+      pageTitle: 'Seller Application',
+      pageSubtitle: 'Complete your seller application to start selling on iSTOC TradeHub',
+
+      // Business Information
+      businessInfoTitle: 'Business Information',
+      businessInfoDesc: 'Tell us about your business',
+      businessName: 'Business/Seller Name',
+      businessNamePlaceholder: 'Enter your business name',
+      sellerType: 'Seller Type',
+      selectSellerType: 'Select seller type',
+      sellerTypeIndividual: 'Individual',
+      sellerTypeBusiness: 'Business',
+      sellerTypeEnterprise: 'Enterprise',
+
+      // Tax & Business Details
+      taxInfoTitle: 'Tax & Business Details',
+      taxInfoDesc: 'Your tax identification information',
+      taxId: 'Tax ID',
+      taxIdPlaceholder: 'Enter your tax identification number',
+      taxIdType: 'Tax ID Type',
+      taxIdTypeTCKN: 'TCKN (Personal ID)',
+      taxIdTypeVKN: 'VKN (Tax Number)',
+      taxOffice: 'Tax Office',
+      taxOfficePlaceholder: 'Enter your tax office name',
+
+      // Identity Documents
+      identityTitle: 'Identity Documents',
+      identityDesc: 'A valid identity document is required for verification',
+      identityDocumentType: 'Document Type',
+      selectDocumentType: 'Select document type',
+      identityDocNationalId: 'National ID Card',
+      identityDocPassport: 'Passport',
+      identityDocDriverLicense: 'Driver License',
+      identityDocNumber: 'Document Number',
+      identityDocNumberPlaceholder: 'Enter document number',
+      identityDocExpiry: 'Document Expiry Date',
+      identityDocAttachment: 'Identity Document (Photo/Scan)',
+
+      // Business Documents
+      businessDocsTitle: 'Business Documents',
+      businessDocsDesc: 'Upload your official business documents',
+      tradeRegistryAttachment: 'Trade Registry Document',
+      taxCertificateAttachment: 'Tax Certificate',
+      signatureCircularAttachment: 'Signature Circular',
+      uploadHint: 'PDF, JPG, or PNG (max 5MB)',
+
+      // Banking Information
+      bankingTitle: 'Banking Information',
+      bankingDesc: 'Your bank account for receiving payments',
+      bankName: 'Bank Name',
+      bankNamePlaceholder: 'Enter your bank name',
+      bankBranch: 'Bank Branch',
+      bankBranchPlaceholder: 'Enter your bank branch',
+      iban: 'IBAN',
+      ibanPlaceholder: 'Enter your IBAN (e.g. TR...)',
+      accountHolderName: 'Account Holder Name',
+      accountHolderNamePlaceholder: 'Enter account holder name',
+
+      // Preferences
+      preferencesTitle: 'Preferences',
+      preferencesDesc: 'Help us understand your business better',
+      preferredCategories: 'Preferred Categories',
+      businessDescription: 'Business Description',
+      businessDescriptionPlaceholder: 'Briefly describe your business, products, and experience...',
+      catTextile: 'Textile & Apparel',
+      catElectronics: 'Electronics',
+      catFoodBeverage: 'Food & Beverage',
+      catAutomotive: 'Automotive',
+      catMachinery: 'Machinery & Equipment',
+      catConstruction: 'Construction & Building',
+      catCosmetics: 'Cosmetics',
+      catFurniture: 'Furniture',
+      catAgriculture: 'Agriculture',
+      catOther: 'Other',
+
+      // Terms & Agreements
+      termsTitle: 'Terms & Agreements',
+      termsDesc: 'Please read and accept the following agreements',
+      termsAccepted: 'I accept the Terms & Conditions',
+      privacyAccepted: 'I accept the Privacy Policy',
+      kvkkAccepted: 'I give KVKK (Personal Data Protection) consent',
+      commissionAccepted: 'I accept the Commission Terms',
+      returnPolicyAccepted: 'I accept the Return Policy',
+
+      // Actions & Status
+      submitApplication: 'Submit Application',
+      submitting: 'Submitting...',
+      submitError: 'Failed to submit application. Please try again.',
+      requiredField: 'This field is required',
+      termsRequired: 'You must accept all terms and agreements',
+      fileUploadFailed: 'File upload failed. Please try again.',
+    },
   },
 
 

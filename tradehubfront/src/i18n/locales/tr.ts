@@ -3692,6 +3692,104 @@ const tr = {
     ratingSupplierService: 'Tedarikçi Hizmeti',
     ratingOnTime: 'Zamanında Gönderim',
     ratingQuality: 'Ürün Kalitesi',
+
+    // ============================================================
+    // SELLER APPLICATION FORM
+    // ============================================================
+    sellerApplication: {
+      // Page
+      pageTitle: 'Satıcı Başvurusu',
+      pageSubtitle: 'iSTOC TradeHub\'da satış yapmaya başlamak için başvurunuzu tamamlayın',
+
+      // Business Information
+      businessInfoTitle: 'İşletme Bilgileri',
+      businessInfoDesc: 'İşletmeniz hakkında bilgi verin',
+      businessName: 'İşletme/Satıcı Adı',
+      businessNamePlaceholder: 'İşletme adınızı girin',
+      sellerType: 'Satıcı Türü',
+      selectSellerType: 'Satıcı türü seçin',
+      sellerTypeIndividual: 'Bireysel',
+      sellerTypeBusiness: 'Şirket',
+      sellerTypeEnterprise: 'Kurumsal',
+
+      // Tax & Business Details
+      taxInfoTitle: 'Vergi ve İşletme Bilgileri',
+      taxInfoDesc: 'Vergi kimlik bilgileriniz',
+      taxId: 'Vergi Numarası',
+      taxIdPlaceholder: 'Vergi kimlik numaranızı girin',
+      taxIdType: 'Vergi Kimlik Türü',
+      taxIdTypeTCKN: 'TCKN (T.C. Kimlik No)',
+      taxIdTypeVKN: 'VKN (Vergi Kimlik No)',
+      taxOffice: 'Vergi Dairesi',
+      taxOfficePlaceholder: 'Vergi dairesi adını girin',
+
+      // Identity Documents
+      identityTitle: 'Kimlik Belgeleri',
+      identityDesc: 'Doğrulama için geçerli bir kimlik belgesi gereklidir',
+      identityDocumentType: 'Belge Türü',
+      selectDocumentType: 'Belge türü seçin',
+      identityDocNationalId: 'Nüfus Cüzdanı / Kimlik Kartı',
+      identityDocPassport: 'Pasaport',
+      identityDocDriverLicense: 'Ehliyet',
+      identityDocNumber: 'Belge Numarası',
+      identityDocNumberPlaceholder: 'Belge numarasını girin',
+      identityDocExpiry: 'Belge Geçerlilik Tarihi',
+      identityDocAttachment: 'Kimlik Belgesi (Fotoğraf/Tarama)',
+
+      // Business Documents
+      businessDocsTitle: 'İşletme Belgeleri',
+      businessDocsDesc: 'Resmi işletme belgelerinizi yükleyin',
+      tradeRegistryAttachment: 'Ticaret Sicil Gazetesi',
+      taxCertificateAttachment: 'Vergi Levhası',
+      signatureCircularAttachment: 'İmza Sirküleri',
+      uploadHint: 'PDF, JPG veya PNG (maks. 5MB)',
+
+      // Banking Information
+      bankingTitle: 'Banka Bilgileri',
+      bankingDesc: 'Ödeme almak için banka hesap bilgileriniz',
+      bankName: 'Banka Adı',
+      bankNamePlaceholder: 'Banka adınızı girin',
+      bankBranch: 'Şube',
+      bankBranchPlaceholder: 'Şube adını girin',
+      iban: 'IBAN',
+      ibanPlaceholder: 'IBAN numaranızı girin (ör. TR...)',
+      accountHolderName: 'Hesap Sahibi Adı',
+      accountHolderNamePlaceholder: 'Hesap sahibi adını girin',
+
+      // Preferences
+      preferencesTitle: 'Tercihler',
+      preferencesDesc: 'İşletmenizi daha iyi anlamamıza yardımcı olun',
+      preferredCategories: 'Tercih Edilen Kategoriler',
+      businessDescription: 'İşletme Açıklaması',
+      businessDescriptionPlaceholder: 'İşletmenizi, ürünlerinizi ve deneyiminizi kısaca açıklayın...',
+      catTextile: 'Tekstil ve Giyim',
+      catElectronics: 'Elektronik',
+      catFoodBeverage: 'Gıda ve İçecek',
+      catAutomotive: 'Otomotiv',
+      catMachinery: 'Makine ve Ekipman',
+      catConstruction: 'İnşaat ve Yapı',
+      catCosmetics: 'Kozmetik',
+      catFurniture: 'Mobilya',
+      catAgriculture: 'Tarım',
+      catOther: 'Diğer',
+
+      // Terms & Agreements
+      termsTitle: 'Şartlar ve Sözleşmeler',
+      termsDesc: 'Lütfen aşağıdaki sözleşmeleri okuyun ve kabul edin',
+      termsAccepted: 'Kullanım Koşullarını kabul ediyorum',
+      privacyAccepted: 'Gizlilik Politikasını kabul ediyorum',
+      kvkkAccepted: 'KVKK (Kişisel Verilerin Korunması) onayı veriyorum',
+      commissionAccepted: 'Komisyon Şartlarını kabul ediyorum',
+      returnPolicyAccepted: 'İade Politikasını kabul ediyorum',
+
+      // Actions & Status
+      submitApplication: 'Başvuruyu Gönder',
+      submitting: 'Gönderiliyor...',
+      submitError: 'Başvuru gönderilemedi. Lütfen tekrar deneyin.',
+      requiredField: 'Bu alan zorunludur',
+      termsRequired: 'Tüm şartları ve sözleşmeleri kabul etmelisiniz',
+      fileUploadFailed: 'Dosya yüklenemedi. Lütfen tekrar deneyin.',
+    },
   },
 
   // ─── Seller Mock Data ──────────────────────────────────────
