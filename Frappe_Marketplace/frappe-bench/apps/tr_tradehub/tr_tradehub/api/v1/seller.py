@@ -1145,11 +1145,72 @@ def update_storefront(storefront_name: Optional[str] = None, **kwargs) -> Dict[s
         "facebook_url", "instagram_url", "twitter_url", "linkedin_url", "youtube_url", "tiktok_url",
         "shipping_policy", "return_policy", "privacy_policy", "terms_of_service",
         "custom_css", "custom_header_html", "custom_footer_html",
+        # Factory & Capabilities fields
+        "factory_video_url", "employee_count", "factory_area",
+        "annual_revenue", "capability_verified_by",
     ]
 
     for field in allowed_fields:
         if field in kwargs:
             setattr(storefront, field, kwargs[field])
+
+    # Handle child table: factory_images → Storefront Factory Image
+    if "factory_images" in kwargs:
+        images_data = kwargs["factory_images"]
+        if isinstance(images_data, str):
+            import json as json_lib
+            try:
+                images_data = json_lib.loads(images_data)
+            except (ValueError, TypeError):
+                images_data = []
+        if isinstance(images_data, list):
+            storefront.set("factory_images", [])
+            for idx, img in enumerate(images_data):
+                if isinstance(img, dict) and img.get("image"):
+                    storefront.append("factory_images", {
+                        "image": img["image"],
+                        "caption": img.get("caption", ""),
+                        "sort_order": img.get("sort_order", idx),
+                    })
+
+    # Handle child table: certificates → Storefront Certificate
+    if "certificates" in kwargs:
+        certs_data = kwargs["certificates"]
+        if isinstance(certs_data, str):
+            import json as json_lib
+            try:
+                certs_data = json_lib.loads(certs_data)
+            except (ValueError, TypeError):
+                certs_data = []
+        if isinstance(certs_data, list):
+            storefront.set("certificates", [])
+            for cert in certs_data:
+                if isinstance(cert, dict) and (cert.get("certificate_type") or cert.get("certificate_name")):
+                    storefront.append("certificates", {
+                        "certificate_name": cert.get("certificate_name", cert.get("certificate_type", "")),
+                        "certificate_type": cert.get("certificate_type", ""),
+                        "issued_date": cert.get("issued_date"),
+                        "expiry_date": cert.get("expiry_date"),
+                    })
+
+    # Handle child table: capabilities → Storefront Capability
+    if "capabilities" in kwargs:
+        caps_data = kwargs["capabilities"]
+        if isinstance(caps_data, str):
+            import json as json_lib
+            try:
+                caps_data = json_lib.loads(caps_data)
+            except (ValueError, TypeError):
+                caps_data = []
+        if isinstance(caps_data, list):
+            storefront.set("capabilities", [])
+            for cap in caps_data:
+                if isinstance(cap, dict) and cap.get("capability_name"):
+                    storefront.append("capabilities", {
+                        "capability_name": cap["capability_name"],
+                        "capability_type": cap.get("capability_type", ""),
+                        "is_verified": cap.get("is_verified", 0),
+                    })
 
     storefront.save()
 

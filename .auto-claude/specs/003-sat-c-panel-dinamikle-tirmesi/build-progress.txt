@@ -1,0 +1,139 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Satıcı Panel Dinamikleştirmesi — Seller Dynamic Integration
+Spec: 003-sat-c-panel-dinamikle-tirmesi
+Started: 2026-03-11
+
+Workflow Type: feature
+Rationale: Substantial cross-service feature spanning backend API endpoints, DocType schema changes, buyer frontend mock-to-API migration, and new seller dashboard page. Feature workflow chosen because backend must be built first (data source), then frontends can consume.
+
+Session 1 (Planner):
+- Created implementation_plan.json with 6 phases, 18 subtasks
+- Updated context.json with file mappings, patterns, and existing implementations
+- Created init.sh for development environment startup
+- Verified project_index.json already exists with correct service definitions
+
+Phase Summary:
+- Phase 1 — DocType Schema Extension: 4 subtasks, depends on [] (no deps)
+  · 3 child DocTypes (Factory Image, Certificate, Capability)
+  · 8 new fields added to Storefront DocType
+- Phase 2 — Backend API Endpoints: 4 subtasks, depends on [phase-1-doctype]
+  · generate_slug() helper
+  · get_manufacturer_categories() endpoint
+  · get_manufacturers_list() endpoint (complex JOIN + sort + pagination)
+  · get_seller_storefront_data() endpoint (4-object response)
+- Phase 3 — Storefront Frontend: 3 subtasks, depends on [phase-2-backend-api]
+  · API wrapper functions + yearsActive() utility
+  · staticConfig.ts for template data
+  · seller-storefront.ts refactor (mock removal + API wiring + renderStorefront)
+- Phase 4 — Manufacturers Frontend: 3 subtasks, depends on [phase-2-backend-api]
+  · TypeScript interfaces
+  · ManufacturerList.ts refactor (dynamic data)
+  · manufacturers.ts refactor (API + filters + sort + pagination)
+- Phase 5 — Seller Dashboard: 2 subtasks, depends on [phase-2-backend-api]
+  · StorefrontEdit.vue 3-tab page
+  · Vue Router route registration
+- Phase 6 — Integration: 2 subtasks, depends on [phase-3, phase-4, phase-5]
+  · End-to-end data flow verification
+  · Edge case and error handling verification
+
+Services Involved:
+- tr_tradehub_backend (Python/Frappe): New API endpoints in seller.py
+- tradehub_marketing (Frappe DocTypes): Storefront DocType extension + child DocTypes
+- tradehubfront (TypeScript/Vite): Mock data removal + API integration on 2 pages
+- tr_tradehub_frontend (Vue 3): New StorefrontEdit.vue page in seller dashboard
+
+Parallelism Analysis:
+- Max parallel phases: 3 (phases 3, 4, 5 can all run after phase 2)
+- Recommended workers: 2
+- Parallel groups:
+  · [phase-3-storefront-frontend, phase-4-manufacturers-frontend, phase-5-seller-dashboard]
+    Reason: All depend only on phase-2-backend-api, work on different file sets in different services
+
+Risk Level: HIGH
+- Database schema changes (DocType fields + child DocTypes)
+- Public-facing endpoints with allow_guest=True
+- Cross-service data flow (4 services)
+- Mock data removal (pages go blank if API fails)
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 003 --parallel 2
+
+Example:
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 003 --parallel 2
+
+=== END SESSION 1 ===
+
+=== SUBTASK 6-1: End-to-End Verification ===
+
+Verification Date: 2026-03-11
+
+--- Data Flow Verification Results ---
+
+1. Manufacturers Page Loads Real Data from API: PASS
+   - manufacturers.ts calls loadManufacturers() → API endpoint
+   - Cards display all required fields: logo, name, verified badge, years, employee count,
+     factory area, revenue, rating, reviews, response time, delivery rate, certificates,
+     top products, factory images carousel
+   - Empty states handled (no products, no factory images, no manufacturers)
+
+2. Manufacturer Name Navigation: PASS
+   - ManufacturerList.ts creates links: /pages/seller/seller-storefront.html?store={slug}
+   - storefront_slug correctly maps from sf.slug in database
+   - URL encoding applied via encodeURIComponent()
+
+3. Storefront Page — All 19 data-* Attributes: PASS (19/19 connected)
+   - StoreHeader.ts defines: data-seller-name, data-seller-logo, data-verified-badge,
+     data-years, data-location, data-categories, data-email, data-badges, data-verified-by
+   - CompanyProfile.ts defines: data-rating, data-reviews-count, data-response-time,
+     data-delivery-rate, data-total-orders, data-factory-video, data-capabilities,
+     data-capability-verifier, data-sidebar-name, data-sidebar-logo
+   - renderStorefront() in seller-storefront.ts queries and populates all 19
+
+4. Category Tabs/Filters/Sorting: PASS
+   - wireSortSelector() handles sort dropdown (popular, best_seller, leader, fast_response)
+   - wireCategoryEvents() listens for mfr:category-change custom event
+   - wireFilterEvents() listens for mfr:filter-change custom event
+   - All reset page to 1 and trigger fetchManufacturers()
+
+5. Pagination: PASS
+   - PaginationControls() renders prev/next/page buttons with smart page range (max 5)
+   - Prev disabled on page 1, Next disabled on last page
+   - Page numbers clickable, current page highlighted
+   - Scroll to top on page change
+
+6. Seller Dashboard StorefrontEdit: FIXED + PASS
+   - 3 tabs correctly implemented (Company Profile, Factory & Capacity, Storefront Settings)
+   - Vue Router route registered at /app/storefront-edit
+
+   CRITICAL ISSUES FOUND & FIXED:
+   a) get_public_info() in storefront.py was missing new factory fields
+      → Added factory_video_url, employee_count, factory_area, annual_revenue,
+        capability_verified_by, factory_images, certificates, capabilities,
+        is_published, public_email to the return dict
+   b) update_storefront() in seller.py had new fields missing from allowed_fields
+      → Added factory_video_url, employee_count, factory_area, annual_revenue,
+        capability_verified_by to allowed_fields
+   c) update_storefront() had no child table handling
+      → Added child table handling for factory_images, certificates, capabilities
+        with JSON string parsing support and proper Frappe set/append pattern
+
+--- Edge Case Verification ---
+- Missing ?store= param: HANDLED (error state with redirect link)
+- Empty top_products: HANDLED (placeholder message)
+- Empty factory_images: HANDLED (slider section omitted)
+- Unverified seller: HANDLED (badge hidden via data-* hydration)
+- Zero reviews: HANDLED (shows "0 reviews")
+- Pagination beyond total: HANDLED (next button disabled)
+- Empty capabilities/certificates: HANDLED (fallback to static defaults)
+- API errors: HANDLED (error states with retry buttons)
+
+--- Build Checks ---
+- TypeScript compilation: PASS (0 errors)
+- Python syntax (seller.py): PASS
+- Python syntax (storefront.py): PASS
+
+=== END SUBTASK 6-1 ===
