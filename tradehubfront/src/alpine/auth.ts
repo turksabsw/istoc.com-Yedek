@@ -18,6 +18,11 @@ import {
   type AccountSetupFormData,
 } from '../components/auth/AccountSetupForm'
 import {
+  SupplierSetupForm,
+  initSupplierSetupForm,
+  type SupplierSetupFormData,
+} from '../components/auth/SupplierSetupForm'
+import {
   escapeHtml,
   type RegisterStep,
 } from '../components/auth/RegisterPage'
@@ -26,6 +31,7 @@ import {
   type ForgotPasswordStep,
 } from '../components/auth/ForgotPasswordPage'
 import { getBaseUrl } from '../components/auth/AuthLayout'
+import { register, login, getSessionUser, getRedirectUrl } from '../utils/auth'
 
 Alpine.data('registerPage', () => ({
   currentStep: 'account-type' as RegisterStep,
@@ -122,21 +128,73 @@ Alpine.data('registerPage', () => ({
         case 'setup': {
           // Dynamically render setup form (child component needs fresh DOM each time)
           const container = (this.$refs as Record<string, HTMLElement>).setupContainer;
-          if (container) {
-            container.innerHTML = AccountSetupForm('TR');
-          }
-          initAccountSetupForm({
-            defaultCountry: 'TR',
-            onSubmit: (formData: AccountSetupFormData) => {
-              if (this.accountType) {
-                this.$dispatch('register-complete', {
-                  accountType: this.accountType,
-                  email: this.email,
-                  formData
-                });
-              }
+
+          if (this.accountType === 'supplier') {
+            // Supplier: render SupplierSetupForm with business-specific fields
+            if (container) {
+              container.innerHTML = SupplierSetupForm('TR');
             }
-          });
+            initSupplierSetupForm({
+              defaultCountry: 'TR',
+              onSubmit: async (formData: SupplierSetupFormData) => {
+                if (!this.accountType) return;
+                try {
+                  await register(
+                    this.email,
+                    formData.password,
+                    formData.firstName,
+                    formData.lastName,
+                    this.accountType,
+                    '',
+                    formData.country?.code || 'TR',
+                    true,
+                    true,
+                  );
+                  await login(this.email, formData.password);
+                  // Supplier: redirect to application form to complete seller application
+                  const baseUrl = getBaseUrl();
+                  window.location.href = `${baseUrl}pages/seller/application-form.html`;
+                } catch (err) {
+                  const message = err instanceof Error ? err.message : t('auth.register.error');
+                  showToast({ message, type: 'error' });
+                }
+              }
+            });
+          } else {
+            // Buyer: render standard AccountSetupForm
+            if (container) {
+              container.innerHTML = AccountSetupForm('TR');
+            }
+            initAccountSetupForm({
+              defaultCountry: 'TR',
+              onSubmit: async (formData: AccountSetupFormData) => {
+                if (!this.accountType) return;
+                try {
+                  await register(
+                    this.email,
+                    formData.password,
+                    formData.firstName,
+                    formData.lastName,
+                    this.accountType,
+                    '',
+                    formData.country?.code || 'TR',
+                    true,
+                    true,
+                  );
+                  await login(this.email, formData.password);
+                  const user = await getSessionUser();
+                  if (user) {
+                    window.location.href = getRedirectUrl(user);
+                  } else {
+                    window.location.href = '/';
+                  }
+                } catch (err) {
+                  const message = err instanceof Error ? err.message : t('auth.register.error');
+                  showToast({ message, type: 'error' });
+                }
+              }
+            });
+          }
           break;
         }
       }

@@ -30,3 +30,21 @@ required_apps = [
     "tradehub_logistics",
     "tradehub_marketing",
 ]
+
+# Fixtures
+# --------
+# Marketplace roles (Buyer, Seller) with Desk Access: 0
+# These are loaded during bench migrate and prevent marketplace users
+# from accessing the /app admin panel.
+fixtures = [
+    {
+        "dt": "Role",
+        "filters": [["name", "in", ["Buyer", "Seller"]]]
+    }
+]
+
+# Setup
+# -----
+# Create marketplace roles after installation
+after_install = "tr_tradehub.setup.create_marketplace_roles.execute"
+after_migrate = "tr_tradehub.setup.create_marketplace_roles.execute"

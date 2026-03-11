@@ -408,6 +408,192 @@ def register(
 
 
 @frappe.whitelist(allow_guest=True)
+def register_user(
+    email: str,
+    password: str,
+    first_name: str,
+    last_name: str,
+    account_type: str = "buyer",
+    phone: Optional[str] = None,
+    country: str = "TR",
+    accept_terms: bool = False,
+    accept_kvkk: bool = False,
+) -> Dict[str, Any]:
+    """
+    Register a new user account on TR-TradeHub marketplace.
+
+    This endpoint handles user registration for both buyer and supplier
+    account types. For suppliers, a draft Seller Application is also created.
+
+    Note: check_email_exists already exists in auth.py — use
+    tr_tradehub.api.v1.auth.check_email_exists for pre-registration checks.
+
+    Args:
+        email: User's email address (will be used as username)
+        password: User's password (must meet security requirements)
+        first_name: User's first name
+        last_name: User's last name
+        account_type: "buyer" or "supplier" (default: buyer)
+        phone: Optional phone number
+        country: Country code for phone validation (default: TR)
+        accept_terms: Must be True to register
+        accept_kvkk: KVKK consent (required)
+
+    Returns:
+        dict: Registration result with user info
+
+    Example:
+        POST /api/method/tr_tradehub.api.v1.identity.register_user
+        {
+            "email": "user@example.com",
+            "password": "SecurePass123",
+            "first_name": "John",
+            "last_name": "Doe",
+            "account_type": "buyer",
+            "accept_terms": true,
+            "accept_kvkk": true
+        }
+    """
+    # Rate limiting
+    check_rate_limit("register")
+
+    # Validate required fields
+    if not email or not password or not first_name or not last_name:
+        frappe.throw(_("Email, password, first name, and last name are required"))
+
+    email = email.strip().lower()
+    first_name = first_name.strip()
+    last_name = last_name.strip()
+
+    # Validate account_type
+    account_type = account_type.strip().lower() if account_type else "buyer"
+    if account_type not in ("buyer", "supplier"):
+        frappe.throw(_("Account type must be 'buyer' or 'supplier'"))
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Please enter a valid email address"))
+
+    # Check if email already exists
+    if frappe.db.exists("User", email):
+        frappe.throw(_("An account with this email already exists"))
+
+    # Validate password strength
+    password_check = validate_password_strength(password)
+    if not password_check["is_valid"]:
+        frappe.throw("\n".join(password_check["errors"]))
+
+    # Validate phone if provided
+    if phone:
+        phone = normalize_phone(phone, country)
+        if not validate_phone_format(phone, country):
+            frappe.throw(_("Please enter a valid phone number"))
+
+    # Validate terms acceptance
+    if not accept_terms:
+        frappe.throw(_("You must accept the terms and conditions to register"))
+
+    # Validate KVKK consent
+    if not accept_kvkk:
+        frappe.throw(_("KVKK consent is required to register"))
+
+    # Create user
+    try:
+        user = frappe.get_doc(
+            {
+                "doctype": "User",
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "full_name": f"{first_name} {last_name}",
+                "enabled": 1,
+                "new_password": password,
+                "user_type": "Website User",
+                "send_welcome_email": 0,  # We'll handle verification ourselves
+                "mobile_no": phone,
+            }
+        )
+        user.flags.ignore_permissions = True
+        user.flags.no_welcome_mail = True
+        user.insert()
+
+        # Assign Buyer role (all users start as buyers)
+        user.add_roles("Buyer")
+
+        # For supplier accounts, also create a draft Seller Application
+        seller_application_name = None
+        if account_type == "supplier":
+            if frappe.db.exists("DocType", "Seller Application"):
+                seller_app = frappe.get_doc(
+                    {
+                        "doctype": "Seller Application",
+                        "applicant_user": email,
+                        "business_name": f"{first_name} {last_name}",
+                        "seller_type": "Individual",
+                        "contact_email": email,
+                        "contact_phone": phone or "",
+                        "contact_name": f"{first_name} {last_name}",
+                        "status": "Draft",
+                    }
+                )
+                seller_app.flags.ignore_permissions = True
+                seller_app.insert()
+                seller_application_name = seller_app.name
+
+        # Record consents
+        _record_registration_consents(
+            user=email,
+            accept_terms=accept_terms,
+            accept_kvkk=accept_kvkk,
+            marketing_consent=False,
+        )
+
+        # Send verification email
+        verification_key = _create_email_verification(email)
+
+        # Commit all changes
+        frappe.db.commit()
+
+        # Log registration event
+        _log_identity_event(
+            "registration",
+            email,
+            {
+                "account_type": account_type,
+                "country": country,
+                "seller_application": seller_application_name,
+            },
+        )
+
+        result = {
+            "success": True,
+            "message": _(
+                "Account created successfully. Please check your email to verify your account."
+            ),
+            "user": email,
+            "account_type": account_type,
+            "requires_verification": True,
+            "verification_sent": True,
+        }
+
+        # Include seller application info for supplier accounts
+        if seller_application_name:
+            result["seller_application"] = seller_application_name
+            result["seller_application_status"] = "Draft"
+
+        return result
+
+    except frappe.DuplicateEntryError:
+        frappe.throw(_("An account with this email already exists"))
+    except Exception as e:
+        # Cleanup on failure: remove user if created
+        if frappe.db.exists("User", email):
+            frappe.delete_doc("User", email, force=True)
+        frappe.log_error(f"Registration error (register_user): {str(e)}", "Identity API Error")
+        frappe.throw(_("An error occurred during registration. Please try again."))
+
+
+@frappe.whitelist(allow_guest=True)
 def register_organization(
     email: str,
     password: str,
@@ -2002,6 +2188,7 @@ Public API Endpoints:
 
 Registration:
 - register: Register individual user account
+- register_user: Register buyer or supplier user account
 - register_organization: Register organization account
 
 Authentication:

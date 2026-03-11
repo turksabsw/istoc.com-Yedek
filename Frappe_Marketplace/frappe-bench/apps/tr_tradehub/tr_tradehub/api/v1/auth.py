@@ -629,22 +629,39 @@ def sso_callback(
         frappe.local.response["location"] = redirect_url
 
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_session_user() -> Dict[str, Any]:
     """
-    Get current session user information.
+    Get current session user information with role flags and seller profile status.
 
     Returns information about the currently logged-in user,
-    including whether they authenticated via SSO.
+    including whether they authenticated via SSO, role-based flags
+    for access control, and seller profile/application status.
 
     Returns:
         dict: {
             "success": True,
             "logged_in": bool,
-            "user": {...} | None
+            "user": {
+                "email": str,
+                "full_name": str,
+                "first_name": str,
+                "last_name": str,
+                "username": str,
+                "user_image": str | None,
+                "is_sso_user": bool,
+                "roles": list[str],
+                "tenant": str | None,
+                "is_admin": bool,
+                "is_seller": bool,
+                "is_buyer": bool,
+                "has_seller_profile": bool,
+                "pending_seller_application": bool,
+                "seller_profile": dict | None,
+            } | None
         }
 
-    API: GET /api/method/trade_hub.api.v1.auth.get_session_user
+    API: GET /api/method/tr_tradehub.api.v1.auth.get_session_user
     """
     user = frappe.session.user
 
@@ -662,6 +679,50 @@ def get_session_user() -> Dict[str, Any]:
         hasattr(user_doc, "keycloak_user_id") and user_doc.keycloak_user_id
     )
 
+    # Build roles list
+    roles = [r.role for r in user_doc.roles]
+
+    # Role flags for access control
+    is_admin = "System Manager" in roles
+    is_buyer = "Buyer" in roles
+
+    # Check seller profile existence (uses frappe.db.exists for performance)
+    has_seller_profile = bool(
+        frappe.db.exists("Seller Profile", {"user": user})
+    )
+
+    # is_seller is True if user has Seller role OR has an active Seller Profile
+    is_seller = "Seller" in roles or has_seller_profile
+
+    # Check for pending seller application
+    pending_seller_application = bool(
+        frappe.db.exists("Seller Application", {
+            "applicant_user": user,
+            "status": ["in", ["Draft", "Submitted", "Under Review"]]
+        })
+    )
+
+    # Fetch seller profile data if available
+    seller_profile = None
+    if has_seller_profile:
+        seller_profile_name = frappe.db.get_value(
+            "Seller Profile", {"user": user}, "name"
+        )
+        if seller_profile_name:
+            seller_profile_data = frappe.db.get_value(
+                "Seller Profile",
+                seller_profile_name,
+                ["name", "business_name", "seller_type", "status"],
+                as_dict=True
+            )
+            if seller_profile_data:
+                seller_profile = {
+                    "name": seller_profile_data.get("name"),
+                    "business_name": seller_profile_data.get("business_name"),
+                    "seller_type": seller_profile_data.get("seller_type"),
+                    "status": seller_profile_data.get("status"),
+                }
+
     return {
         "success": True,
         "logged_in": True,
@@ -673,8 +734,14 @@ def get_session_user() -> Dict[str, Any]:
             "username": user_doc.username,
             "user_image": user_doc.user_image,
             "is_sso_user": is_sso_user,
-            "roles": [r.role for r in user_doc.roles],
+            "roles": roles,
             "tenant": getattr(user_doc, "tenant", None),
+            "is_admin": is_admin,
+            "is_seller": is_seller,
+            "is_buyer": is_buyer,
+            "has_seller_profile": has_seller_profile,
+            "pending_seller_application": pending_seller_application,
+            "seller_profile": seller_profile,
         }
     }
 

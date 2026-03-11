@@ -23,6 +23,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const userName = computed(() => user.value?.full_name || user.value?.email || '')
 
+  const isSeller = computed(() => !!user.value?.is_seller)
+  const isAdmin = computed(() => !!user.value?.is_admin)
+
   async function login(email, password) {
     loading.value = true
     error.value = null
@@ -40,8 +43,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUser() {
     try {
-      const data = await api.getLoggedUser()
-      user.value = data
+      const res = await api.callMethod('tr_tradehub.api.v1.auth.get_session_user')
+      const session = res.message
+      if (session?.logged_in && session?.user) {
+        user.value = session.user
+      } else {
+        user.value = null
+      }
     } catch {
       user.value = null
     }
@@ -96,6 +104,8 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading,
     userInitials,
     userName,
+    isSeller,
+    isAdmin,
     login,
     fetchUser,
     logout,
