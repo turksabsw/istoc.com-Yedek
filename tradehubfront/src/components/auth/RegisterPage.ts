@@ -144,11 +144,15 @@ export function RegisterPage(initialStep: RegisterStep = 'account-type'): string
               placeholder="${t('auth.register.emailPlaceholder')}" data-i18n-placeholder="auth.register.emailPlaceholder"
               autocomplete="email"
               @input="validateEmail()"
+              @blur="checkEmailBlur()"
               class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 auth-input-focus transition-all"
               required
             />
             <p id="register-email-error" x-show="emailError" x-cloak class="mt-1 text-sm text-red-500" data-i18n="auth.register.emailError">
               ${t('auth.register.emailError')}
+            </p>
+            <p x-show="emailExistsError" x-cloak class="mt-1 text-sm text-red-500">
+              ${t('auth.register.alreadyHave')} <a href="${baseUrl}pages/auth/login.html" class="font-medium underline">${t('auth.register.signIn')}</a>
             </p>
           </div>
 
@@ -156,11 +160,15 @@ export function RegisterPage(initialStep: RegisterStep = 'account-type'): string
           <button
             type="submit"
             id="register-email-continue"
-            :disabled="!emailValid"
+            :disabled="!emailValid || emailSubmitting || emailExistsError"
             disabled
             class="th-btn th-btn-pill w-full py-3 text-base font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span data-i18n="auth.register.sendCode">${t('auth.register.sendCode')}</span>
+            <svg x-show="emailSubmitting" x-cloak class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span x-show="!emailSubmitting" data-i18n="auth.register.sendCode">${t('auth.register.sendCode')}</span>
           </button>
         </form>
 
