@@ -328,6 +328,24 @@ Alpine.data('registerPage', () => ({
   },
 }));
 
+/* ── Forgot Password API response types ───────────────── */
+
+interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+interface VerifyResetOtpResponse {
+  success: boolean;
+  message: string;
+  reset_token: string;
+}
+
+interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 Alpine.data('forgotPasswordPage', () => ({
   step: 'find-account' as ForgotPasswordStep,
   email: '',
@@ -336,6 +354,8 @@ Alpine.data('forgotPasswordPage', () => ({
   otpError: false,
   showPassword: false,
   passwordValid: false,
+  submitting: false,
+  resetToken: '',
   reqLength: null as boolean | null,
   reqChars: null as boolean | null,
   reqEmoji: null as boolean | null,
@@ -345,20 +365,68 @@ Alpine.data('forgotPasswordPage', () => ({
     return maskEmail(this.email);
   },
 
-  submitFindAccount() {
+  /** Step 1: Request password reset OTP via API */
+  async submitFindAccount() {
     const trimmed = this.email.trim();
-    if (!trimmed) return;
+    if (!trimmed || this.submitting) return;
 
-    this.step = 'verify-code';
-    this.startCountdown();
+    this.submitting = true;
 
-    this.$nextTick(() => {
-      const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
-      if (container) {
-        const first = container.querySelector('[data-fp-otp-index="0"]') as HTMLInputElement;
-        first?.focus();
-      }
-    });
+    try {
+      await apiPost<ForgotPasswordResponse>(
+        'tr_tradehub.api.v1.auth.forgot_password',
+        { email: trimmed },
+      );
+
+      this.email = trimmed;
+      this.step = 'verify-code';
+      this.startCountdown();
+
+      this.$nextTick(() => {
+        const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
+        if (container) {
+          const first = container.querySelector('[data-fp-otp-index="0"]') as HTMLInputElement;
+          first?.focus();
+        }
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.submitting = false;
+    }
+  },
+
+  /** Step 2: Verify reset OTP and get reset_token (stored in component state only) */
+  async verifyOtp() {
+    const otpCode = this.otp.join('');
+    if (otpCode.length !== 6 || this.submitting) return;
+
+    this.submitting = true;
+
+    try {
+      const result = await apiPost<VerifyResetOtpResponse>(
+        'tr_tradehub.api.v1.auth.verify_reset_otp',
+        { email: this.email, otp: otpCode },
+      );
+
+      // Store reset_token in component state only (NOT localStorage)
+      this.resetToken = result.reset_token;
+
+      this.step = 'reset-password';
+      this.stopCountdown();
+
+      this.$nextTick(() => {
+        const pwInput = (this.$refs as Record<string, HTMLInputElement>).newPassword;
+        pwInput?.focus();
+      });
+    } catch (err) {
+      this.otpError = true;
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.submitting = false;
+    }
   },
 
   handleOtpInput(event: Event) {
@@ -383,15 +451,10 @@ Alpine.data('forgotPasswordPage', () => ({
 
     this.otpError = false;
 
-    // Auto-proceed when all 6 digits entered
+    // Auto-verify when all 6 digits entered
     if (this.otp.every((d: string) => d !== '')) {
       setTimeout(() => {
-        this.step = 'reset-password';
-        this.stopCountdown();
-        this.$nextTick(() => {
-          const pwInput = (this.$refs as Record<string, HTMLInputElement>).newPassword;
-          pwInput?.focus();
-        });
+        this.verifyOtp();
       }, 300);
     }
   },
@@ -415,10 +478,10 @@ Alpine.data('forgotPasswordPage', () => ({
       focusEl?.focus();
     }
 
+    // Auto-verify when all 6 digits pasted
     if (this.otp.every((d: string) => d !== '')) {
       setTimeout(() => {
-        this.step = 'reset-password';
-        this.stopCountdown();
+        this.verifyOtp();
       }, 300);
     }
   },
@@ -447,16 +510,28 @@ Alpine.data('forgotPasswordPage', () => ({
     }
   },
 
-  resendCode() {
+  /** Resend OTP via forgot_password API */
+  async resendCode() {
     if (this.countdown > 0) return;
 
-    // Reset OTP
+    // Reset OTP inputs
     this.otp = ['', '', '', '', '', ''];
     const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
     if (container) {
       container.querySelectorAll<HTMLInputElement>('[data-fp-otp-index]').forEach(i => { i.value = ''; });
     }
     this.otpError = false;
+
+    try {
+      await apiPost<ForgotPasswordResponse>(
+        'tr_tradehub.api.v1.auth.forgot_password',
+        { email: this.email },
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    }
+
     this.startCountdown();
 
     if (container) {
@@ -513,16 +588,40 @@ Alpine.data('forgotPasswordPage', () => ({
     return valid ? 'color: #16a34a' : 'color: #dc2626';
   },
 
-  submitReset() {
-    if (!this.passwordValid) return;
-    const baseUrl = getBaseUrl();
-    showToast({ message: t('auth.forgot.passwordUpdated'), type: 'success' });
-    setTimeout(() => {
-      window.location.href = `${baseUrl}pages/auth/login.html`;
-    }, 1500);
+  /** Step 3: Reset password via API using reset_token from component state */
+  async submitReset() {
+    if (!this.passwordValid || this.submitting) return;
+
+    const pw = (this.$refs as Record<string, HTMLInputElement>).newPassword?.value || '';
+    if (!pw || !this.resetToken) return;
+
+    this.submitting = true;
+
+    try {
+      await apiPost<ResetPasswordResponse>(
+        'tr_tradehub.api.v1.auth.reset_password',
+        { reset_token: this.resetToken, new_password: pw },
+      );
+
+      // Clear reset_token from component state after successful reset
+      this.resetToken = '';
+
+      const baseUrl = getBaseUrl();
+      showToast({ message: t('auth.forgot.passwordUpdated'), type: 'success' });
+      setTimeout(() => {
+        window.location.href = `${baseUrl}pages/auth/login.html?message=password_reset_success`;
+      }, 1500);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.submitting = false;
+    }
   },
 
   destroy() {
     this.stopCountdown();
+    // Clear sensitive state on component destruction
+    this.resetToken = '';
   },
 }));

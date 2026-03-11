@@ -103,11 +103,17 @@ function StepFindAccount(): string {
 
         <button
           type="submit"
-          :disabled="!email.trim()"
+          :disabled="!email.trim() || submitting"
           disabled
           class="w-full h-12 th-btn th-btn-pill disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span data-i18n="auth.forgot.continue">${t('auth.forgot.continue')}</span>
+          <template x-if="submitting">
+            <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </template>
+          <span x-show="!submitting" data-i18n="auth.forgot.continue">${t('auth.forgot.continue')}</span>
         </button>
       </form>
 
@@ -233,11 +239,17 @@ function StepResetPassword(): string {
         <!-- Submit -->
         <button
           type="submit"
-          :disabled="!passwordValid"
+          :disabled="!passwordValid || submitting"
           disabled
           class="w-full h-12 th-btn th-btn-pill disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span data-i18n="auth.forgot.resetAndLogin">${t('auth.forgot.resetAndLogin')}</span>
+          <template x-if="submitting">
+            <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </template>
+          <span x-show="!submitting" data-i18n="auth.forgot.resetAndLogin">${t('auth.forgot.resetAndLogin')}</span>
         </button>
       </form>
     </div>
