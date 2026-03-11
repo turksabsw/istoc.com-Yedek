@@ -7,6 +7,7 @@
 export {
   SocialLoginButtons,
   initSocialLoginButtons,
+  fetchAvailableProviders,
   getSocialLoginButtons,
   type LoginProvider,
   type SocialLoginButtonsOptions

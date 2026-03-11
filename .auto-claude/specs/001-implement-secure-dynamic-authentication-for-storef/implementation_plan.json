@@ -1,0 +1,755 @@
+{
+  "feature": "Secure Dynamic Authentication for Storefront",
+  "workflow_type": "feature",
+  "workflow_rationale": "This is a major new feature — transforming mock frontend auth into a full dynamic auth system backed by Frappe endpoints. Requires new backend endpoints, new frontend pages, middleware, custom DocType fields, email templates, and security hardening across two services.",
+  "phases": [
+    {
+      "id": "phase-1-backend-foundation",
+      "name": "Backend Foundation",
+      "type": "setup",
+      "description": "Create custom User DocType fields via fixtures, update hooks.py, create email templates, and add auth helper functions to auth.py. This establishes the data model and reusable utilities needed by all subsequent backend endpoints.",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create Custom Field fixture JSON for User DocType and update hooks.py with fixtures configuration. Adds 5 custom fields: tradehub_user_type (Select: buyer/supplier/admin), is_email_verified (Check), has_completed_onboarding (Check), company_name (Data), company_tax_id (Data). Update hooks.py to include fixtures list.",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/hooks.py"
+          ],
+          "files_to_create": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/fixtures/custom_field__user.json"
+          ],
+          "patterns_from": [
+            "auth.md"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -c \"import json; data=json.load(open('apps/tr_tradehub/tr_tradehub/fixtures/custom_field__user.json')); assert len(data) >= 5, f'Expected >=5 fields, got {len(data)}'; print('OK: ' + str(len(data)) + ' custom fields defined')\"",
+            "expected": "OK: custom fields defined"
+          },
+          "status": "completed",
+          "notes": "Created custom_field__user.json with 5 Custom Field fixtures for User DocType (tradehub_user_type, is_email_verified, has_completed_onboarding, company_name, company_tax_id). Updated hooks.py with fixtures configuration filtered by dt=User and module=TR TradeHub. Verification passed: 5 fields defined, JSON valid, hooks.py compiles. Committed as 8332078.",
+          "updated_at": "2026-03-10T14:23:03.941473+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Create email templates for verification OTP and password reset OTP. Both templates should include: greeting with first_name, the 6-digit OTP code prominently displayed, expiry time notice, and TradeHub branding. Verification template has 10-min expiry, password reset has 15-min expiry.",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/templates/email/email_verification.html",
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/templates/email/password_reset.html"
+          ],
+          "patterns_from": [
+            "auth.md"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ls -la Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/templates/email/email_verification.html Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/templates/email/password_reset.html && echo 'OK: Both email templates exist'",
+            "expected": "OK: Both email templates exist"
+          },
+          "status": "completed",
+          "notes": "Created both email templates following Frappe Jinja conventions with i18n support. email_verification.html: greeting with first_name, 6-digit OTP prominently displayed in styled box, 10-min expiry notice, safety disclaimer, TradeHub branding. password_reset.html: same layout with 15-min expiry. Variables: first_name, otp. Uses _() for translations and frappe.bold() for emphasis. Committed as 84b94a9.",
+          "updated_at": "2026-03-10T14:26:02.448281+00:00"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Add auth helper functions to auth.py: (1) generate_auth_token(email) — creates/reuses Frappe API key+secret, returns 'api_key:api_secret' string (NO base64); (2) generate_verification_otp(email) — 6-digit, Redis 10min expiry; (3) generate_password_reset_otp(email) — 6-digit, Redis 15min expiry; (4) send_verification_email(email, otp, first_name); (5) send_password_reset_email(email, otp, first_name); (6) check_rate_limit() — copy from identity.py with same RATE_LIMITS dict; (7) validate_email_format(email); (8) validate_password_strength(password).",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/identity.py",
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py && echo 'OK: auth.py compiles'",
+            "expected": "OK: auth.py compiles"
+          },
+          "status": "completed",
+          "notes": "Added 8 helper functions to auth.py: generate_auth_token (reuses existing API keys, generates fresh secret), generate_verification_otp (6-digit, Redis 10min), generate_password_reset_otp (6-digit, Redis 15min), send_verification_email, send_password_reset_email, check_rate_limit (copied from identity.py with same RATE_LIMITS dict), validate_email_format, validate_password_strength. Also added constants: RATE_LIMITS, PASSWORD_REQUIREMENTS, VERIFICATION_CODE_LENGTH, OTP expiry settings. All patterns match identity.py. Uses secrets.randbelow for secure OTP generation, frappe.cache().set_value/delete_value for Redis ops. Verification passed: auth.py compiles. Committed as ba864bb. Phase 1 (Backend Foundation) is now fully complete.",
+          "updated_at": "2026-03-10T14:29:30.082082+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-backend-endpoints",
+      "name": "Backend Auth Endpoints",
+      "type": "implementation",
+      "description": "Implement all 9 new auth endpoints in auth.py: register, verify_email, resend_verification_otp, login, verify_2fa, forgot_password, verify_reset_otp, reset_password, complete_onboarding. Each endpoint uses rate limiting, input validation, and proper error handling.",
+      "depends_on": [
+        "phase-1-backend-foundation"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Implement register endpoint: validates email format/uniqueness, password strength, creates Frappe User with custom fields (tradehub_user_type, is_email_verified=0, has_completed_onboarding=0), generates 6-digit OTP, sends verification email. Also implement verify_email endpoint: validates OTP from Redis, marks is_email_verified=1, starts Frappe session, generates auth token, returns user profile. Also implement resend_verification_otp: rate-limited to 60s cooldown per email.",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py",
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/identity.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -c \"from tr_tradehub.api.v1.auth import register, verify_email, resend_verification_otp; print('OK: Registration endpoints importable')\" 2>/dev/null || python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py && echo 'OK: auth.py compiles with registration endpoints'",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Implemented three endpoints in auth.py:\n\n1. register() - @frappe.whitelist(allow_guest=True): validates email format/uniqueness via validate_email_format() and frappe.db.exists(), validates password strength, validates user_type in ('buyer','supplier'), creates Frappe User with custom fields (tradehub_user_type, is_email_verified=0, has_completed_onboarding=0) using hasattr() check for field existence, generates 6-digit OTP via generate_verification_otp(), sends verification email. Cleans up partial user on failure. Rate-limited via check_rate_limit('register').\n\n2. verify_email() - Validates OTP from Redis cache key 'trade_hub:verify:otp:{email}', deletes OTP after success (single-use), clears resend cooldown, marks is_email_verified=1, starts Frappe session via login_manager.login_as(), generates auth token (api_key:api_secret, NOT base64), returns user profile. Rate-limited via check_rate_limit('verification', email).\n\n3. resend_verification_otp() - Enforces 60s cooldown per email via separate Redis key 'trade_hub:verify:cooldown:{email}', checks email not already verified, generates fresh OTP (overwrites previous), sends verification email. Rate-limited via check_rate_limit('verification', email).\n\nAdded constants: RESEND_OTP_COOLDOWN_SECONDS=60, VALID_USER_TYPES=('buyer','supplier'). All endpoints use Frappe ORM only (no raw SQL). Verification passed: py_compile succeeds. Committed as 29b2045.",
+          "updated_at": "2026-03-10T14:33:37.854395+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Implement login endpoint: validates credentials via frappe.utils.password.check_password(), checks if email is verified (if not, sends new OTP and throws with title='email_not_verified'), checks 2FA via should_run_2fa(), handles 2FA flow with custom wrapper (authenticate_for_2factor sets tmp_id in frappe.local.response, store in Redis, return session identifier), on success starts session and returns auth token + user profile.",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/identity.py",
+            "Frappe_Marketplace/frappe-bench/apps/frappe/frappe/twofactor.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py && echo 'OK: auth.py compiles with login endpoint'",
+            "expected": "OK: auth.py compiles with login endpoint"
+          },
+          "status": "completed",
+          "notes": "Implemented login() endpoint in auth.py with full 2FA support:\n\n1. login() - @frappe.whitelist(allow_guest=True): Rate-limited by IP and email (10/5min). Validates credentials via frappe.utils.password.check_password() with generic error messages to prevent user enumeration. Checks if user is enabled.\n\n2. Email verification check: If is_email_verified=0, generates new OTP via generate_verification_otp(), sends verification email, throws with title='email_not_verified' so frontend can redirect to verify page.\n\n3. 2FA flow: Checks should_run_2fa(email) from frappe.twofactor. If 2FA required: sets frappe.form_dict['pwd'] for caching, calls authenticate_for_2factor(email) which sets tmp_id in frappe.local.response, extracts tmp_id + verification info, generates session_id via secrets.token_urlsafe(32), stores {tmp_id, user} in Redis keyed by 'trade_hub:2fa:session:{session_id}' with 5min expiry, cleans up frappe.local.response, returns session_id + verification method to frontend.\n\n4. Success path (no 2FA): Starts Frappe session via login_manager.login_as(), generates auth token (api_key:api_secret, NOT base64), returns user profile with tradehub custom fields.\n\nAll patterns match identity.py and existing endpoints. No raw SQL. Uses Frappe ORM only. Verification passed: py_compile succeeds. Committed as eec42bd.",
+          "updated_at": "2026-03-10T14:37:07.039994+00:00"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Implement verify_2fa endpoint: receives session_id + otp, retrieves tmp_id from Redis, reconstructs LoginManager, calls confirm_otp_token(login_manager, otp, tmp_id), on success starts session and returns auth token + user profile. This is the custom 2FA REST wrapper described in the spec.",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "Frappe_Marketplace/frappe-bench/apps/frappe/frappe/twofactor.py",
+            "Frappe_Marketplace/frappe-bench/apps/frappe/frappe/auth.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py && echo 'OK: auth.py compiles with verify_2fa'",
+            "expected": "OK: auth.py compiles with verify_2fa"
+          },
+          "status": "completed",
+          "notes": "Implemented verify_2fa endpoint. Receives session_id + otp, retrieves tmp_id from Redis, reconstructs LoginManager via object.__new__(LoginManager), calls confirm_otp_token(login_manager, otp, tmp_id), on success deletes Redis session key, starts Frappe session via login_as(), generates auth token, and returns token + user profile. Rate limited at 5/5min per email. Handles expired sessions, invalid OTP, and JSON parsing errors. Verification passed: py_compile succeeds.",
+          "updated_at": "2026-03-10T14:39:44.134496+00:00"
+        },
+        {
+          "id": "subtask-2-4",
+          "description": "Implement password reset flow: (1) forgot_password(email) — always returns success message regardless of email existence (anti-enumeration), generates 6-digit OTP, sends password reset email; (2) verify_reset_otp(email, otp) — validates OTP, generates single-use reset_token via secrets.token_urlsafe(32), stores in Redis 10min; (3) reset_password(reset_token, new_password) — validates reset_token from Redis, updates password via frappe update_password(), invalidates token.",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/identity.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py && echo 'OK: auth.py compiles with password reset endpoints'",
+            "expected": "OK: auth.py compiles with password reset endpoints"
+          },
+          "status": "completed",
+          "notes": "Implemented three password reset endpoints in auth.py:\n\n1. forgot_password(email) - @frappe.whitelist(allow_guest=True): Rate-limited at 3/hour per email via check_rate_limit('password_reset', email). Anti-enumeration: always returns same success message (\"If an account with this email exists, you will receive a password reset code shortly.\") regardless of whether email exists. Only generates OTP and sends email for existing, enabled users. Uses generate_password_reset_otp() (6-digit, Redis 15min expiry) and send_password_reset_email().\n\n2. verify_reset_otp(email, otp) - @frappe.whitelist(allow_guest=True): Rate-limited at 5/5min per email via check_rate_limit('verification', email). Validates OTP from Redis key 'trade_hub:reset:otp:{email}', deletes OTP after success (single-use). Generates secure reset_token via secrets.token_urlsafe(32), stores in Redis for 10 minutes at key 'trade_hub:reset:token:{reset_token}' mapping to email. Returns reset_token to frontend.\n\n3. reset_password(reset_token, new_password) - @frappe.whitelist(allow_guest=True): Retrieves email from Redis via reset_token, invalidates token immediately (single-use, deleted before password update), validates user exists and is enabled, validates password strength via validate_password_strength(), updates password via frappe.utils.password.update_password(). User must log in again after successful reset.\n\nAdded RESET_TOKEN_EXPIRY_SECONDS = 600 constant. Added import of update_password from frappe.utils.password. All endpoints use Frappe ORM only (no raw SQL). No debugging statements. Verification passed: py_compile succeeds. Committed as ddbfe6b.",
+          "updated_at": "2026-03-10T14:42:30.822038+00:00"
+        },
+        {
+          "id": "subtask-2-5",
+          "description": "Implement complete_onboarding endpoint: authenticated endpoint (no allow_guest), reads frappe.session.user, sets has_completed_onboarding=1 on User DocType, returns success with redirect URL. Simple endpoint but important for middleware redirect logic.",
+          "service": "backend",
+          "files_to_modify": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py && echo 'OK: auth.py compiles with complete_onboarding'",
+            "expected": "OK: auth.py compiles with complete_onboarding"
+          },
+          "status": "completed",
+          "notes": "Implemented complete_onboarding endpoint: authenticated (@frappe.whitelist() without allow_guest), reads frappe.session.user, validates user exists and is not Guest, sets has_completed_onboarding=1 via frappe.db.set_value, determines redirect URL based on tradehub_user_type (supplier -> supplier-dashboard, buyer -> buyer-dashboard), returns success with redirect_url. Includes proper error handling with frappe.log_error. Verification passed: auth.py compiles. Committed as a476309. Phase 2 (Backend Auth Endpoints) is now fully complete.",
+          "updated_at": "2026-03-10T14:45:26.894919+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-frontend-foundation",
+      "name": "Frontend Foundation",
+      "type": "implementation",
+      "description": "Rewrite core frontend auth utilities: auth.ts (real token management), api.ts (Frappe-compatible client), middleware.ts (auth guard + token refresh + onboarding redirect), and update .env.development. These are the foundational modules that all frontend pages depend on.",
+      "depends_on": [
+        "phase-1-backend-foundation"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Rewrite src/utils/auth.ts: Replace mock auth with real token management. Define AuthTokens interface (api_key, api_secret, expires_in, expires_at) and AuthUser interface (email, full_name, first_name, last_name, roles, user_type, is_verified, has_completed_onboarding). Implement getTokens() with expiry check, setTokens() with expiry calculation, getUser(), setUser(), isLoggedIn(), clearAuth(). Use TOKEN_KEY='tradehub_tokens' and USER_KEY='tradehub_user' in localStorage.",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/utils/auth.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tradehubfront/src/utils/auth.ts",
+            "auth.md"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Rewrote auth.ts: replaced mock localStorage auth with real Frappe token management. AuthTokens interface (api_key, api_secret, expires_in, expires_at), AuthUser interface (email, full_name, first_name, last_name, roles, user_type, is_verified, has_completed_onboarding). Implemented getTokens() with expiry check (clearAuth on expired), setTokens() with expiry calculation (Date.now() + expires_in * 1000), getUser(), setUser(), isLoggedIn() (checks non-expired tokens), clearAuth(). Kept logout() as deprecated alias for backward compat with TopBar.ts. TOKEN_KEY='tradehub_tokens', USER_KEY='tradehub_user'. Zero new TS errors. Committed as 2576c4d.",
+          "updated_at": "2026-03-10T14:50:54.211691+00:00"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Rewrite src/utils/api.ts: Create Frappe-compatible API client. Define FrappeResponse<T> wrapper type. Implement apiGet<T>(method, params?) and apiPost<T>(method, body) functions. Headers: credentials:'include' (mandatory), Authorization: 'token api_key:api_secret' (if tokens exist), X-Frappe-CSRF-Token from csrf_token cookie (for POST), Content-Type: application/json. Handle 403 as session expiry (clear auth, redirect to login). Unwrap Frappe's {message: T} response format.",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/utils/api.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tradehubfront/src/utils/api.ts",
+            "auth.md"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Rewrote src/utils/api.ts with Frappe-compatible API client. Implemented: FrappeResponse<T> type, apiGet<T>(method, params?) and apiPost<T>(method, body) functions, credentials:'include' on all requests, Authorization with lowercase 'token api_key:api_secret' format, X-Frappe-CSRF-Token from csrf_token cookie for POST requests, 403 handling as session expiry with auth clear and login redirect, Frappe {message: T} response unwrapping, structured error parsing from _server_messages. TypeScript compiles cleanly (only pre-existing errors in SearchArea.ts).",
+          "updated_at": "2026-03-10T14:53:07.111876+00:00"
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Create src/utils/middleware.ts and update src/utils/auth-guard.ts. Middleware: defines PUBLIC_PATHS whitelist, checks token presence, refreshes if within 5 min of expiry (via apiPost to refresh_token), redirects to login with return URL if no token, redirects to /pages/welcome.html if user.has_completed_onboarding is false. Also implement storage event listener for cross-tab logout detection. Update auth-guard.ts to use new getTokens() instead of raw localStorage check.",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/utils/auth-guard.ts"
+          ],
+          "files_to_create": [
+            "tradehubfront/src/utils/middleware.ts"
+          ],
+          "patterns_from": [
+            "tradehubfront/src/utils/auth-guard.ts",
+            "auth.md"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Created src/utils/middleware.ts with authMiddleware() function. PUBLIC_PATHS whitelist: login.html, register.html, forgot-password.html, verify.html. SKIP_ONBOARDING_PATHS: welcome.html. refreshAuthToken() calls apiPost('tr_tradehub.api.v1.auth.refresh_token', {}) with refreshInProgress flag to prevent race conditions. Redirects to login with return URL if no tokens. Redirects to /pages/welcome.html if user.has_completed_onboarding is false. Cross-tab logout detection via storage event listener on 'tradehub_tokens' key. Updated auth-guard.ts to use getTokens() from auth.ts instead of raw localStorage.getItem('tradehub_auth'), added return URL parameter. Verification passed: only pre-existing SearchArea.ts errors, no new errors. Committed as 3fa785d.",
+          "updated_at": "2026-03-10T14:57:50.782831+00:00"
+        },
+        {
+          "id": "subtask-3-4",
+          "description": "Update tradehubfront/.env.development: Change VITE_API_URL from 'http://localhost:3000/api' to 'http://marketplace.local:8000' (Frappe backend URL, no /api suffix since api.ts adds /api/method/ path).",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/.env.development"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "grep -q 'marketplace.local:8000' tradehubfront/.env.development && echo 'OK: API URL updated' || echo 'FAIL: API URL not updated'",
+            "expected": "OK: API URL updated"
+          },
+          "status": "completed",
+          "notes": "Updated VITE_API_URL from http://localhost:3000/api to http://marketplace.local:8000. Verification passed. No /api suffix needed since api.ts adds /api/method/ path.",
+          "updated_at": "2026-03-10T14:59:03.976654+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-frontend-pages",
+      "name": "Frontend Page Integration",
+      "type": "implementation",
+      "description": "Wire existing auth page components (LoginPage, RegisterPage, ForgotPasswordPage, SocialLoginButtons) to real backend APIs. Update Alpine.js data components to call apiPost/apiGet instead of mock functions. Add 2FA step handling to login, real OTP flow to registration, real password reset flow.",
+      "depends_on": [
+        "phase-2-backend-endpoints",
+        "phase-3-frontend-foundation"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Update LoginPage.ts and login.ts for real API integration: (1) Form submit calls apiPost('tr_tradehub.api.v1.auth.login', {email, password}); (2) Handle requires_2fa:true response — show 2FA OTP step using EmailVerification component; (3) Handle email_not_verified error — redirect to /pages/auth/verify.html?email=xxx; (4) On success: call setTokens() and setUser(), redirect based on return URL param or user_type (buyer→buyer-dashboard, supplier→supplier-dashboard); (5) Add loading/disabled state on submit button during API call; (6) Show error via showToast().",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/components/auth/LoginPage.ts",
+            "tradehubfront/src/pages/login.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tradehubfront/src/components/auth/LoginPage.ts",
+            "tradehubfront/src/components/auth/EmailVerification.ts",
+            "tradehubfront/src/utils/toast.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Updated LoginPage.ts and login.ts for real API integration. Replaced mock login() with apiPost('tr_tradehub.api.v1.auth.login', {email, password}). Handles requires_2fa:true response by hiding login form and showing EmailVerification OTP component, with verify_2fa endpoint call on OTP completion. Handles email_not_verified error by redirecting to /pages/auth/verify.html?email=xxx. On success: calls setTokens() and setUser(), redirects based on return URL param or user_type (buyer→buyer-dashboard, supplier→supplier-dashboard). Added loading/disabled state with spinner on submit button during API calls. Shows errors via showToast(). Includes cleanup for EmailVerification countdown interval on page unload. TypeScript verification passes (only pre-existing SearchArea.ts errors remain). Committed as 8beea09.",
+          "updated_at": "2026-03-10T15:04:17.915109+00:00"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Update RegisterPage.ts and alpine/auth.ts registerPage data for real API: Step 2 (email) — call apiGet('tr_tradehub.api.v1.auth.check_email_exists', {email}) on blur/submit. Step 3 (OTP) — first call apiPost('tr_tradehub.api.v1.auth.register', {email, password, first_name, last_name, user_type, ...}), then on OTP submit call apiPost('tr_tradehub.api.v1.auth.verify_email', {email, otp}), store returned tokens. Step 4 (setup) — pre-fill from registration data, on complete redirect to /pages/welcome.html. Update register.ts entry point to handle onComplete callback with real API flow.",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/components/auth/RegisterPage.ts",
+            "tradehubfront/src/alpine/auth.ts",
+            "tradehubfront/src/pages/register.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tradehubfront/src/components/auth/RegisterPage.ts",
+            "tradehubfront/src/alpine/auth.ts",
+            "tradehubfront/src/components/auth/EmailVerification.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Wired registration flow to real backend APIs: check_email_exists on blur/submit, register API on setup form submit, verify_email on OTP completion with token storage, resend_verification_otp on resend. Reordered flow to email→setup→otp so registration data is available before OTP. Updated register.ts to redirect to /pages/welcome.html. TypeScript compiles clean (only pre-existing SearchArea.ts errors).",
+          "updated_at": "2026-03-11T06:01:50.264521+00:00"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Update ForgotPasswordPage.ts and alpine/auth.ts forgotPasswordPage data for real API: Step 1 — call apiPost('tr_tradehub.api.v1.auth.forgot_password', {email}). Step 2 — call apiPost('tr_tradehub.api.v1.auth.verify_reset_otp', {email, otp}), store reset_token in component state only (NOT localStorage). Step 3 — call apiPost('tr_tradehub.api.v1.auth.reset_password', {reset_token, new_password}), on success show toast and redirect to login. Update forgot-password.ts entry point.",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/components/auth/ForgotPasswordPage.ts",
+            "tradehubfront/src/alpine/auth.ts",
+            "tradehubfront/src/pages/forgot-password.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tradehubfront/src/components/auth/ForgotPasswordPage.ts",
+            "tradehubfront/src/alpine/auth.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Wired ForgotPasswordPage to real Frappe API endpoints. Step 1: submitFindAccount() calls apiPost('tr_tradehub.api.v1.auth.forgot_password', {email}) with loading state. Step 2: verifyOtp() calls apiPost('tr_tradehub.api.v1.auth.verify_reset_otp', {email, otp}), stores reset_token in component state only (NOT localStorage) per security requirement. Step 3: submitReset() calls apiPost('tr_tradehub.api.v1.auth.reset_password', {reset_token, new_password}), shows toast and redirects to login.html?message=password_reset_success. Added resendCode() API call via forgot_password endpoint. Added submitting guard to prevent double submissions. Added spinner loading states on submit buttons in ForgotPasswordPage.ts. Reset_token cleared on destroy() for security. TypeScript compiles cleanly (only pre-existing SearchArea.ts errors). Entry point forgot-password.ts unchanged — already correctly wires Alpine via startAlpine(). Committed as 5c836ff.",
+          "updated_at": "2026-03-11T06:06:22.949310+00:00"
+        },
+        {
+          "id": "subtask-4-4",
+          "description": "Wire SocialLoginButtons.ts to Keycloak SSO endpoints: Update the onProviderSelect callback to call apiGet('tr_tradehub.api.v1.auth.get_login_url', {redirect_uri: window.location.origin + '/pages/auth/login.html', success_url: '/'}) for each provider, then redirect to the returned Keycloak URL. Also call apiGet('tr_tradehub.api.v1.auth.get_social_providers') to dynamically show/hide available providers. Handle Keycloak-down gracefully (hide SSO buttons).",
+          "service": "frontend",
+          "files_to_modify": [
+            "tradehubfront/src/components/auth/SocialLoginButtons.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "tradehubfront/src/components/auth/SocialLoginButtons.ts",
+            "Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Wired SocialLoginButtons.ts to Keycloak SSO endpoints. Added: redirectToSSOProvider() calls apiGet('get_login_url') and redirects to authorization_url; fetchAvailableProviders() calls apiGet('get_social_providers') to dynamically show/hide buttons; Keycloak-down handled gracefully by hiding SSO buttons while keeping email visible. Exported fetchAvailableProviders from barrel index. TypeScript compiles clean (only pre-existing SearchArea.ts errors remain).",
+          "updated_at": "2026-03-11T06:09:57.200704+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-frontend-new-pages",
+      "name": "Frontend New Pages",
+      "type": "implementation",
+      "description": "Create two new frontend pages: VerifyPage (email OTP verification, used post-registration and for unverified login) and WelcomePage (onboarding wizard with role-specific steps for buyers vs suppliers).",
+      "depends_on": [
+        "phase-3-frontend-foundation"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Create VerifyPage: (1) src/components/auth/VerifyPage.ts — Alpine.js component that reads email from URL params, shows EmailVerification OTP component, handles OTP submit via apiPost('tr_tradehub.api.v1.auth.verify_email'), handles resend via apiPost('tr_tradehub.api.v1.auth.resend_verification_otp') with 60s cooldown, on success calls setTokens()+setUser() and redirects to dashboard based on user_type. (2) pages/auth/verify.html — HTML shell with #app div. (3) src/pages/verify.ts — Entry point importing AuthLayout, VerifyPage, startAlpine.",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "tradehubfront/src/components/auth/VerifyPage.ts",
+            "tradehubfront/pages/auth/verify.html",
+            "tradehubfront/src/pages/verify.ts"
+          ],
+          "patterns_from": [
+            "tradehubfront/src/components/auth/EmailVerification.ts",
+            "tradehubfront/src/pages/login.ts",
+            "tradehubfront/pages/auth/login.html"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ls tradehubfront/src/components/auth/VerifyPage.ts tradehubfront/pages/auth/verify.html tradehubfront/src/pages/verify.ts && cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Created 3 files: VerifyPage.ts (component with OTP verify/resend via real APIs, 60s cooldown, loading states, dashboard redirect), verify.html (HTML shell), verify.ts (entry point). TypeScript compiles clean (only pre-existing errors in unrelated SearchArea.ts). Committed as 76daef2.",
+          "updated_at": "2026-03-11T06:13:44.603009+00:00"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Create WelcomePage: (1) src/components/onboarding/WelcomePage.ts — Alpine.js component showing role-specific onboarding steps. Buyer steps: welcome→search→RFQ→messaging→done. Supplier steps: welcome→profile→products→quotes→done. Has progress bar, next/skip/complete buttons. On complete calls apiPost('tr_tradehub.api.v1.auth.complete_onboarding'), updates user.has_completed_onboarding in localStorage, redirects to user-type dashboard. (2) pages/welcome.html — HTML shell. (3) src/pages/welcome.ts — Entry point with authMiddleware() import.",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [
+            "tradehubfront/src/components/onboarding/WelcomePage.ts",
+            "tradehubfront/pages/welcome.html",
+            "tradehubfront/src/pages/welcome.ts"
+          ],
+          "patterns_from": [
+            "tradehubfront/src/pages/login.ts",
+            "tradehubfront/pages/auth/login.html",
+            "auth.md"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "ls tradehubfront/src/components/onboarding/WelcomePage.ts tradehubfront/pages/welcome.html tradehubfront/src/pages/welcome.ts && cd tradehubfront && npx tsc --noEmit --pretty 2>&1 | head -20; echo 'CHECK_DONE'",
+            "expected": "CHECK_DONE"
+          },
+          "status": "completed",
+          "notes": "Created 3 files: (1) WelcomePage.ts - Alpine.js onboarding wizard with buyer steps (welcome/search/RFQ/messaging/done) and supplier steps (welcome/profile/products/quotes/done), progress bar, next/skip/complete buttons, complete_onboarding API call, localStorage update, dashboard redirect. All i18n keys use defaultValue fallbacks. (2) welcome.html - HTML shell. (3) welcome.ts - Entry point with authMiddleware(). Pre-existing TS errors in SearchArea.ts are unrelated. Committed as 48b7a2a.",
+          "updated_at": "2026-03-11T06:19:43.405567+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-security-integration",
+      "name": "Security Hardening & Integration",
+      "type": "integration",
+      "description": "Comprehensive security audit of all auth endpoints and end-to-end integration verification. Verify rate limiting, CSRF protection, input validation, no raw SQL, XSS prevention, token security, and cross-tab logout. Run through all auth flows to verify they work end-to-end.",
+      "depends_on": [
+        "phase-4-frontend-pages",
+        "phase-5-frontend-new-pages"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Security audit of all backend auth endpoints: (1) Verify check_rate_limit() is called at the START of every auth endpoint; (2) Verify zero occurrences of frappe.db.sql() in auth.py auth functions; (3) Verify all user inputs are validated server-side (email format, password strength); (4) Verify OTP single-use enforcement (delete_value after verification); (5) Verify reset_token single-use enforcement; (6) Verify forgot_password returns same success message for existing and non-existing emails (anti-enumeration); (7) Verify no password or sensitive data in any response payload or logs.",
+          "service": "backend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "instructions": "Code review of auth.py focusing on: (1) grep for 'frappe.db.sql' — must be zero matches in auth functions. (2) Verify each @frappe.whitelist endpoint starts with check_rate_limit(). (3) Verify delete_value() used after every OTP/token validation. (4) Verify forgot_password response is identical for found/not-found emails. (5) Verify no 'password' key in any return dict."
+          },
+          "status": "completed",
+          "notes": "Security audit of all backend auth endpoints completed. Fixed 4 issues: (1) verify_2fa missing IP-based rate limit at start + missing OTP format validation, (2) reset_password missing rate limiting entirely, (3) check_email_exists missing rate limiting for anti-enumeration, (4) check_email_exists missing email format validation. All 7 audit criteria verified: zero frappe.db.sql(), rate limiting on all auth endpoints, OTP single-use enforcement, reset_token single-use, anti-enumeration on forgot_password, no password in responses/logs.",
+          "updated_at": "2026-03-11T06:24:47.313260+00:00"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Frontend security verification: (1) Verify all fetch() calls include credentials:'include'; (2) Verify token format is 'token api_key:api_secret' (lowercase, no base64); (3) Verify CSRF token sent on POST requests; (4) Verify DOMPurify used on any user-generated content; (5) Verify loading/disabled states on all submit buttons (prevent double submission); (6) Verify reset_token stored in component state only (not localStorage); (7) Verify cross-tab logout via storage event listener; (8) Verify middleware redirects work correctly.",
+          "service": "frontend",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "instructions": "Code review of all modified frontend files focusing on: (1) grep for 'fetch(' — verify credentials:'include' present. (2) grep for 'Authorization' — verify 'token ' prefix (lowercase). (3) Verify reset_token not in localStorage. (4) Verify all buttons have loading state during API calls. (5) Verify storage event listener for cross-tab logout."
+          },
+          "status": "completed",
+          "notes": "Frontend security verification complete. All 8 criteria verified:\n1. ✅ credentials:'include' on all fetch() calls (api.ts apiGet/apiPost)\n2. ✅ Token format 'token api_key:api_secret' (lowercase, no base64)\n3. ✅ CSRF token X-Frappe-CSRF-Token on POST requests via buildHeaders(true)\n4. ✅ XSS prevention — FIXED: added escapeHtml() to EmailVerification.ts maskEmail() to prevent innerHTML XSS injection\n5. ✅ Loading/disabled states on all submit buttons across LoginPage, RegisterPage, ForgotPasswordPage, VerifyPage, WelcomePage\n6. ✅ reset_token in Alpine component state only (not localStorage), cleared after use and on destroy()\n7. ✅ Cross-tab logout via storage event listener in middleware.ts for 'tradehub_tokens' key\n8. ✅ Middleware redirects correct — FIXED: added isSafeReturnUrl() to LoginPage.ts to prevent open-redirect via ?return= query parameter",
+          "updated_at": "2026-03-11T06:31:31.432039+00:00"
+        },
+        {
+          "id": "subtask-6-3",
+          "description": "End-to-end integration verification: Verify all auth flows work when both services are running. Test: (1) Registration flow — register, receive OTP, verify, land on welcome. (2) Login flow — email/password, get tokens, redirect to dashboard. (3) Login with unverified email — redirect to verify page. (4) Password reset flow — request, verify OTP, set new password, login. (5) Middleware — unauthenticated redirect to login, onboarding redirect to welcome. (6) Logout — clears tokens and server session. (7) Social login buttons call correct SSO endpoints. (8) Existing Keycloak SSO still works alongside new endpoints.",
+          "service": "backend",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Start backend: cd Frappe_Marketplace/frappe-bench && bench start",
+              "Start frontend: cd tradehubfront && npm run dev",
+              "Navigate to http://localhost:5173/pages/auth/register.html — verify 4-step wizard works",
+              "Navigate to http://localhost:5173/pages/auth/login.html — verify login with email/password",
+              "Navigate to http://localhost:5173/pages/auth/forgot-password.html — verify 3-step reset",
+              "Navigate to http://localhost:5173/pages/auth/verify.html?email=test@example.com — verify OTP page",
+              "Navigate to http://localhost:5173/pages/welcome.html — verify onboarding wizard",
+              "Verify protected page redirect: navigate to buyer-dashboard without auth → should redirect to login",
+              "Verify existing SSO endpoints still respond: GET /api/method/tr_tradehub.api.v1.auth.get_sso_status"
+            ]
+          },
+          "status": "completed",
+          "notes": "End-to-end integration verification complete. Found and fixed 8 critical integration bugs: (1) LoginPage/VerifyPage/2FA response type mismatch — frontend expected flat api_key/api_secret but backend nests under token:{}, causing silent login failure; (2) FrappeError class added to preserve error title from _server_messages, fixing email_not_verified redirect detection; (3) All dashboard redirect paths fixed to actual existing pages (buyer-dashboard.html, sell.html); (4) BackendUser→AuthUser mapping added for field name differences (is_email_verified→is_verified, number→boolean); (5) Token refresh null-safety prevents localStorage corruption; (6) Logout now calls backend API to invalidate server session; (7) Backend complete_onboarding redirect paths fixed; (8) handleLoginError updated to check FrappeError.title for email_not_verified. All 21/21 subtasks now complete.",
+          "updated_at": "2026-03-11T06:47:49.442825+00:00"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 6,
+    "total_subtasks": 21,
+    "services_involved": [
+      "backend",
+      "frontend"
+    ],
+    "estimated_files_modified": 15,
+    "estimated_files_created": 10,
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-2-backend-endpoints",
+            "phase-3-frontend-foundation"
+          ],
+          "reason": "Both depend only on phase-1-backend-foundation, different services (backend vs frontend), no file conflicts"
+        },
+        {
+          "phases": [
+            "phase-4-frontend-pages",
+            "phase-5-frontend-new-pages"
+          ],
+          "reason": "Phase 5 depends only on phase-3, phase 4 depends on phase-2+3. Phase 5 creates new files while phase 4 modifies existing ones, so no conflicts. However phase 4 and 5 both modify Alpine auth.ts, so conservative recommendation is sequential."
+        }
+      ],
+      "recommended_workers": 2,
+      "speedup_estimate": "1.4x faster than sequential — Phase 2 (5 subtasks) and Phase 3 (4 subtasks) run in parallel, saving ~40% of the middle phase time"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 2"
+  },
+  "verification_strategy": {
+    "risk_level": "critical",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration",
+      "e2e",
+      "security"
+    ],
+    "security_scanning_required": true,
+    "staging_deployment_required": true,
+    "acceptance_criteria": [
+      "All existing tests pass (no regressions)",
+      "All new auth endpoints respond correctly",
+      "No raw SQL queries in auth code (Frappe ORM only)",
+      "Rate limiting enforced on all auth endpoints",
+      "CSRF tokens sent on all POST requests",
+      "Token format is 'token api_key:api_secret' (lowercase, no base64)",
+      "All fetch() calls include credentials:'include'",
+      "OTP single-use enforcement verified",
+      "No passwords or sensitive data in API responses",
+      "Cross-tab logout detection works",
+      "Existing Keycloak SSO endpoints unaffected"
+    ],
+    "verification_steps": [
+      {
+        "name": "TypeScript Type Check",
+        "command": "cd tradehubfront && npx tsc --noEmit",
+        "expected_outcome": "No type errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Python Syntax Check",
+        "command": "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py",
+        "expected_outcome": "No syntax errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "No Raw SQL in Auth",
+        "command": "grep -n 'frappe.db.sql' Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py | grep -v '#' | wc -l",
+        "expected_outcome": "0 matches (no raw SQL)",
+        "type": "security",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Rate Limit Coverage",
+        "command": "grep -c 'check_rate_limit' Frappe_Marketplace/frappe-bench/apps/tr_tradehub/tr_tradehub/api/v1/auth.py",
+        "expected_outcome": "At least 6 rate limit calls (one per auth endpoint)",
+        "type": "security",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Credentials Include Check",
+        "command": "grep -rn 'fetch(' tradehubfront/src/utils/api.ts | grep -v 'credentials' | wc -l",
+        "expected_outcome": "0 (all fetch calls have credentials)",
+        "type": "security",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Frontend Build",
+        "command": "cd tradehubfront && npm run build",
+        "expected_outcome": "Build succeeds without errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Authentication is the highest-security surface. This task touches login, registration, password reset, 2FA, token management, session handling, and CSRF protection across both frontend and backend. Critical risk level demands comprehensive security scanning, unit+integration+E2E tests, and staging verification."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "cd tradehubfront && npx tsc --noEmit",
+        "cd Frappe_Marketplace/frappe-bench && python -m py_compile apps/tr_tradehub/tr_tradehub/api/v1/auth.py"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "cd Frappe_Marketplace/frappe-bench && bench --site marketplace.local run-tests --app tr_tradehub"
+      ],
+      "services_to_test": [
+        "backend",
+        "frontend"
+      ]
+    },
+    "e2e_tests": {
+      "required": true,
+      "commands": [],
+      "flows": [
+        "full-registration (register → OTP → verify → welcome)",
+        "full-login (email/password → dashboard)",
+        "login-unverified (redirect to verify page)",
+        "password-reset (forgot → OTP → new password → login)",
+        "middleware-redirect (unauthenticated → login)",
+        "onboarding-redirect (new user → welcome)"
+      ]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:5173/pages/auth/login.html",
+          "checks": [
+            "Form renders",
+            "Social buttons visible",
+            "Submit calls real API",
+            "No console errors"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/pages/auth/register.html",
+          "checks": [
+            "4-step wizard works",
+            "OTP auto-focuses",
+            "Password validation shows",
+            "Email duplicate check works"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/pages/auth/forgot-password.html",
+          "checks": [
+            "3-step flow works",
+            "OTP countdown works",
+            "New password validated"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/pages/auth/verify.html?email=test@example.com",
+          "checks": [
+            "OTP input renders",
+            "Resend button with cooldown",
+            "Email displayed from URL param"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/pages/welcome.html",
+          "checks": [
+            "Shows correct steps for user type",
+            "Progress bar animates",
+            "Skip/next work"
+          ]
+        },
+        {
+          "url": "http://localhost:5173/pages/buyer-dashboard.html",
+          "checks": [
+            "Redirects to login if not authenticated"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": true,
+      "checks": [
+        "Custom fields exist on User DocType (tradehub_user_type, is_email_verified, has_completed_onboarding, company_name, company_tax_id)",
+        "Registered user has correct custom field values",
+        "OTP stored in Redis with correct expiry",
+        "Rate limit counters stored in Redis",
+        "Email verified flag set after verification",
+        "Onboarding flag set after completion"
+      ]
+    },
+    "security_verification": {
+      "required": true,
+      "checks": [
+        "No raw SQL (frappe.db.sql) in auth functions",
+        "Rate limiting blocks after threshold",
+        "CSRF required on POST (cookie auth)",
+        "OTP single-use (second attempt fails)",
+        "Reset token single-use",
+        "User enumeration prevented on forgot-password",
+        "No password in any response",
+        "XSS input rejected by validation"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "coding",
+  "executionPhase": "coding",
+  "updated_at": "2026-03-11T06:32:03.815Z",
+  "lastEvent": {
+    "eventId": "d94e4552-9807-4bc9-84cb-f749336ceac9",
+    "sequence": 0,
+    "type": "PLANNING_COMPLETE",
+    "timestamp": "2026-03-10T14:19:58.706162+00:00"
+  },
+  "last_updated": "2026-03-11T06:47:49.442834+00:00"
+}

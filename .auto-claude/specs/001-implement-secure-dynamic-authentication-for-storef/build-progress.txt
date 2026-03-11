@@ -1,0 +1,337 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Secure Dynamic Authentication for Storefront
+Workspace: /home/bora/Masaüstü/istoc.com
+Started: 2026-03-10
+
+Workflow Type: feature
+Rationale: Major new feature — transforming mock frontend auth into a full dynamic auth system backed by Frappe endpoints. Spans two services (frontend + backend) with new endpoints, new pages, middleware, custom DocType fields, email templates, and security hardening.
+
+Session 1 (Planner):
+- Created implementation_plan.json
+- Phases: 6
+- Total subtasks: 21
+- Created init.sh
+- Created project_index.json
+- Created context.json
+
+Phase Summary:
+- Phase 1 (Backend Foundation): 3 subtasks, no dependencies
+  → Custom fields fixture, email templates, auth helper functions
+- Phase 2 (Backend Auth Endpoints): 5 subtasks, depends on Phase 1
+  → register/verify, login, verify_2fa, password reset, complete_onboarding
+- Phase 3 (Frontend Foundation): 4 subtasks, depends on Phase 1
+  → auth.ts rewrite, api.ts rewrite, middleware.ts, .env update
+- Phase 4 (Frontend Page Integration): 4 subtasks, depends on Phase 2 + Phase 3
+  → LoginPage, RegisterPage, ForgotPasswordPage, SocialLoginButtons wiring
+- Phase 5 (Frontend New Pages): 2 subtasks, depends on Phase 3
+  → VerifyPage, WelcomePage
+- Phase 6 (Security & Integration): 3 subtasks, depends on Phase 4 + Phase 5
+  → Security audit, frontend security review, E2E verification
+
+Services Involved:
+- backend (Frappe_Marketplace/tr_tradehub): 9 new auth API endpoints, custom User fields, email templates, helper functions, rate limiting
+- frontend (tradehubfront): auth.ts rewrite, api.ts rewrite, middleware.ts, 3 page updates, 2 new pages, .env update, social login wiring
+
+Parallelism Analysis:
+- Max parallel phases: 2
+- Recommended workers: 2
+- Parallel groups:
+  * Phase 2 (Backend Endpoints) + Phase 3 (Frontend Foundation) — both depend only on Phase 1, different services
+  * Phase 5 (New Pages) can start as soon as Phase 3 completes, even if Phase 2 is still running
+
+Critical Gotchas (from investigation):
+1. Use frappe.cache().delete_value() NOT delete_key()
+2. Token format: lowercase 'token api_key:api_secret' NOT Bearer/Token
+3. authenticate_for_2factor() sets tmp_id in frappe.local.response, needs custom wrapper
+4. confirm_otp_token() takes login_manager object, NOT session string
+5. get_2fa_method() does NOT exist — use frappe.twofactor.get_verification_method()
+6. credentials:'include' REQUIRED on ALL fetch() calls
+7. Check existing api_key before generating new — reuse to prevent orphans
+8. Frappe returns 403 (not 401) for session expiry
+9. vite.config.ts uses fast-glob — do NOT manually add page entries
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 2
+
+Example:
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 001 --parallel 2
+
+=== END SESSION 1 ===
+
+Session 2 (Builder - subtask-1-2):
+- Created email templates directory: templates/email/
+- Created email_verification.html: Jinja template with first_name greeting, 6-digit OTP display, 10-min expiry notice, TradeHub branding, i18n support
+- Created password_reset.html: Jinja template with first_name greeting, 6-digit OTP display, 15-min expiry notice, TradeHub branding, i18n support
+- Both templates follow Frappe email conventions: _() for i18n, frappe.bold() for emphasis, {{ variable }} for context vars
+- Template variables expected: first_name, otp (passed via frappe.sendmail args)
+- Verification passed: Both files exist at expected paths
+- Committed as 84b94a9
+- Updated implementation_plan.json: subtask-1-2 status → completed
+
+=== END SESSION 2 ===
+
+Session 3 (Builder - subtask-1-3):
+- Added 8 auth helper functions to auth.py (between existing helpers and public endpoints)
+- Constants added: RATE_LIMITS (register/login/password_reset/verification/2fa_verify), PASSWORD_REQUIREMENTS, VERIFICATION_CODE_LENGTH=6, VERIFICATION_OTP_EXPIRY_SECONDS=600, PASSWORD_RESET_OTP_EXPIRY_SECONDS=900
+- Functions added:
+  1. check_rate_limit(action, identifier, throw) — Redis-based rate limiting, copied from identity.py
+  2. validate_email_format(email) — regex validation
+  3. validate_password_strength(password) — returns {is_valid, errors}
+  4. generate_auth_token(email) — reuses existing API key, generates fresh API secret, returns 'api_key:api_secret'
+  5. generate_verification_otp(email) — 6-digit, Redis 10min expiry, cache key: trade_hub:verify:otp:{email}
+  6. generate_password_reset_otp(email) — 6-digit, Redis 15min expiry, cache key: trade_hub:reset:otp:{email}
+  7. send_verification_email(email, otp, first_name) — uses frappe.sendmail with email_verification template
+  8. send_password_reset_email(email, otp, first_name) — uses frappe.sendmail with password_reset template
+- Import added: re (for regex validation)
+- All functions follow identity.py patterns exactly
+- Verification passed: python3 -m py_compile auth.py → OK
+- Committed as ba864bb
+- Updated implementation_plan.json: subtask-1-3 status → completed
+- Phase 1 (Backend Foundation) is now COMPLETE (all 3 subtasks done)
+
+=== END SESSION 3 ===
+
+Session 4 (Builder - subtask-3-1):
+- Rewrote tradehubfront/src/utils/auth.ts: replaced mock auth with real Frappe-compatible token management
+- Defined AuthTokens interface: api_key, api_secret, expires_in (seconds), expires_at (ms timestamp)
+- Defined AuthUser interface: email, full_name, first_name, last_name, roles, user_type, is_verified, has_completed_onboarding
+- Implemented getTokens(): reads from localStorage, checks Date.now() > expires_at, calls clearAuth() on expired/corrupt
+- Implemented setTokens(): accepts tokens with optional expires_at, calculates from expires_in if not provided
+- Implemented getUser(): reads from localStorage with JSON parse error handling
+- Implemented setUser(): stores user profile to localStorage
+- Implemented isLoggedIn(): delegates to getTokens() !== null (checks token presence + expiry)
+- Implemented clearAuth(): removes both TOKEN_KEY and USER_KEY from localStorage
+- Kept logout() as deprecated alias for clearAuth() (backward compat with TopBar.ts)
+- Removed mock login() function (LoginPage.ts will be updated in subtask-4-1)
+- Storage keys: TOKEN_KEY='tradehub_tokens', USER_KEY='tradehub_user'
+- Verification: zero new TS errors (only pre-existing 3 in SearchArea.ts)
+- Committed as 2576c4d
+- Updated implementation_plan.json: subtask-3-1 status → completed
+
+=== END SESSION 4 ===
+
+Session 5 (Builder - subtask-3-3):
+- Created tradehubfront/src/utils/middleware.ts: auth middleware for protected pages
+- Exported authMiddleware() async function with the following responsibilities:
+  1. PUBLIC_PATHS whitelist: login.html, register.html, forgot-password.html, verify.html (skip auth checks)
+  2. Cross-tab logout detection: storage event listener on 'tradehub_tokens' key, clears auth and redirects on removal
+  3. Token presence check: redirects to login with return URL parameter if getTokens() returns null
+  4. Proactive token refresh: calls apiPost('tr_tradehub.api.v1.auth.refresh_token') when token expires within 5 minutes
+  5. Onboarding gate: redirects to /pages/welcome.html if user.has_completed_onboarding is false (skips for welcome.html itself)
+- Race condition prevention: refreshInProgress flag prevents concurrent refresh API calls
+- SKIP_ONBOARDING_PATHS: welcome.html (prevents redirect loop)
+- Updated tradehubfront/src/utils/auth-guard.ts:
+  - Replaced raw localStorage.getItem('tradehub_auth') with getTokens() from auth.ts
+  - Added return URL parameter to login redirect (encodeURIComponent(window.location.href))
+  - Added JSDoc comment
+- Verification: zero new TS errors (only pre-existing 3 in SearchArea.ts)
+- Committed as 3fa785d
+- Updated implementation_plan.json: subtask-3-3 status → completed
+
+=== END SESSION 5 ===
+
+Session 6 (Builder - subtask-6-1):
+- Security audit of all backend auth endpoints in auth.py (2,338 lines)
+- AUDIT RESULTS (7 criteria):
+
+  (1) check_rate_limit() at START of every auth endpoint:
+      ✅ register() — check_rate_limit("register") at start
+      ✅ verify_email() — check_rate_limit("verification", email) at start
+      ✅ resend_verification_otp() — check_rate_limit("verification", email) at start
+      ✅ login() — check_rate_limit("login") + check_rate_limit("login", email) at start
+      ✅ forgot_password() — check_rate_limit("password_reset", email) at start
+      ✅ verify_reset_otp() — check_rate_limit("verification", email) at start
+      ❌ verify_2fa() — FIXED: added IP-based check_rate_limit("2fa_verify") at START, kept email-based after session retrieval
+      ❌ reset_password() — FIXED: added check_rate_limit("password_reset") at start
+      ❌ check_email_exists() — FIXED: added check_rate_limit("verification") at start
+
+  (2) Zero frappe.db.sql() occurrences: ✅ PASS — grep returns zero matches
+
+  (3) Server-side input validation:
+      ✅ register: email format, password strength, user_type
+      ✅ verify_email: email format, OTP presence
+      ✅ login: email format
+      ✅ forgot_password: email format
+      ✅ verify_reset_otp: email format, OTP presence
+      ✅ reset_password: password strength
+      ❌ check_email_exists — FIXED: added validate_email_format() and email normalization
+      ❌ verify_2fa — FIXED: added OTP format validation (6 digits regex)
+
+  (4) OTP single-use enforcement (delete_value after verification): ✅ PASS
+      - verify_email: delete_value() at line 1386
+      - verify_reset_otp: delete_value() at line 2016
+      - verify_2fa: delete_value() at line 1833 (2FA session deleted)
+
+  (5) reset_token single-use enforcement: ✅ PASS
+      - reset_password: delete_value() immediately at line 2089
+
+  (6) forgot_password anti-enumeration: ✅ PASS
+      - Returns identical "If an account with this email exists..." message for both existing and non-existing emails
+
+  (7) No password or sensitive data in response/logs: ✅ PASS
+      - No 'password' key in any return dict
+      - Log statements only reference email + error message, never password
+
+- FIXES APPLIED:
+  1. verify_2fa: Added IP-based check_rate_limit("2fa_verify") at START before Redis lookups + OTP 6-digit format validation
+  2. reset_password: Added check_rate_limit("password_reset") at start
+  3. check_email_exists: Added check_rate_limit("verification"), validate_email_format(), email normalization
+- Verification passed: all grep checks confirm fixes applied
+- Updated implementation_plan.json: subtask-6-1 status → completed
+
+=== END SESSION 6 ===
+
+Session 7 (Builder - subtask-6-3):
+- End-to-end integration verification of all auth flows
+- CRITICAL INTEGRATION BUGS FOUND AND FIXED:
+
+  BUG 1: LoginPage.ts — API response type mismatch (CRITICAL)
+    Issue: Frontend LoginResponse expected flat api_key/api_secret/expires_in
+           but backend nests them under token: {api_key, api_secret, token_type}
+    Impact: Login would silently fail — no redirect, no error, no token storage
+    Fix: Updated LoginResponse interface to use nested token object,
+         updated handleLoginSuccess to extract from result.token
+
+  BUG 2: VerifyPage.ts — Same token nesting mismatch (CRITICAL)
+    Issue: VerifyEmailResponse expected flat api_key/api_secret
+    Impact: Email verification would fail to store tokens
+    Fix: Updated response type, added token extraction from result.token
+
+  BUG 3: Verify2FAResponse — Same issue for 2FA flow (CRITICAL)
+    Issue: 2FA response expected flat tokens
+    Impact: 2FA verification would fail to store tokens
+    Fix: Updated type and extraction
+
+  BUG 4: api.ts — FrappeError title not preserved (MEDIUM)
+    Issue: Frappe _server_messages contain title field (e.g. "email_not_verified")
+           but handleError only extracted message text, losing the title
+    Impact: Login with unverified email would show error toast instead of
+           redirecting to verify page (email_not_verified detection failed)
+    Fix: Added FrappeError class that preserves title, updated handleError
+         to extract title from _server_messages
+
+  BUG 5: Dashboard redirect paths — all wrong (MEDIUM)
+    Issue: LoginPage, VerifyPage, WelcomePage, and backend used non-existent paths:
+           - pages/supplier-dashboard.html (doesn't exist)
+           - pages/buyer-dashboard.html (doesn't exist)
+           - pages/seller/seller-dashboard.html (doesn't exist)
+    Fix: Updated all to use actual paths:
+           - Buyer: pages/dashboard/buyer-dashboard.html
+           - Supplier: pages/seller/sell.html
+
+  BUG 6: Backend-to-frontend user field name mismatch (MEDIUM)
+    Issue: Backend returns is_email_verified (number), frontend AuthUser expects
+           is_verified (boolean). Backend doesn't send roles array.
+    Impact: Stored user profile would have wrong field names, causing
+           middleware checks to behave incorrectly
+    Fix: Added BackendUser interface and mapBackendUser() mapping function
+         to auth.ts. Updated LoginPage and VerifyPage to use mapping.
+
+  BUG 7: Token refresh could corrupt tokens (LOW)
+    Issue: middleware.ts refreshAuthToken expected api_key/api_secret in response
+           but refresh_token endpoint (Keycloak) only returns expires_in.
+           Would store undefined values, corrupting localStorage tokens.
+    Fix: Added null checks — only update tokens if response has valid data,
+         otherwise extend existing token expiry.
+
+  BUG 8: Logout doesn't invalidate server session (MEDIUM)
+    Issue: TopBar.ts logout handler only called clearAuth() (localStorage),
+           never called backend tr_tradehub.api.v1.auth.logout endpoint.
+    Impact: Server-side session remained active after client-side logout
+    Fix: Added fire-and-forget apiPost to backend logout endpoint before
+         clearing local auth. Error is silently caught.
+
+- FILES MODIFIED (9 files):
+  1. tradehubfront/src/utils/api.ts — Added FrappeError class, updated handleError
+  2. tradehubfront/src/utils/auth.ts — Added BackendUser interface, mapBackendUser()
+  3. tradehubfront/src/utils/middleware.ts — Fixed refreshAuthToken null safety
+  4. tradehubfront/src/components/auth/LoginPage.ts — Fixed response types, token extraction,
+     error detection, dashboard paths, user mapping
+  5. tradehubfront/src/components/auth/VerifyPage.ts — Fixed response type, token extraction,
+     dashboard paths, user mapping
+  6. tradehubfront/src/components/onboarding/WelcomePage.ts — Fixed supplier dashboard path
+  7. tradehubfront/src/components/header/TopBar.ts — Added backend logout API call
+  8. Frappe_Marketplace/.../auth.py — Fixed complete_onboarding redirect paths
+  9. .auto-claude/.../implementation_plan.json — Updated subtask-6-3 status
+
+- E2E FLOW VERIFICATION (static analysis):
+
+  (1) Registration flow ✅
+      Frontend: RegisterPage → check_email_exists → register → verify_email
+      API contracts: alpine/auth.ts uses correct nested token.api_key format
+      Token storage: setTokens with 86400s default expiry
+      User storage: Manual mapping with correct field names
+      Redirect: register-complete event → entry point handles redirect
+      Rate limiting: All endpoints have check_rate_limit at start
+
+  (2) Login flow ✅
+      Frontend: LoginPage → login → handleLoginSuccess
+      API contracts: FIXED — now correctly reads result.token.api_key
+      Token storage: setTokens with 86400s expiry
+      User storage: FIXED — uses mapBackendUser() for correct field mapping
+      Redirect: Return URL validation (isSafeReturnUrl) → dashboard by user_type
+      Error handling: Error toasts for failures
+
+  (3) Login with unverified email ✅
+      Backend: login() throws with title="email_not_verified"
+      Frontend: FIXED — FrappeError preserves title, handleLoginError checks
+               title === 'email_not_verified' || message includes 'verify your email'
+      Redirect: FIXED — correctly navigates to /pages/auth/verify.html?email=...
+      OTP auto-send: Backend generates new OTP and sends verification email
+
+  (4) Password reset flow ✅
+      Frontend: forgotPasswordPage → forgot_password → verify_reset_otp → reset_password
+      API contracts: Correct — forgot_password returns success, verify_reset_otp returns
+                     reset_token, reset_password takes reset_token + new_password
+      reset_token security: Stored in component state only, cleared after use/destroy
+      Anti-enumeration: forgot_password always returns same message
+      Redirect: After reset → login.html?message=password_reset_success
+
+  (5) Middleware ✅
+      Public paths: login, register, forgot-password, verify — correctly skipped
+      Token check: Redirects to login with return URL if getTokens() null
+      Token refresh: FIXED — null-safe, won't corrupt tokens
+      Onboarding: Redirects to welcome.html if has_completed_onboarding is false
+      Cross-tab: Storage event listener detects logout in other tabs
+
+  (6) Logout ✅
+      Frontend: FIXED — calls apiPost('...logout') fire-and-forget, then clearAuth()
+      Backend: logout() clears refresh token, ends Frappe session
+      Cross-tab: Other tabs detect token removal via storage event
+
+  (7) Social login buttons ✅
+      Frontend: SocialLoginButtons fetches get_social_providers,
+               calls get_login_url for SSO redirect
+      Backend: get_login_url generates Keycloak authorization URL with CSRF state
+      Graceful degradation: If Keycloak down, SSO buttons hidden, email stays visible
+      Callback: sso_callback handles authorization code exchange
+
+  (8) Existing Keycloak SSO ✅
+      Backend: All existing endpoints preserved (get_sso_status, get_login_url,
+               sso_callback, refresh_token, get_session_user, etc.)
+      No conflicts: New auth endpoints (register, login, etc.) added alongside
+               existing SSO endpoints in same file
+      SSO cache keys: Unchanged (trade_hub:sso:* prefix)
+
+- VERIFICATION RESULTS:
+  ✅ TypeScript compilation: 0 new errors (only pre-existing 3 in SearchArea.ts)
+  ✅ Python compilation: auth.py compiles without errors
+  ✅ All API method names match between frontend and backend
+  ✅ All response types now match backend response structure
+  ✅ Dashboard redirect paths now match actual HTML files
+  ✅ User field mapping handles is_email_verified → is_verified conversion
+  ✅ Rate limiting present on all auth endpoints
+  ✅ Zero frappe.db.sql() in auth code
+  ✅ OTP single-use enforced (delete_value after verification)
+  ✅ Reset token single-use enforced
+  ✅ Anti-enumeration on forgot_password
+  ✅ No password in any response or log
+
+- Updated implementation_plan.json: subtask-6-3 status → completed
+- All 21/21 subtasks complete — feature implementation DONE
+
+=== END SESSION 7 ===

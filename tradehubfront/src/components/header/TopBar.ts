@@ -8,7 +8,8 @@
 import type { LocaleOption, CurrencyOption } from '../../types/navigation';
 import { megaCategories } from './MegaMenu';
 import { cartStore } from '../cart/state/CartStore';
-import { isLoggedIn, getUser, logout } from '../../utils/auth';
+import { isLoggedIn, getUser, logout, clearAuth } from '../../utils/auth';
+import { apiPost } from '../../utils/api';
 import { mockConversations } from '../../data/mockMessages';
 import { t, getCurrentLang, updatePageTranslations } from '../../i18n';
 import type { SupportedLang } from '../../i18n';
@@ -80,13 +81,23 @@ function renderCompactLogo(): string {
   `;
 }
 
+/** Escape a string for safe interpolation into HTML attributes */
+function escapeAttr(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/'/g, '&#39;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /**
  * User profile button with dropdown for compact header (Alibaba-style)
  * Only shown when user is logged in.
  */
 function renderUserButton(): string {
   const user = getUser();
-  const displayName = user?.name ?? t('topbar.defaultUser');
+  const displayName = user?.full_name ?? t('topbar.defaultUser');
   return `
     <div class="relative">
       <button
@@ -107,7 +118,7 @@ function renderUserButton(): string {
         class="z-50 hidden bg-white rounded-lg shadow-lg border border-gray-200 w-[220px] py-2"
       >
         <div class="px-4 py-2 border-b border-gray-100">
-          <p class="text-[14px] font-semibold text-[#222]"><span data-i18n="header.hello" data-i18n-options='{"name":"${displayName}"}'>${t('header.hello', { name: displayName })}</span></p>
+          <p class="text-[14px] font-semibold text-[#222]"><span data-i18n="header.hello" data-i18n-options='{"name":"${escapeAttr(displayName)}"}'>${t('header.hello', { name: displayName })}</span></p>
         </div>
         <ul class="py-1">
           <li><a href="/pages/dashboard/buyer-dashboard.html" class="block px-4 py-2 text-[13px] text-[#222] hover:bg-gray-50 transition-colors"><span data-i18n="header.myDashboard">${t('header.myDashboard')}</span></a></li>
@@ -1446,7 +1457,13 @@ document.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
   if (target.id === 'logout-btn' || target.closest('#logout-btn')) {
     e.preventDefault();
-    logout();
+    // Call backend logout to invalidate server session (fire-and-forget).
+    // We clear local auth and redirect immediately regardless of API result.
+    apiPost('tr_tradehub.api.v1.auth.logout', {}).catch(() => {
+      // Backend logout failed (network error, session expired, etc.).
+      // Client-side cleanup still proceeds below.
+    });
+    clearAuth();
     window.location.href = getBaseUrl();
   }
 });

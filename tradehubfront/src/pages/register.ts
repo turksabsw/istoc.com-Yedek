@@ -32,9 +32,8 @@ startAlpine()
 
 // Initialize register page interactivity (transitional bridge for callbacks)
 initRegisterPage({
-  onComplete: (_data) => {
-    // In production, this would send data to the backend
-    // For now, redirect to homepage after successful registration
-    window.location.href = getBaseUrl();
+  onComplete: () => {
+    // Registration and email verification complete — redirect to onboarding
+    window.location.href = `${getBaseUrl()}pages/welcome.html`;
   }
 })

@@ -1,6 +1,8 @@
 import Alpine from 'alpinejs'
 import { t } from '../i18n'
 import { showToast } from '../utils/toast'
+import { apiGet, apiPost } from '../utils/api'
+import { setTokens, setUser } from '../utils/auth'
 import {
   initAccountTypeSelector,
   getSelectedAccountType,
@@ -27,12 +29,47 @@ import {
 } from '../components/auth/ForgotPasswordPage'
 import { getBaseUrl } from '../components/auth/AuthLayout'
 
+/* ── Register API response types ──────────────────────── */
+
+interface CheckEmailResponse {
+  success: boolean;
+  exists: boolean;
+}
+
+interface RegisterResponse {
+  success: boolean;
+  message: string;
+  user: string;
+  requires_verification: boolean;
+}
+
+interface VerifyEmailResponse {
+  success: boolean;
+  message: string;
+  token: {
+    api_key: string;
+    api_secret: string;
+    token_type: string;
+  };
+  user: {
+    email: string;
+    full_name: string;
+    first_name: string;
+    last_name: string;
+    user_type: string;
+    is_email_verified: number;
+    has_completed_onboarding: number;
+  };
+}
+
 Alpine.data('registerPage', () => ({
   currentStep: 'account-type' as RegisterStep,
   accountType: 'buyer' as AccountType | null,
   email: '',
   emailValid: false,
   emailError: false,
+  emailExistsError: false,
+  emailSubmitting: false,
   otpState: null as EmailVerificationState | null,
 
   init() {
@@ -64,10 +101,32 @@ Alpine.data('registerPage', () => ({
     this.emailValid = emailRegex.test(value);
     if (this.emailValid) {
       this.emailError = false;
+      this.emailExistsError = false;
     }
   },
 
-  submitEmail() {
+  /** Check email existence on blur for early feedback */
+  async checkEmailBlur() {
+    const input = (this.$refs as Record<string, HTMLInputElement>).emailInput;
+    const value = input?.value.trim() || '';
+
+    if (!this.emailValid || !value) return;
+
+    try {
+      const result = await apiGet<CheckEmailResponse>(
+        'tr_tradehub.api.v1.auth.check_email_exists',
+        { email: value },
+      );
+      if (result.exists) {
+        this.emailExistsError = true;
+      }
+    } catch {
+      // Silently fail on blur — will be caught on submit
+    }
+  },
+
+  /** Submit email step: validate, check existence via API, proceed to setup */
+  async submitEmail() {
     const input = (this.$refs as Record<string, HTMLInputElement>).emailInput;
     const value = input?.value.trim() || '';
 
@@ -76,8 +135,29 @@ Alpine.data('registerPage', () => ({
       return;
     }
 
-    this.email = value;
-    this.goToStep('otp');
+    this.emailSubmitting = true;
+    this.emailExistsError = false;
+
+    try {
+      const result = await apiGet<CheckEmailResponse>(
+        'tr_tradehub.api.v1.auth.check_email_exists',
+        { email: value },
+      );
+
+      if (result.exists) {
+        this.emailExistsError = true;
+        return;
+      }
+
+      this.email = value;
+      // Proceed to setup step (collect name/password before registration)
+      this.goToStep('setup');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.emailSubmitting = false;
+    }
   },
 
   goToStep(step: RegisterStep) {
@@ -99,6 +179,62 @@ Alpine.data('registerPage', () => ({
           input?.focus();
           break;
         }
+        case 'setup': {
+          // Show setup form BEFORE OTP — collect name/password for registration
+          const container = (this.$refs as Record<string, HTMLElement>).setupContainer;
+          if (container) {
+            container.innerHTML = AccountSetupForm('TR');
+          }
+          initAccountSetupForm({
+            defaultCountry: 'TR',
+            onSubmit: async (formData: AccountSetupFormData) => {
+              if (!this.accountType) return;
+
+              // Set loading state on setup submit button
+              const submitBtn = document.getElementById('account-setup-submit-btn') as HTMLButtonElement | null;
+              if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.dataset.originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = `
+                  <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                `;
+              }
+
+              try {
+                // Call register API — creates user and sends verification OTP
+                await apiPost<RegisterResponse>(
+                  'tr_tradehub.api.v1.auth.register',
+                  {
+                    email: this.email,
+                    password: formData.password,
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    user_type: this.accountType,
+                  },
+                );
+
+                // Proceed to OTP verification step
+                this.goToStep('otp');
+              } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                showToast({ message, type: 'error' });
+
+                // Restore submit button
+                if (submitBtn) {
+                  if (submitBtn.dataset.originalText) {
+                    submitBtn.innerHTML = submitBtn.dataset.originalText;
+                    delete submitBtn.dataset.originalText;
+                  }
+                  submitBtn.disabled = false;
+                }
+              }
+            },
+          });
+          break;
+        }
         case 'otp': {
           // Dynamically render OTP content (child component needs fresh DOM each time)
           const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
@@ -107,35 +243,83 @@ Alpine.data('registerPage', () => ({
           }
           this.otpState = initEmailVerification({
             email: this.email,
-            onComplete: () => {
-              this.goToStep('setup');
-            },
-            onResend: () => {
-              // In production, resend OTP via backend
-            },
-            onBack: () => {
-              this.goToStep('email');
-            }
-          });
-          break;
-        }
-        case 'setup': {
-          // Dynamically render setup form (child component needs fresh DOM each time)
-          const container = (this.$refs as Record<string, HTMLElement>).setupContainer;
-          if (container) {
-            container.innerHTML = AccountSetupForm('TR');
-          }
-          initAccountSetupForm({
-            defaultCountry: 'TR',
-            onSubmit: (formData: AccountSetupFormData) => {
-              if (this.accountType) {
+            onComplete: async (otp: string) => {
+              // Disable continue button during verification
+              const continueBtn = document.getElementById('otp-continue-btn') as HTMLButtonElement | null;
+              if (continueBtn) {
+                continueBtn.disabled = true;
+                continueBtn.dataset.originalText = continueBtn.innerHTML;
+                continueBtn.innerHTML = `
+                  <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                `;
+              }
+
+              try {
+                // Verify email with OTP — returns auth tokens
+                const result = await apiPost<VerifyEmailResponse>(
+                  'tr_tradehub.api.v1.auth.verify_email',
+                  { email: this.email, otp },
+                );
+
+                // Store auth tokens (no expires_in from server, default 24h)
+                setTokens({
+                  api_key: result.token.api_key,
+                  api_secret: result.token.api_secret,
+                  expires_in: 86400,
+                });
+
+                // Store user profile
+                setUser({
+                  email: result.user.email,
+                  full_name: result.user.full_name,
+                  first_name: result.user.first_name,
+                  last_name: result.user.last_name,
+                  roles: [],
+                  user_type: result.user.user_type || this.accountType || 'buyer',
+                  is_verified: true,
+                  has_completed_onboarding: Boolean(result.user.has_completed_onboarding),
+                });
+
+                // Dispatch completion event for entry point redirect
                 this.$dispatch('register-complete', {
                   accountType: this.accountType,
                   email: this.email,
-                  formData
+                  formData: {
+                    firstName: result.user.first_name,
+                    lastName: result.user.last_name,
+                  },
                 });
+              } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                showToast({ message, type: 'error' });
+
+                // Re-enable continue button
+                if (continueBtn) {
+                  if (continueBtn.dataset.originalText) {
+                    continueBtn.innerHTML = continueBtn.dataset.originalText;
+                    delete continueBtn.dataset.originalText;
+                  }
+                  continueBtn.disabled = false;
+                }
               }
-            }
+            },
+            onResend: async () => {
+              try {
+                await apiPost(
+                  'tr_tradehub.api.v1.auth.resend_verification_otp',
+                  { email: this.email },
+                );
+              } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                showToast({ message, type: 'error' });
+              }
+            },
+            onBack: () => {
+              this.goToStep('setup');
+            },
           });
           break;
         }
@@ -143,6 +327,24 @@ Alpine.data('registerPage', () => ({
     });
   },
 }));
+
+/* ── Forgot Password API response types ───────────────── */
+
+interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+interface VerifyResetOtpResponse {
+  success: boolean;
+  message: string;
+  reset_token: string;
+}
+
+interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
 
 Alpine.data('forgotPasswordPage', () => ({
   step: 'find-account' as ForgotPasswordStep,
@@ -152,6 +354,8 @@ Alpine.data('forgotPasswordPage', () => ({
   otpError: false,
   showPassword: false,
   passwordValid: false,
+  submitting: false,
+  resetToken: '',
   reqLength: null as boolean | null,
   reqChars: null as boolean | null,
   reqEmoji: null as boolean | null,
@@ -161,20 +365,68 @@ Alpine.data('forgotPasswordPage', () => ({
     return maskEmail(this.email);
   },
 
-  submitFindAccount() {
+  /** Step 1: Request password reset OTP via API */
+  async submitFindAccount() {
     const trimmed = this.email.trim();
-    if (!trimmed) return;
+    if (!trimmed || this.submitting) return;
 
-    this.step = 'verify-code';
-    this.startCountdown();
+    this.submitting = true;
 
-    this.$nextTick(() => {
-      const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
-      if (container) {
-        const first = container.querySelector('[data-fp-otp-index="0"]') as HTMLInputElement;
-        first?.focus();
-      }
-    });
+    try {
+      await apiPost<ForgotPasswordResponse>(
+        'tr_tradehub.api.v1.auth.forgot_password',
+        { email: trimmed },
+      );
+
+      this.email = trimmed;
+      this.step = 'verify-code';
+      this.startCountdown();
+
+      this.$nextTick(() => {
+        const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
+        if (container) {
+          const first = container.querySelector('[data-fp-otp-index="0"]') as HTMLInputElement;
+          first?.focus();
+        }
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.submitting = false;
+    }
+  },
+
+  /** Step 2: Verify reset OTP and get reset_token (stored in component state only) */
+  async verifyOtp() {
+    const otpCode = this.otp.join('');
+    if (otpCode.length !== 6 || this.submitting) return;
+
+    this.submitting = true;
+
+    try {
+      const result = await apiPost<VerifyResetOtpResponse>(
+        'tr_tradehub.api.v1.auth.verify_reset_otp',
+        { email: this.email, otp: otpCode },
+      );
+
+      // Store reset_token in component state only (NOT localStorage)
+      this.resetToken = result.reset_token;
+
+      this.step = 'reset-password';
+      this.stopCountdown();
+
+      this.$nextTick(() => {
+        const pwInput = (this.$refs as Record<string, HTMLInputElement>).newPassword;
+        pwInput?.focus();
+      });
+    } catch (err) {
+      this.otpError = true;
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.submitting = false;
+    }
   },
 
   handleOtpInput(event: Event) {
@@ -199,15 +451,10 @@ Alpine.data('forgotPasswordPage', () => ({
 
     this.otpError = false;
 
-    // Auto-proceed when all 6 digits entered
+    // Auto-verify when all 6 digits entered
     if (this.otp.every((d: string) => d !== '')) {
       setTimeout(() => {
-        this.step = 'reset-password';
-        this.stopCountdown();
-        this.$nextTick(() => {
-          const pwInput = (this.$refs as Record<string, HTMLInputElement>).newPassword;
-          pwInput?.focus();
-        });
+        this.verifyOtp();
       }, 300);
     }
   },
@@ -231,10 +478,10 @@ Alpine.data('forgotPasswordPage', () => ({
       focusEl?.focus();
     }
 
+    // Auto-verify when all 6 digits pasted
     if (this.otp.every((d: string) => d !== '')) {
       setTimeout(() => {
-        this.step = 'reset-password';
-        this.stopCountdown();
+        this.verifyOtp();
       }, 300);
     }
   },
@@ -263,16 +510,28 @@ Alpine.data('forgotPasswordPage', () => ({
     }
   },
 
-  resendCode() {
+  /** Resend OTP via forgot_password API */
+  async resendCode() {
     if (this.countdown > 0) return;
 
-    // Reset OTP
+    // Reset OTP inputs
     this.otp = ['', '', '', '', '', ''];
     const container = (this.$refs as Record<string, HTMLElement>).otpContainer;
     if (container) {
       container.querySelectorAll<HTMLInputElement>('[data-fp-otp-index]').forEach(i => { i.value = ''; });
     }
     this.otpError = false;
+
+    try {
+      await apiPost<ForgotPasswordResponse>(
+        'tr_tradehub.api.v1.auth.forgot_password',
+        { email: this.email },
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    }
+
     this.startCountdown();
 
     if (container) {
@@ -303,24 +562,22 @@ Alpine.data('forgotPasswordPage', () => ({
     const pw = (this.$refs as Record<string, HTMLInputElement>).newPassword?.value || '';
     const touched = pw.length > 0;
 
-    // Rule 1: 6-20 characters
-    const lengthOk = pw.length >= 6 && pw.length <= 20;
+    // Rule 1: At least 8 characters (matching backend PASSWORD_REQUIREMENTS.min_length)
+    const lengthOk = pw.length >= 8;
     this.reqLength = touched ? lengthOk : null;
 
-    // Rule 2: At least 2 of: letters, digits, special chars
-    const hasLetters = /[a-zA-Z]/.test(pw);
-    const hasDigits = /[0-9]/.test(pw);
-    const hasSpecial = /[^a-zA-Z0-9\s]/.test(pw);
-    const typesCount = [hasLetters, hasDigits, hasSpecial].filter(Boolean).length;
-    const charsOk = typesCount >= 2;
+    // Rule 2: Must contain uppercase + lowercase + digit (matching backend)
+    const hasUppercase = /[A-Z]/.test(pw);
+    const hasLowercase = /[a-z]/.test(pw);
+    const hasDigit = /[0-9]/.test(pw);
+    const charsOk = hasUppercase && hasLowercase && hasDigit;
     this.reqChars = touched ? charsOk : null;
 
-    // Rule 3: No emoji
+    // Rule 3: No emoji (frontend-only UX rule)
     const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
     const noEmoji = !emojiRegex.test(pw);
     this.reqEmoji = touched ? noEmoji : null;
 
-    // Enable/disable submit
     this.passwordValid = lengthOk && charsOk && noEmoji;
   },
 
@@ -329,16 +586,40 @@ Alpine.data('forgotPasswordPage', () => ({
     return valid ? 'color: #16a34a' : 'color: #dc2626';
   },
 
-  submitReset() {
-    if (!this.passwordValid) return;
-    const baseUrl = getBaseUrl();
-    showToast({ message: t('auth.forgot.passwordUpdated'), type: 'success' });
-    setTimeout(() => {
-      window.location.href = `${baseUrl}pages/auth/login.html`;
-    }, 1500);
+  /** Step 3: Reset password via API using reset_token from component state */
+  async submitReset() {
+    if (!this.passwordValid || this.submitting) return;
+
+    const pw = (this.$refs as Record<string, HTMLInputElement>).newPassword?.value || '';
+    if (!pw || !this.resetToken) return;
+
+    this.submitting = true;
+
+    try {
+      await apiPost<ResetPasswordResponse>(
+        'tr_tradehub.api.v1.auth.reset_password',
+        { reset_token: this.resetToken, new_password: pw },
+      );
+
+      // Clear reset_token from component state after successful reset
+      this.resetToken = '';
+
+      const baseUrl = getBaseUrl();
+      showToast({ message: t('auth.forgot.passwordUpdated'), type: 'success' });
+      setTimeout(() => {
+        window.location.href = `${baseUrl}pages/auth/login.html?message=password_reset_success`;
+      }, 1500);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      showToast({ message, type: 'error' });
+    } finally {
+      this.submitting = false;
+    }
   },
 
   destroy() {
     this.stopCountdown();
+    // Clear sensitive state on component destruction
+    this.resetToken = '';
   },
 }));

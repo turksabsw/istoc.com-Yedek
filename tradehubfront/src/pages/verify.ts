@@ -1,6 +1,6 @@
 /**
- * Login Page — Entry Point
- * Assembles AuthLayout with LoginPage content for the login flow.
+ * Verify Page — Entry Point
+ * Assembles AuthLayout with VerifyPage content for email OTP verification.
  */
 
 import '../style.css'
@@ -9,13 +9,14 @@ import { startAlpine } from '../alpine'
 import { t } from '../i18n'
 
 // Auth components
-import { AuthLayout, initAuthLayout, LoginPage, initLoginPage } from '../components/auth'
+import { AuthLayout, initAuthLayout } from '../components/auth'
+import { VerifyPage, initVerifyPage } from '../components/auth/VerifyPage'
 
 /* ── App Setup ───────────────────────────────────────── */
 
 const appEl = document.querySelector<HTMLDivElement>('#app')!
-appEl.innerHTML = AuthLayout(LoginPage(), {
-  title: t('auth.login.title'),
+appEl.innerHTML = AuthLayout(VerifyPage(), {
+  title: t('auth.verifyEmail'),
   showBackButton: true,
 })
 
@@ -27,8 +28,8 @@ initFlowbite()
 // Initialize auth layout (back button handler)
 initAuthLayout()
 
-// Initialize login page interactivity (form submission, 2FA, error handling)
-initLoginPage()
+// Initialize verify page interactivity (OTP verification, resend, navigation)
+initVerifyPage()
 
 // Start Alpine AFTER innerHTML is set so it can find all x-data directives in the DOM
 startAlpine()

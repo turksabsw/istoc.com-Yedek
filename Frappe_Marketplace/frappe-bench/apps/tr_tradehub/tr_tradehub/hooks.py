@@ -30,3 +30,14 @@ required_apps = [
     "tradehub_logistics",
     "tradehub_marketing",
 ]
+
+# Fixtures
+# --------
+# Custom fields added to User DocType for TradeHub authentication and onboarding.
+# These are loaded during app installation via `bench --site <site> migrate`.
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [["dt", "=", "User"], ["module", "=", "TR TradeHub"]],
+    },
+]
