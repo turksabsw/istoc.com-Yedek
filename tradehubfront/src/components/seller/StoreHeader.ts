@@ -23,15 +23,15 @@ export function StoreHeader(seller: SellerProfile): string {
     </span>
   ` : '';
 
-  const emailRow = seller.email ? `
-    <p class="store-header__email text-[13px] text-(--color-text-tertiary) dark:text-gray-400 flex items-center gap-1">
+  const emailRow = `
+    <p data-email class="store-header__email text-[13px] text-(--color-text-tertiary) dark:text-gray-400 flex items-center gap-1${seller.email ? '' : ' hidden'}">
       <svg class="w-4 h-4 text-(--color-text-tertiary) dark:text-gray-400" viewBox="0 0 16 16" fill="none">
         <rect x="2" y="4" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
         <path d="M2 4l6 5 6-5" stroke="currentColor" stroke-width="1.5" fill="none"/>
       </svg>
-      ${seller.email}
+      <span>${seller.email || ''}</span>
     </p>
-  ` : '';
+  `;
 
   const deliveryBadge = seller.deliveryBadge ? `
     <a class="store-header__delivery-badge inline-flex items-center border border-(--color-border-strong) dark:border-gray-600 rounded-sm px-2.5 py-1 text-[12px] text-[#374151] dark:text-gray-300 underline hover:bg-(--color-surface-muted) focus:ring-1 focus:ring-[#d1d5db] transition-colors cursor-pointer max-w-[260px] lg:max-w-none truncate" href="#">
@@ -54,6 +54,7 @@ export function StoreHeader(seller: SellerProfile): string {
         <div class="store-header__info flex items-start gap-3 lg:gap-5 min-w-0">
           <!-- Logo -->
           <img
+            data-seller-logo
             class="store-header__logo w-[80px] max-h-[48px] lg:max-h-[52px] xl:w-[100px] xl:max-h-[60px] object-contain flex-shrink-0 hover:scale-105 transition-transform duration-200"
             src="${seller.logo}"
             alt="${seller.name}"
@@ -63,7 +64,7 @@ export function StoreHeader(seller: SellerProfile): string {
           <div class="store-header__details flex flex-col gap-1 min-w-0">
             <!-- Company Name + Chevron -->
             <div class="store-header__name-row flex items-center gap-2">
-              <h1 class="store-header__name text-[18px] lg:text-[20px] xl:text-[22px] font-bold text-(--color-text-primary) dark:text-gray-50 leading-tight">
+              <h1 data-seller-name class="store-header__name text-[18px] lg:text-[20px] xl:text-[22px] font-bold text-(--color-text-primary) dark:text-gray-50 leading-tight">
                 ${seller.name}
               </h1>
               <svg class="store-header__chevron w-4 h-4 text-(--color-text-tertiary) cursor-pointer transition-transform hover:text-(--color-text-secondary)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -73,20 +74,20 @@ export function StoreHeader(seller: SellerProfile): string {
 
             <!-- Badge Row -->
             <div class="store-header__badges flex items-center gap-2 flex-wrap">
-              ${verifiedBadge}
+              <span data-verified-badge${seller.verificationType ? '' : ' class="hidden"'}>${verifiedBadge}</span>
               ${proBadge}
               <span class="store-header__separator text-(--color-border-strong)">&middot;</span>
-              <span class="store-header__years text-[13px] text-(--color-text-tertiary) dark:text-gray-400">
+              <span data-years class="store-header__years text-[13px] text-(--color-text-tertiary) dark:text-gray-400">
                 ${seller.yearsOnPlatform}yrs
               </span>
               <span class="store-header__separator text-(--color-border-strong)">&middot;</span>
-              <span class="store-header__location text-[13px] text-(--color-text-tertiary) dark:text-gray-400">
+              <span data-location class="store-header__location text-[13px] text-(--color-text-tertiary) dark:text-gray-400">
                 ${seller.location}
               </span>
             </div>
 
             <!-- Main Categories -->
-            <p class="store-header__categories text-[13px] text-(--color-text-tertiary) dark:text-gray-400 break-words">
+            <p data-categories class="store-header__categories text-[13px] text-(--color-text-tertiary) dark:text-gray-400 break-words">
               ${t('seller.sf.mainCategoriesLabel')} ${seller.mainCategories.join(', ')}
             </p>
 
@@ -94,13 +95,13 @@ export function StoreHeader(seller: SellerProfile): string {
             ${emailRow}
 
             <!-- Tags Row (Delivery + Assessment) -->
-            <div class="store-header__tags flex flex-wrap items-center gap-2 mt-1">
+            <div data-badges class="store-header__tags flex flex-wrap items-center gap-2 mt-1">
               ${deliveryBadge}
               ${assessmentBadge}
             </div>
 
             <!-- TÜV Verification Note -->
-            <p class="store-header__tuv text-[11px] text-(--color-text-muted) dark:text-gray-500 mt-1">
+            <p data-verified-by class="store-header__tuv text-[11px] text-(--color-text-muted) dark:text-gray-500 mt-1">
               Verified by TÜVRheinland — ${seller.verificationDate}
               <span class="inline-block ml-1 cursor-help" data-tooltip-target="tuv-tooltip" data-tooltip-placement="top">&oplus;</span>
             </p>

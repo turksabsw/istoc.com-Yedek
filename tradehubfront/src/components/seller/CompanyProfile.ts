@@ -121,10 +121,10 @@ function ContactSidebar(seller: SellerProfile): string {
       
       <div class="flex items-center gap-3 mb-6">
         <div class="w-12 h-12 flex items-center justify-center rounded overflow-hidden shadow-sm border border-gray-100 p-1">
-          <img src="${seller.logo}" alt="${seller.name}" class="w-full h-full object-contain" />
+          <img data-sidebar-logo src="${seller.logo}" alt="${seller.name}" class="w-full h-full object-contain" />
         </div>
         <div>
-          <h4 class="text-[14px] font-medium text-gray-900 leading-tight line-clamp-2">${seller.name}</h4>
+          <h4 data-sidebar-name class="text-[14px] font-medium text-gray-900 leading-tight line-clamp-2">${seller.name}</h4>
         </div>
       </div>
 
@@ -153,25 +153,25 @@ function OverviewTab(stats: SellerPerformanceStats, mainProducts: SimpleProduct[
           <!-- Stats -->
           <div>
             <div class="flex items-end gap-2 mb-4">
-              <span class="text-[32px] font-bold leading-none text-gray-900">${stats.rating.toFixed(1)}</span>
+              <span data-rating class="text-[32px] font-bold leading-none text-gray-900">${stats.rating.toFixed(1)}</span>
               <span class="text-[14px] text-gray-500 mb-1">/5</span>
               <div class="ml-2">
                 <span class="block text-[12px] text-gray-900 font-medium">${t('seller.sf.satisfactory')}</span>
-                <button type="button" @click="setTab('reviews')" class="text-[12px] text-blue-600 hover:underline cursor-pointer">${stats.reviewCount} ${t('seller.sf.reviews')}</button>
+                <button data-reviews-count type="button" @click="setTab('reviews')" class="text-[12px] text-blue-600 hover:underline cursor-pointer">${stats.reviewCount} ${t('seller.sf.reviews')}</button>
               </div>
             </div>
             
             <ul class="space-y-2 text-[13px] text-gray-900 mb-6 font-medium">
-              <li class="flex items-center gap-2"><span>&le;${stats.responseTime}</span> <span class="text-gray-500 font-normal">${t('seller.sf.avgResponseTime')}</span></li>
-              <li class="flex items-center gap-2"><span>${stats.onTimeDeliveryRate}</span> <span class="text-gray-500 font-normal">${t('seller.sf.onTimeDeliveryRate')}</span></li>
-              <li class="flex items-center gap-2"><span>${stats.transactions}+</span> <span class="text-gray-500 font-normal">${t('seller.sf.orders')}</span></li>
+              <li class="flex items-center gap-2"><span data-response-time>&le;${stats.responseTime}</span> <span class="text-gray-500 font-normal">${t('seller.sf.avgResponseTime')}</span></li>
+              <li class="flex items-center gap-2"><span data-delivery-rate>${stats.onTimeDeliveryRate}</span> <span class="text-gray-500 font-normal">${t('seller.sf.onTimeDeliveryRate')}</span></li>
+              <li class="flex items-center gap-2"><span data-total-orders>${stats.transactions}+</span> <span class="text-gray-500 font-normal">${t('seller.sf.orders')}</span></li>
             </ul>
 
             <div class="pt-4 border-t border-gray-100">
               <h4 class="text-[13px] font-bold text-gray-900 mb-3 flex items-center gap-2">
-                ${t('seller.sf.supplierCapacity')} <span class="text-[11px] font-normal text-gray-500">${t('seller.sf.verifiedBy')} <strong>Intertek</strong></span>
+                ${t('seller.sf.supplierCapacity')} <span data-capability-verifier class="text-[11px] font-normal text-gray-500">${t('seller.sf.verifiedBy')} <strong>Intertek</strong></span>
               </h4>
-              <ul class="space-y-2 text-[13px] text-gray-600">
+              <ul data-capabilities class="space-y-2 text-[13px] text-gray-600">
                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> ${t('seller.sf.minorCustomization')}</li>
                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> ${t('seller.sf.drawingCustomization')}</li>
                 <li class="flex items-center gap-2"><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg> ${t('seller.sf.finalProductInspection')}</li>
@@ -181,7 +181,7 @@ function OverviewTab(stats: SellerPerformanceStats, mainProducts: SimpleProduct[
           </div>
           
           <!-- Video / Images Gallery -->
-          <div class="relative rounded-lg overflow-hidden bg-gray-100 aspect-video group cursor-pointer company-profile__video-trigger">
+          <div data-factory-video class="relative rounded-lg overflow-hidden bg-gray-100 aspect-video group cursor-pointer company-profile__video-trigger">
             <img src="https://images.unsplash.com/photo-1581091226825-acb28bd45c61?q=80&w=800&auto=format&fit=crop" alt="Factory Video" class="w-full h-full object-cover">
             <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                <div class="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center">
