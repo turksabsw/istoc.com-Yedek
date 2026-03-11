@@ -1,8 +1,9 @@
 import { ManufacturersHero } from './ManufacturersHero'
 import { HorizontalCategoryBar } from './HorizontalCategoryBar'
 import { ManufacturerList } from './ManufacturerList'
+import type { Manufacturer } from '../../types/seller/manufacturer'
 
-export function ManufacturersLayout(): string {
+export function ManufacturersLayout(manufacturers: Manufacturer[] = []): string {
   return `
     <div class="container-boxed pt-4">
       <!-- 1) Top Hero Section -->
@@ -12,7 +13,7 @@ export function ManufacturersLayout(): string {
       ${HorizontalCategoryBar()}
 
       <!-- 3) Manufacturer List -->
-      ${ManufacturerList()}
+      ${ManufacturerList(manufacturers)}
     </div>
   `;
 }
