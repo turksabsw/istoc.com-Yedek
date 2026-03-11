@@ -19,6 +19,7 @@ All endpoints follow Frappe conventions and patterns.
 """
 
 import json
+import re
 from typing import Any, Dict, List, Optional
 
 import frappe
@@ -220,6 +221,67 @@ def validate_iban(iban: str) -> Dict[str, Any]:
         "iban_formatted": f"{iban[:4]} {iban[4:8]} {iban[8:12]} {iban[12:16]} {iban[16:20]} {iban[20:24]} {iban[24:]}",
         "error": _("Invalid IBAN checksum") if not is_valid else None,
     }
+
+
+# Turkish character transliteration map
+TURKISH_CHAR_MAP = {
+    "ç": "c", "Ç": "c",
+    "ş": "s", "Ş": "s",
+    "ğ": "g", "Ğ": "g",
+    "ı": "i", "İ": "i",
+    "ö": "o", "Ö": "o",
+    "ü": "u", "Ü": "u",
+}
+
+
+def generate_slug(display_name: str) -> str:
+    """
+    Generate a URL-safe slug from a display name.
+
+    Converts display_name to lowercase, transliterates Turkish characters
+    (ç→c, ş→s, ğ→g, ı→i, ö→o, ü→u), removes non-alphanumeric characters
+    (except hyphens), and ensures uniqueness against the Storefront DocType's
+    existing slug field by appending -1, -2, etc. on collision.
+
+    Follows the pattern from Storefront.generate_slug() but as a standalone
+    utility function.
+
+    Args:
+        display_name: The display name to convert to a slug
+
+    Returns:
+        str: A unique, URL-safe slug
+    """
+    if not display_name:
+        display_name = "store"
+
+    # Lowercase
+    slug = display_name.strip().lower()
+
+    # Turkish character transliteration
+    for turkish_char, latin_char in TURKISH_CHAR_MAP.items():
+        slug = slug.replace(turkish_char, latin_char)
+
+    # Replace non-alphanumeric characters with hyphens
+    slug = re.sub(r"[^a-z0-9\-]", "-", slug)
+
+    # Collapse multiple hyphens
+    slug = re.sub(r"-+", "-", slug)
+
+    # Strip leading/trailing hyphens
+    slug = slug.strip("-")
+
+    if not slug:
+        slug = "store"
+
+    # Ensure uniqueness against Storefront slugs
+    counter = 1
+    original_slug = slug
+    while frappe.db.exists("Storefront", {"slug": slug}):
+        slug = f"{original_slug}-{counter}"
+        counter += 1
+
+    return slug
 
 
 def get_current_seller() -> Optional[str]:
