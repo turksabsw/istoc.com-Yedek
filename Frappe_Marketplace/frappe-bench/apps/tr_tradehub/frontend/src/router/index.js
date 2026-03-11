@@ -28,6 +28,7 @@ const SellerMetricsList = () => import('@/views/seller/SellerMetricsList.vue')
 const SellerMetricsDetail = () => import('@/views/seller/SellerMetricsDetail.vue')
 const KpiTemplateList = () => import('@/views/seller/KpiTemplateList.vue')
 const KpiTemplateDetail = () => import('@/views/seller/KpiTemplateDetail.vue')
+const StorefrontEdit = () => import('@/views/seller/StorefrontEdit.vue')
 
 // Sales Module Pages (lazy-loaded)
 const RfqList = () => import('@/views/sales/RfqList.vue')
@@ -153,6 +154,12 @@ const routes = [
         name: 'RfqDetail',
         component: RfqDetail,
         meta: { title: 'RFQ Detay', breadcrumb: 'Detay', section: 'sales', breadcrumbParent: 'RFQ', breadcrumbParentRoute: '/app/rfq-list' },
+      },
+      {
+        path: 'app/storefront-edit',
+        name: 'StorefrontEdit',
+        component: StorefrontEdit,
+        meta: { title: 'Vitrin Düzenle', breadcrumb: 'Vitrin Düzenle', section: 'marketing' },
       },
       {
         path: 'app/product-add',
