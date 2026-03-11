@@ -1939,6 +1939,210 @@ def get_manufacturers_list(
 
 
 # =============================================================================
+# STOREFRONT DATA
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def get_seller_storefront_data(storefront_slug: str) -> Dict[str, Any]:
+    """
+    Get all data for a single seller storefront page.
+
+    Looks up the Storefront by its unique slug field, joins with the
+    associated Seller Profile, and returns seller info, performance metrics,
+    storefront details (factory images, capabilities), and tab counts.
+
+    Args:
+        storefront_slug: The unique URL slug of the storefront
+
+    Returns:
+        dict: Contains 4 objects — seller, performance, storefront, tabs
+
+    Raises:
+        frappe.ValidationError: If slug is missing or storefront not found
+
+    Example:
+        GET /api/method/tr_tradehub.api.v1.seller.get_seller_storefront_data?storefront_slug=anadolu-endustriyel
+    """
+    storefront_slug = cstr(storefront_slug).strip()
+
+    if not storefront_slug:
+        frappe.throw(_("Storefront not found"))
+
+    # Look up Storefront by slug and join with Seller Profile
+    storefront_data = frappe.db.sql(
+        """
+        SELECT
+            sf.name AS storefront_name,
+            sf.slug,
+            sf.factory_video_url,
+            sf.capability_verified_by,
+            sp.name AS seller_id,
+            sp.display_name,
+            sp.logo,
+            sp.verification_status,
+            sp.verified_by,
+            sp.verified_at,
+            sp.joined_at,
+            sp.city,
+            sp.country,
+            sp.contact_email,
+            sp.average_rating,
+            sp.total_reviews,
+            sp.response_time_hours,
+            sp.on_time_delivery_rate,
+            sp.total_sales_count
+        FROM `tabStorefront` sf
+        INNER JOIN `tabSeller Profile` sp ON sf.seller = sp.name
+        WHERE sf.slug = %s
+        AND sf.status = 'Active'
+        AND sf.is_published = 1
+        LIMIT 1
+        """,
+        storefront_slug,
+        as_dict=True,
+    )
+
+    if not storefront_data:
+        frappe.throw(_("Storefront not found"))
+
+    sf = storefront_data[0]
+    seller_id = sf.seller_id
+    storefront_name = sf.storefront_name
+
+    # Compute years_active from joined_at
+    years_active = 0
+    if sf.joined_at:
+        years_active = getdate(nowdate()).year - getdate(sf.joined_at).year
+
+    # Determine verification fields
+    is_verified = sf.verification_status == "Verified"
+    verification_label = "Verified" if is_verified else ""
+
+    # --- Derive categories from active Listings ---
+    categories_rows = frappe.db.sql(
+        """
+        SELECT DISTINCT l.category
+        FROM `tabListing` l
+        WHERE l.seller = %s
+        AND l.status = 'Active'
+        AND l.category IS NOT NULL
+        AND l.category != ''
+        ORDER BY l.category ASC
+        """,
+        seller_id,
+        as_dict=True,
+    )
+    categories = [row.category for row in categories_rows]
+
+    # --- Fetch seller badges (child table on Seller Profile) ---
+    badge_rows = frappe.db.sql(
+        """
+        SELECT badge_name, badge_code
+        FROM `tabSeller Badge`
+        WHERE parent = %s
+        AND parenttype = 'Seller Profile'
+        AND is_active = 1
+        ORDER BY idx ASC
+        """,
+        seller_id,
+        as_dict=True,
+    )
+    badges = [
+        {"label": row.badge_name or "", "type": row.badge_code or ""}
+        for row in badge_rows
+    ]
+
+    # --- Fetch factory images from Storefront child table ---
+    factory_images_rows = frappe.db.sql(
+        """
+        SELECT image
+        FROM `tabStorefront Factory Image`
+        WHERE parent = %s
+        ORDER BY sort_order ASC
+        """,
+        storefront_name,
+        as_dict=True,
+    )
+    factory_images = [row.image for row in factory_images_rows if row.image]
+
+    # --- Fetch capabilities from Storefront child table ---
+    capability_rows = frappe.db.sql(
+        """
+        SELECT capability_name
+        FROM `tabStorefront Capability`
+        WHERE parent = %s
+        ORDER BY idx ASC
+        """,
+        storefront_name,
+        as_dict=True,
+    )
+    capabilities = [row.capability_name for row in capability_rows if row.capability_name]
+
+    # --- Tab counts ---
+    # Products count: active listings for this seller
+    products_count = cint(
+        frappe.db.count(
+            "Listing",
+            filters={"seller": seller_id, "status": "Active"},
+        )
+    )
+
+    # Categories count: distinct categories from active listings
+    categories_count = len(categories)
+
+    # Campaigns count: active campaigns for this seller
+    campaigns_count_result = frappe.db.sql(
+        """
+        SELECT COUNT(*) AS cnt
+        FROM `tabCampaign`
+        WHERE seller = %s
+        AND status = 'Active'
+        AND (end_date IS NULL OR end_date >= %s)
+        """,
+        (seller_id, nowdate()),
+        as_dict=True,
+    )
+    campaigns_count = cint(campaigns_count_result[0].cnt) if campaigns_count_result else 0
+
+    return {
+        "seller": {
+            "seller_id": seller_id,
+            "display_name": sf.display_name or "",
+            "logo": sf.logo or "",
+            "is_verified": is_verified,
+            "verification_label": verification_label,
+            "verified_by": sf.verified_by or "",
+            "verified_at": cstr(sf.verified_at) if sf.verified_at else "",
+            "years_active": years_active,
+            "city": sf.city or "",
+            "country": sf.country or "",
+            "contact_email": sf.contact_email or "",
+            "categories": categories,
+            "badges": badges,
+        },
+        "performance": {
+            "average_rating": flt(sf.average_rating, 1),
+            "total_reviews": cint(sf.total_reviews),
+            "response_time_hours": cint(sf.response_time_hours),
+            "on_time_delivery_rate": flt(sf.on_time_delivery_rate, 1),
+            "total_orders": cint(sf.total_sales_count),
+        },
+        "storefront": {
+            "factory_video_url": sf.factory_video_url or "",
+            "factory_images": factory_images,
+            "capabilities": capabilities,
+            "capability_verified_by": sf.capability_verified_by or "",
+        },
+        "tabs": {
+            "products_count": products_count,
+            "categories_count": categories_count,
+            "campaigns_count": campaigns_count,
+        },
+    }
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
@@ -2020,4 +2224,7 @@ Manufacturer Categories:
 
 Manufacturers:
 - get_manufacturers_list: Get paginated list of manufacturers with profiles, products, and metrics
+
+Storefront Data:
+- get_seller_storefront_data: Get full storefront page data (seller, performance, storefront, tabs)
 """
