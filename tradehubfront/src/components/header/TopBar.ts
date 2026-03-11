@@ -81,13 +81,23 @@ function renderCompactLogo(): string {
   `;
 }
 
+/** Escape a string for safe interpolation into HTML attributes */
+function escapeAttr(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/'/g, '&#39;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /**
  * User profile button with dropdown for compact header (Alibaba-style)
  * Only shown when user is logged in.
  */
 function renderUserButton(): string {
   const user = getUser();
-  const displayName = user?.name ?? t('topbar.defaultUser');
+  const displayName = user?.full_name ?? t('topbar.defaultUser');
   return `
     <div class="relative">
       <button
@@ -108,7 +118,7 @@ function renderUserButton(): string {
         class="z-50 hidden bg-white rounded-lg shadow-lg border border-gray-200 w-[220px] py-2"
       >
         <div class="px-4 py-2 border-b border-gray-100">
-          <p class="text-[14px] font-semibold text-[#222]"><span data-i18n="header.hello" data-i18n-options='{"name":"${displayName}"}'>${t('header.hello', { name: displayName })}</span></p>
+          <p class="text-[14px] font-semibold text-[#222]"><span data-i18n="header.hello" data-i18n-options='{"name":"${escapeAttr(displayName)}"}'>${t('header.hello', { name: displayName })}</span></p>
         </div>
         <ul class="py-1">
           <li><a href="/pages/dashboard/buyer-dashboard.html" class="block px-4 py-2 text-[13px] text-[#222] hover:bg-gray-50 transition-colors"><span data-i18n="header.myDashboard">${t('header.myDashboard')}</span></a></li>
