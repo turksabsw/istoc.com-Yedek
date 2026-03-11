@@ -1120,8 +1120,17 @@ def check_email_exists(email: str) -> Dict[str, Any]:
 
     API: GET /api/method/trade_hub.api.v1.auth.check_email_exists
     """
+    # Rate limiting to prevent mass user enumeration
+    check_rate_limit("verification")
+
     if not email:
         frappe.throw(_("Email is required"))
+
+    email = email.strip().lower()
+
+    # Validate email format
+    if not validate_email_format(email):
+        frappe.throw(_("Please enter a valid email address"))
 
     exists = frappe.db.exists("User", email)
 
@@ -1734,11 +1743,18 @@ def verify_2fa(
             "otp": "123456"
         }
     """
+    # Rate limiting by IP (at the START, before any Redis lookups)
+    check_rate_limit("2fa_verify")
+
     # Validate required fields
     if not session_id or not otp:
         frappe.throw(_("Session ID and verification code are required"))
 
     otp = otp.strip()
+
+    # Validate OTP format (must be 6 digits)
+    if not re.match(r"^\d{6}$", otp):
+        frappe.throw(_("Verification code must be 6 digits"))
 
     # Retrieve 2FA session data from Redis
     cache_key = f"trade_hub:2fa:session:{session_id}"
@@ -1767,7 +1783,7 @@ def verify_2fa(
             title=_("Session Error"),
         )
 
-    # Rate limiting by email
+    # Additional rate limiting by email (after retrieving user from session)
     check_rate_limit("2fa_verify", user)
 
     # Reconstruct LoginManager without calling __init__
@@ -2051,6 +2067,9 @@ def reset_password(
             "new_password": "NewSecurePass1"
         }
     """
+    # Rate limiting by IP to prevent brute-force token guessing
+    check_rate_limit("password_reset")
+
     # Validate required fields
     if not reset_token or not new_password:
         frappe.throw(_("Reset token and new password are required"))
