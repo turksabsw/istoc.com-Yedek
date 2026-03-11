@@ -1636,6 +1636,55 @@ def validate_iban_api(iban: str) -> Dict[str, Any]:
 
 
 # =============================================================================
+# MANUFACTURER CATEGORY ENDPOINTS
+# =============================================================================
+
+
+@frappe.whitelist(allow_guest=True)
+def get_manufacturer_categories() -> List[Dict[str, Any]]:
+    """
+    Get product categories from active sellers' listings.
+
+    Queries active sellers' product categories by joining
+    Seller Profile → Listing → Product Category. Returns categories
+    that have at least one active listing from an active seller.
+
+    Returns:
+        list: Categories with {name, label, count} objects where
+            - name: Product Category document name
+            - label: Human-readable category name
+            - count: Number of active listings in this category from active sellers
+
+    Example:
+        GET /api/method/tr_tradehub.api.v1.seller.get_manufacturer_categories
+        [
+            {"name": "CAT-001", "label": "Elektrik Sayaçları", "count": 42},
+            {"name": "CAT-002", "label": "Su Sayaçları", "count": 28},
+            ...
+        ]
+    """
+    categories = frappe.db.sql(
+        """
+        SELECT
+            pc.name AS name,
+            pc.category_name AS label,
+            COUNT(DISTINCT l.name) AS count
+        FROM `tabProduct Category` pc
+        INNER JOIN `tabListing` l ON l.category = pc.name
+        INNER JOIN `tabSeller Profile` sp ON l.seller = sp.name
+        WHERE sp.status = 'Active'
+        AND l.status = 'Active'
+        AND pc.enabled = 1
+        GROUP BY pc.name, pc.category_name
+        ORDER BY count DESC
+        """,
+        as_dict=True,
+    )
+
+    return categories
+
+
+# =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
@@ -1711,4 +1760,7 @@ Seller Tiers:
 Validation:
 - validate_tax_id_api: Validate Turkish tax ID
 - validate_iban_api: Validate Turkish IBAN
+
+Manufacturer Categories:
+- get_manufacturer_categories: Get product categories from active sellers' listings
 """
