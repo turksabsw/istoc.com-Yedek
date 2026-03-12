@@ -7,11 +7,11 @@ export const railSections = [
   { id: 'dashboard', icon: 'house', label: 'Ana Sayfa' },
   { id: 'sales', icon: 'shopping-cart', label: 'Satış' },
   { id: 'products', icon: 'box', label: 'Ürünler' },
-  { id: 'customers', icon: 'users', label: 'Müşteri' },
-  { id: 'finance', icon: 'coins', label: 'Finans' },
+  { id: 'customers', icon: 'user', label: 'Müşteri' },
+  { id: 'finance', icon: 'dollar-sign', label: 'Finans' },
   { id: 'logistics', icon: 'truck', label: 'Lojistik' },
-  { id: 'marketing', icon: 'rocket', label: 'Pazarlama' },
-  { id: 'analytics', icon: 'chart-column', label: 'Analiz' },
+  { id: 'marketing', icon: 'activity', label: 'Pazarlama' },
+  { id: 'analytics', icon: 'chart-bar', label: 'Analiz' },
   { id: 'messaging', icon: 'message-square', label: 'Mesajlar' },
   { id: 'settings', icon: 'settings', label: 'Ayarlar' },
 ]
@@ -37,12 +37,14 @@ export const panelSections = {
   dashboard: [
     {
       title: null, // No title = non-collapsible quick nav
+      color: '#7c3aed',
       items: [
         { label: 'Genel Bakış', icon: 'layout-grid', route: '/dashboard' },
       ],
     },
     {
       title: 'Performans Metrikleri',
+      color: '#f59e0b',
       items: [
         { label: 'Satıcı KPI', icon: 'gauge', route: '/app/seller-kpi-list' },
         { label: 'Satıcı Puanı', icon: 'star', route: '/app/seller-score-list' },
@@ -51,6 +53,7 @@ export const panelSections = {
     },
     {
       title: 'KPI Şablonları',
+      color: '#10b981',
       items: [
         { label: 'KPI Şablonu', icon: 'file-text', route: '/app/kpi-template-list' },
       ],
@@ -60,6 +63,7 @@ export const panelSections = {
   sales: [
     {
       title: 'Teklif Talepleri (RFQ)',
+      color: '#3b82f6',
       items: [
         { label: 'RFQ', icon: 'file-text', route: '/app/rfq-list' },
         { label: 'RFQ Kalemleri', icon: 'list', doctype: 'RFQ Item' },
@@ -73,6 +77,7 @@ export const panelSections = {
     },
     {
       title: 'Siparişler',
+      color: '#10b981',
       items: [
         { label: 'Sipariş', icon: 'shopping-bag', doctype: 'Order' },
         { label: 'Sipariş Kalemleri', icon: 'list', doctype: 'Order Item' },
@@ -85,6 +90,7 @@ export const panelSections = {
     },
     {
       title: 'Teklifler',
+      color: '#f59e0b',
       items: [
         { label: 'Teklif', icon: 'file-text', doctype: 'Quotation' },
         { label: 'Teklif Kalemleri', icon: 'list', doctype: 'Quotation Item' },
@@ -92,6 +98,7 @@ export const panelSections = {
     },
     {
       title: 'İade Yönetimi',
+      color: '#ef4444',
       items: [
         { label: 'Ödeme İadesi', icon: 'undo', doctype: 'Payment Refund' },
       ],
@@ -101,6 +108,7 @@ export const panelSections = {
   products: [
     {
       title: 'Ürün Listelemeleri',
+      color: '#7c3aed',
       items: [
         { label: 'Listeleme', icon: 'list', doctype: 'Listing' },
         { label: 'Listeleme Varyantı', icon: 'git-branch', doctype: 'Listing Variant' },
@@ -112,6 +120,7 @@ export const panelSections = {
     },
     {
       title: 'Stok Birimi (SKU)',
+      color: '#f59e0b',
       items: [
         { label: 'SKU', icon: 'barcode', doctype: 'SKU' },
         { label: 'SKU Ürün', icon: 'package', doctype: 'SKU Product' },
@@ -120,6 +129,7 @@ export const panelSections = {
     },
     {
       title: 'Katalog Yönetimi',
+      color: '#10b981',
       items: [
         { label: 'Ürün', icon: 'package', doctype: 'Product' },
         { label: 'Ürün Kategorisi', icon: 'folder', doctype: 'Product Category' },
@@ -133,6 +143,7 @@ export const panelSections = {
     },
     {
       title: 'Toplu Fiyatlandırma',
+      color: '#3b82f6',
       items: [
         { label: 'Ürün Fiyat Kademesi', icon: 'layers', doctype: 'Product Pricing Tier' },
         { label: 'Toplu Fiyat Kademesi', icon: 'layers', doctype: 'Listing Bulk Pricing Tier' },
@@ -140,6 +151,7 @@ export const panelSections = {
     },
     {
       title: 'PIM Yönetimi',
+      color: '#a855f7',
       items: [
         { label: 'PIM Ürün', icon: 'database', doctype: 'PIM Product' },
         { label: 'PIM Ürün Varyantı', icon: 'git-branch', doctype: 'PIM Product Variant' },
@@ -149,6 +161,7 @@ export const panelSections = {
     },
     {
       title: 'Medya Kütüphanesi',
+      color: '#ef4444',
       items: [
         { label: 'Medya Varlığı', icon: 'image', doctype: 'Media Asset' },
         { label: 'Medya Kütüphanesi', icon: 'film', doctype: 'Media Library' },
@@ -157,6 +170,7 @@ export const panelSections = {
     },
     {
       title: 'Stok & Envanter',
+      color: '#06b6d4',
       items: [
         { label: 'Depo', icon: 'warehouse', doctype: 'Warehouse' },
         { label: 'Stok Hareketi', icon: 'arrow-left-right', doctype: 'Stock Entry' },
@@ -170,6 +184,7 @@ export const panelSections = {
   customers: [
     {
       title: 'Müşteri Profilleri',
+      color: '#3b82f6',
       items: [
         { label: 'Alıcı Profili', icon: 'user', doctype: 'Buyer Profile' },
         { label: 'Premium Alıcı', icon: 'crown', doctype: 'Premium Buyer' },
@@ -178,6 +193,7 @@ export const panelSections = {
     },
     {
       title: 'Müşteri Kategorileri',
+      color: '#10b981',
       items: [
         { label: 'Alıcı Kategorisi', icon: 'users', doctype: 'Buyer Category' },
         { label: 'Alıcı Seviyesi', icon: 'layers', doctype: 'Buyer Level' },
@@ -186,6 +202,7 @@ export const panelSections = {
     },
     {
       title: 'Fiyat Listeleri',
+      color: '#f59e0b',
       items: [
         { label: 'Fiyat Kırılımı', icon: 'percent', doctype: 'Price Break' },
         { label: 'Ürün Fiyat Kademesi', icon: 'layers', doctype: 'Product Pricing Tier' },
@@ -193,12 +210,14 @@ export const panelSections = {
     },
     {
       title: 'Özel Fiyatlandırma',
+      color: '#a855f7',
       items: [
         { label: 'Incoterm Fiyatı', icon: 'globe', doctype: 'Incoterm Price' },
       ],
     },
     {
       title: 'Alıcı Doğrulama',
+      color: '#ef4444',
       items: [
         { label: 'Alıcı Doğrulama', icon: 'user-check', doctype: 'Buyer Verification' },
         { label: 'Ticari Referans', icon: 'handshake', doctype: 'Trade Reference' },
@@ -207,6 +226,7 @@ export const panelSections = {
     },
     {
       title: 'CRM & İlişki Yönetimi',
+      color: '#06b6d4',
       items: [
         { label: 'Kişi', icon: 'contact', doctype: 'Contact' },
         { label: 'Firma', icon: 'building-2', doctype: 'Company' },
@@ -217,6 +237,7 @@ export const panelSections = {
     },
     {
       title: 'Bölge Yönetimi',
+      color: '#14b8a6',
       items: [
         { label: 'Bölge / Territory', icon: 'map-pin', doctype: 'Territory' },
         { label: 'Ülke Grubu', icon: 'globe', doctype: 'Country Group' },
@@ -228,6 +249,7 @@ export const panelSections = {
   finance: [
     {
       title: 'Bakiye ve Hak Edişler',
+      color: '#10b981',
       items: [
         { label: 'Satıcı Bakiyesi', icon: 'wallet', doctype: 'Seller Balance' },
         { label: 'Satıcı Banka Hesabı', icon: 'landmark', doctype: 'Seller Bank Account' },
@@ -235,6 +257,7 @@ export const panelSections = {
     },
     {
       title: 'Komisyonlar',
+      color: '#f59e0b',
       items: [
         { label: 'Komisyon Planı', icon: 'percent', doctype: 'Commission Plan' },
         { label: 'Komisyon Plan Oranı', icon: 'chart-column', doctype: 'Commission Plan Rate' },
@@ -243,6 +266,7 @@ export const panelSections = {
     },
     {
       title: 'Ödeme Yönetimi',
+      color: '#3b82f6',
       items: [
         { label: 'Ödeme Planı', icon: 'credit-card', doctype: 'Payment Plan' },
         { label: 'Ödeme Taksiti', icon: 'calendar-check', doctype: 'Payment Installment' },
@@ -252,6 +276,7 @@ export const panelSections = {
     },
     {
       title: 'Emanet Hesapları',
+      color: '#ef4444',
       items: [
         { label: 'Emanet Hesabı', icon: 'lock', doctype: 'Escrow Account' },
         { label: 'Emanet Olayı', icon: 'activity', doctype: 'Escrow Event' },
@@ -260,6 +285,7 @@ export const panelSections = {
     },
     {
       title: 'Vergi Ayarları',
+      color: '#7c3aed',
       items: [
         { label: 'Vergi Oranı', icon: 'receipt', doctype: 'Tax Rate' },
         { label: 'Vergi Oranı Kategorisi', icon: 'folder', doctype: 'Tax Rate Category' },
@@ -267,6 +293,7 @@ export const panelSections = {
     },
     {
       title: 'Çoklu Para Birimi',
+      color: '#06b6d4',
       items: [
         { label: 'Para Birimi', icon: 'coins', doctype: 'Currency' },
         { label: 'Döviz Kuru', icon: 'arrow-left-right', doctype: 'Exchange Rate' },
@@ -276,6 +303,7 @@ export const panelSections = {
     },
     {
       title: 'e-Fatura / e-Arşiv',
+      color: '#a855f7',
       items: [
         { label: 'e-Fatura', icon: 'file-text', doctype: 'E Invoice' },
         { label: 'e-Arşiv Fatura', icon: 'file-archive', doctype: 'E Archive Invoice' },
@@ -285,6 +313,7 @@ export const panelSections = {
     },
     {
       title: 'Akreditif & Dış Ticaret',
+      color: '#14b8a6',
       items: [
         { label: 'Akreditif (L/C)', icon: 'signature', doctype: 'Letter of Credit' },
         { label: 'Banka Teminat Mektubu', icon: 'shield', doctype: 'Bank Guarantee' },
@@ -294,6 +323,7 @@ export const panelSections = {
     },
     {
       title: 'Mutabakat',
+      color: '#f97316',
       items: [
         { label: 'Hak Ediş Ödemesi', icon: 'send', doctype: 'Payout' },
         { label: 'Ödeme Takvimi', icon: 'calendar', doctype: 'Payout Schedule' },
@@ -305,6 +335,7 @@ export const panelSections = {
   logistics: [
     {
       title: 'Gönderi Yönetimi',
+      color: '#3b82f6',
       items: [
         { label: 'Gönderi', icon: 'truck', doctype: 'Shipment' },
         { label: 'Pazar Yeri Gönderisi', icon: 'package-check', doctype: 'Marketplace Shipment' },
@@ -312,6 +343,7 @@ export const panelSections = {
     },
     {
       title: 'Kargo Firmaları',
+      color: '#f59e0b',
       items: [
         { label: 'Kargo Firması', icon: 'truck', doctype: 'Carrier' },
         { label: 'Lojistik Sağlayıcı', icon: 'warehouse', doctype: 'Logistics Provider' },
@@ -319,6 +351,7 @@ export const panelSections = {
     },
     {
       title: 'Teslimat Bölgeleri',
+      color: '#10b981',
       items: [
         { label: 'Teslimat Bölgesi', icon: 'map', doctype: 'Shipping Zone' },
         { label: 'Teslimat Bölgesi Ücreti', icon: 'banknote', doctype: 'Shipping Zone Rate' },
@@ -328,6 +361,7 @@ export const panelSections = {
     },
     {
       title: 'Gönderi Takibi',
+      color: '#ef4444',
       items: [
         { label: 'Takip Olayı', icon: 'map-pin', doctype: 'Tracking Event' },
         { label: 'Teslimat Süresi', icon: 'clock', doctype: 'Lead Time' },
@@ -335,6 +369,7 @@ export const panelSections = {
     },
     {
       title: 'Gümrük & Sınır Ötesi',
+      color: '#7c3aed',
       items: [
         { label: 'Gümrük Beyannamesi', icon: 'book-open', doctype: 'Customs Declaration' },
         { label: 'Gümrük Vergisi', icon: 'percent', doctype: 'Customs Duty' },
@@ -347,6 +382,7 @@ export const panelSections = {
     },
     {
       title: 'Serbest Bölge',
+      color: '#06b6d4',
       items: [
         { label: 'Serbest Bölge', icon: 'building', doctype: 'Free Zone' },
         { label: 'Serbest Bölge Stok', icon: 'boxes', doctype: 'Free Zone Stock' },
@@ -355,6 +391,7 @@ export const panelSections = {
     },
     {
       title: 'Depo Yönetimi',
+      color: '#a855f7',
       items: [
         { label: 'Depo / Fulfillment', icon: 'warehouse', doctype: 'Fulfillment Center' },
         { label: 'Raf Konumu', icon: 'crosshair', doctype: 'Bin Location' },
@@ -366,12 +403,14 @@ export const panelSections = {
   marketing: [
     {
       title: 'Kampanyalar',
+      color: '#ef4444',
       items: [
         { label: 'Kampanya', icon: 'megaphone', doctype: 'Campaign' },
       ],
     },
     {
       title: 'Kuponlar',
+      color: '#f59e0b',
       items: [
         { label: 'Kupon', icon: 'ticket', doctype: 'Coupon' },
         { label: 'Kupon Ürün Öğesi', icon: 'package', doctype: 'Coupon Product Item' },
@@ -380,6 +419,7 @@ export const panelSections = {
     },
     {
       title: 'Toplu Satış Teklifleri',
+      color: '#10b981',
       items: [
         { label: 'Toplu Satış Teklifi', icon: 'handshake', doctype: 'Wholesale Offer' },
         { label: 'Toplu Satış Teklif Ürünü', icon: 'package', doctype: 'Wholesale Offer Product' },
@@ -387,6 +427,7 @@ export const panelSections = {
     },
     {
       title: 'Grup Alımları',
+      color: '#3b82f6',
       items: [
         { label: 'Grup Alımı', icon: 'users', doctype: 'Group Buy' },
         { label: 'Grup Alımı Kademesi', icon: 'layers', doctype: 'Group Buy Tier' },
@@ -396,6 +437,7 @@ export const panelSections = {
     },
     {
       title: 'Mağaza Vitrinleri',
+      color: '#7c3aed',
       items: [
         { label: 'Vitrin', icon: 'store', doctype: 'Storefront' },
         { label: 'Abonelik', icon: 'repeat', doctype: 'Subscription' },
@@ -404,6 +446,7 @@ export const panelSections = {
     },
     {
       title: 'Numune Yönetimi',
+      color: '#a855f7',
       items: [
         { label: 'Numune Talebi', icon: 'flask-conical', doctype: 'Sample Request' },
         { label: 'Numune Gönderimi', icon: 'send', doctype: 'Sample Shipment' },
@@ -414,6 +457,7 @@ export const panelSections = {
   analytics: [
     {
       title: 'Performans Raporları',
+      color: '#10b981',
       items: [
         { label: 'Satış Performans Raporu', icon: 'trending-up', report: 'Sales Performance Report' },
         { label: 'Ürün Performans Raporu', icon: 'chart-bar', report: 'Product Performance Report' },
@@ -423,6 +467,7 @@ export const panelSections = {
     },
     {
       title: 'KPI Takibi',
+      color: '#f59e0b',
       items: [
         { label: 'Satıcı KPI', icon: 'gauge', doctype: 'Seller KPI' },
         { label: 'KPI Şablonu', icon: 'file-text', doctype: 'KPI Template' },
@@ -431,6 +476,7 @@ export const panelSections = {
     },
     {
       title: 'Satıcı Metrikleri',
+      color: '#3b82f6',
       items: [
         { label: 'Satıcı Puanı', icon: 'star', doctype: 'Seller Score' },
         { label: 'Satıcı Metrikleri', icon: 'chart-column', doctype: 'Seller Metrics' },
@@ -439,6 +485,7 @@ export const panelSections = {
     },
     {
       title: 'İş Zekası',
+      color: '#a855f7',
       items: [
         { label: 'Trend Analizi Raporu', icon: 'trending-up', report: 'Trend Analysis Report' },
         { label: 'Müşteri Davranış Raporu', icon: 'users', report: 'Customer Behavior Report' },
@@ -450,6 +497,7 @@ export const panelSections = {
   messaging: [
     {
       title: 'Mesajlaşma',
+      color: '#3b82f6',
       items: [
         { label: 'Gelen Kutusu', icon: 'inbox', route: '/messaging/inbox' },
         { label: 'Gönderilenler', icon: 'send', route: '/messaging/sent' },
@@ -458,6 +506,7 @@ export const panelSections = {
     },
     {
       title: 'Bildirimler',
+      color: '#10b981',
       items: [
         { label: 'Bildirim Ayarları', icon: 'bell', route: '/messaging/notification-settings' },
         { label: 'E-posta Şablonları', icon: 'mail', doctype: 'Email Template' },
@@ -465,6 +514,7 @@ export const panelSections = {
     },
     {
       title: 'Uyuşmazlık Yönetimi',
+      color: '#ef4444',
       items: [
         { label: 'Uyuşmazlık', icon: 'triangle-alert', doctype: 'Dispute' },
         { label: 'Destek Talepleri', icon: 'headphones', doctype: 'Support Ticket' },
@@ -475,6 +525,7 @@ export const panelSections = {
   settings: [
     {
       title: 'Mağaza Profili',
+      color: '#7c3aed',
       items: [
         { label: 'Satıcı Profili', icon: 'id-card', doctype: 'Seller Profile' },
         { label: 'Satıcı Mağazası', icon: 'store', doctype: 'Seller Store' },
@@ -483,12 +534,14 @@ export const panelSections = {
     },
     {
       title: 'Banka Hesapları',
+      color: '#10b981',
       items: [
         { label: 'Satıcı Banka Hesabı', icon: 'landmark', doctype: 'Seller Bank Account' },
       ],
     },
     {
       title: 'Seviye ve Rozetler',
+      color: '#f59e0b',
       items: [
         { label: 'Satıcı Seviyesi', icon: 'layers', doctype: 'Seller Level' },
         { label: 'Satıcı Kademesi', icon: 'trending-up', doctype: 'Seller Tier' },
@@ -497,6 +550,7 @@ export const panelSections = {
     },
     {
       title: 'Sertifikalar',
+      color: '#3b82f6',
       items: [
         { label: 'Satıcı Sertifikası', icon: 'award', doctype: 'Seller Certification' },
         { label: 'Sertifika Tipi', icon: 'stamp', doctype: 'Certificate Type' },
@@ -504,6 +558,7 @@ export const panelSections = {
     },
     {
       title: 'Sözleşmeler',
+      color: '#ef4444',
       items: [
         { label: 'Sözleşme Şablonu', icon: 'signature', doctype: 'Marketplace Contract Template' },
         { label: 'Sözleşme Revizyonu', icon: 'git-branch', doctype: 'Contract Revision' },
@@ -513,6 +568,7 @@ export const panelSections = {
     },
     {
       title: 'KYC ve Doğrulama',
+      color: '#a855f7',
       items: [
         { label: 'KYC Profili', icon: 'shield', doctype: 'KYC Profile' },
         { label: 'KYC Belgesi', icon: 'file-lock', doctype: 'KYC Document' },
@@ -520,6 +576,7 @@ export const panelSections = {
     },
     {
       title: 'Ekip Yönetimi',
+      color: '#06b6d4',
       items: [
         { label: 'Organizasyon', icon: 'building-2', doctype: 'Organization' },
         { label: 'Organizasyon Üyesi', icon: 'user-plus', doctype: 'Organization Member' },
@@ -529,6 +586,7 @@ export const panelSections = {
     },
     {
       title: 'Yerelleştirme',
+      color: '#14b8a6',
       items: [
         { label: 'Dil & Bölge Ayarı', icon: 'globe', doctype: 'Locale Setting' },
         { label: 'Para Birimi Ayarı', icon: 'coins', doctype: 'Currency Setting' },
@@ -539,6 +597,7 @@ export const panelSections = {
     },
     {
       title: 'Ticaret Uyumu',
+      color: '#f97316',
       items: [
         { label: 'Yaptırım Listesi', icon: 'ban', doctype: 'Sanctions List' },
         { label: 'Ambargo Ülkeleri', icon: 'flag', doctype: 'Embargo Country' },
@@ -549,6 +608,7 @@ export const panelSections = {
     },
     {
       title: 'API & Entegrasyonlar',
+      color: '#64748b',
       items: [
         { label: 'API Anahtarı', icon: 'key', doctype: 'API Key' },
         { label: 'Webhook', icon: 'link', doctype: 'Webhook' },
@@ -558,6 +618,7 @@ export const panelSections = {
     },
     {
       title: 'Denetim',
+      color: '#8b5cf6',
       items: [
         { label: 'Denetim İzi', icon: 'footprints', doctype: 'Audit Trail' },
         { label: 'Giriş Geçmişi', icon: 'log-in', doctype: 'Login History' },
@@ -565,6 +626,51 @@ export const panelSections = {
       ],
     },
   ],
+}
+
+/**
+ * Look up navigation info for a given doctype, report, or route path.
+ * Searches ALL sections in panelSections.
+ * @param {string} key - The doctype name, report name, or route path
+ * @param {'doctype'|'report'|'route'} type - What to match against
+ * @returns {{ sectionId: string, sectionTitle: string, groupTitle: string|null, itemLabel: string } | null}
+ */
+export function lookupNavItem(key, type = 'doctype') {
+  for (const [sectionId, groups] of Object.entries(panelSections)) {
+    for (const group of groups) {
+      for (const item of group.items) {
+        const match = type === 'doctype' ? item.doctype === key
+          : type === 'report' ? item.report === key
+          : item.route === key
+        if (match) {
+          return {
+            sectionId,
+            sectionTitle: sectionTitles[sectionId],
+            groupTitle: group.title,
+            itemLabel: item.label,
+          }
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Get the route of the first navigable item in a section.
+ * Used for section breadcrumb click target.
+ */
+export function getFirstSectionRoute(sectionId) {
+  const groups = panelSections[sectionId]
+  if (!groups) return '/dashboard'
+  for (const group of groups) {
+    for (const item of group.items) {
+      if (item.route) return item.route
+      if (item.doctype) return `/app/${encodeURIComponent(item.doctype)}`
+      if (item.report) return `/app/report/${encodeURIComponent(item.report)}`
+    }
+  }
+  return '/dashboard'
 }
 
 // Global search data (flattened from all sections)

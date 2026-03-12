@@ -74,6 +74,24 @@
   "receives_notifications",
   "interest_section",
   "interest_categories",
+  "scoring_tab",
+  "level_section",
+  "buyer_level",
+  "buyer_level_name",
+  "column_break_level",
+  "membership_date",
+  "payment_pattern",
+  "score_section",
+  "buyer_score",
+  "buyer_score_trend",
+  "column_break_score",
+  "last_score_date",
+  "rates_section",
+  "return_rate",
+  "feedback_rate",
+  "column_break_rates",
+  "dispute_rate",
+  "cancellation_rate",
   "system_tab",
   "timestamps_section",
   "joined_at",
@@ -535,6 +553,120 @@
    "description": "Product categories the buyer is interested in"
   },
   {
+   "fieldname": "scoring_tab",
+   "fieldtype": "Tab Break",
+   "label": "Scoring"
+  },
+  {
+   "fieldname": "level_section",
+   "fieldtype": "Section Break",
+   "label": "Level & Membership"
+  },
+  {
+   "fieldname": "buyer_level",
+   "fieldtype": "Link",
+   "label": "Buyer Level",
+   "options": "Buyer Level",
+   "description": "Current buyer level based on scoring"
+  },
+  {
+   "fieldname": "buyer_level_name",
+   "fieldtype": "Data",
+   "label": "Buyer Level Name",
+   "fetch_from": "buyer_level.level_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_level",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "membership_date",
+   "fieldtype": "Date",
+   "label": "Membership Date",
+   "description": "Date when buyer was assigned current level"
+  },
+  {
+   "default": "New",
+   "fieldname": "payment_pattern",
+   "fieldtype": "Select",
+   "label": "Payment Pattern",
+   "options": "On-Time\nMixed\nLate\nNew",
+   "read_only": 1,
+   "description": "Derived from payment_on_time_rate"
+  },
+  {
+   "fieldname": "score_section",
+   "fieldtype": "Section Break",
+   "label": "Score"
+  },
+  {
+   "default": "0",
+   "fieldname": "buyer_score",
+   "fieldtype": "Float",
+   "label": "Buyer Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Overall buyer score (0-100)"
+  },
+  {
+   "default": "New",
+   "fieldname": "buyer_score_trend",
+   "fieldtype": "Select",
+   "label": "Buyer Score Trend",
+   "options": "Up\nDown\nStable\nNew",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_score",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_score_date",
+   "fieldtype": "Date",
+   "label": "Last Score Date",
+   "read_only": 1,
+   "description": "Date of last score calculation"
+  },
+  {
+   "fieldname": "rates_section",
+   "fieldtype": "Section Break",
+   "label": "Rates"
+  },
+  {
+   "default": "0",
+   "fieldname": "return_rate",
+   "fieldtype": "Percent",
+   "label": "Return Rate",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "feedback_rate",
+   "fieldtype": "Percent",
+   "label": "Feedback Rate",
+   "read_only": 1,
+   "description": "Percentage of orders with feedback submitted"
+  },
+  {
+   "fieldname": "column_break_rates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "dispute_rate",
+   "fieldtype": "Percent",
+   "label": "Dispute Rate",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "cancellation_rate",
+   "fieldtype": "Percent",
+   "label": "Cancellation Rate",
+   "read_only": 1
+  },
+  {
    "fieldname": "system_tab",
    "fieldtype": "Tab Break",
    "label": "System"
@@ -666,7 +798,7 @@
    "link_fieldname": "buyer"
   }
  ],
- "modified": "2026-03-04 12:00:00.000000",
+ "modified": "2026-03-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "TradeHub Core",
  "name": "Buyer Profile",

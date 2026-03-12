@@ -165,6 +165,26 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Seller Customer Grade",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Customer Grade"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Feedback",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Feedback"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Inventory & Product Structure",
    "link_count": 0,
    "link_type": "",
@@ -240,6 +260,16 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Variant Request",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Variant Request"
   },
   {
    "hidden": 0,
@@ -353,6 +383,26 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Category Proposal",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Category Proposal"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Custom Category",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Custom Category"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Attributes & Brands",
    "link_count": 0,
    "link_type": "",
@@ -428,6 +478,26 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Brand Authorization Request",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Brand Authorization Request"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Brand Ownership Claim",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Brand Ownership Claim"
   },
   {
    "hidden": 0,
@@ -758,6 +828,36 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Marketplace Payment Terms Template",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Marketplace Payment Terms Template"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Payment Method",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Payment Method"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Payment Terms",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Payment Terms"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Communication & Moderation",
    "link_count": 0,
    "link_type": "",
@@ -955,6 +1055,56 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Buyer Abuse Log",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer Abuse Log"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer Feedback",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer Feedback"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer KPI Score Log",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer KPI Score Log"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer KPI Template",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer KPI Template"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer Grade",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Customer Grade"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Orders & Cart",
    "link_count": 0,
    "link_type": "",
@@ -1010,6 +1160,46 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Cart Protection Settings",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Cart Protection Settings"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Checkout Session",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Checkout Session"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Proforma Invoice",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Proforma Invoice"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Reservation",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Stock Reservation"
   },
   {
    "hidden": 0,
@@ -1088,6 +1278,26 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Segment Member",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Segment Member"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "User Segment",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "User Segment"
   },
   {
    "hidden": 0,
@@ -1230,6 +1440,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "TradeHub Catalog Settings",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "TradeHub Catalog Settings"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Compliance & Contracts",
    "link_count": 0,
    "link_type": "",
@@ -1265,6 +1485,26 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "ESign Provider",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "ESign Provider"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "ESign Transaction",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "ESign Transaction"
   },
   {
    "hidden": 0,

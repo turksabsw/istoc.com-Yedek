@@ -129,6 +129,7 @@ html.dark {
     box-shadow: 0 8px 30px rgba(#000, 0.1);
     min-width: 280px;
     animation: toastIn 0.3s ease;
+    color: $l-text-700;
 
     &-success {
         border-left: 3px solid $c-success;
@@ -140,5 +141,28 @@ html.dark {
 
     &-info {
         border-left: 3px solid $brand;
+    }
+
+    @include dark {
+        background: $d-bg-elevated;
+        border-color: $d-border;
+        box-shadow: 0 8px 30px rgba(#000, 0.4);
+        color: $d-text;
+    }
+
+    .toast-close {
+        color: $l-text-400;
+
+        &:hover {
+            color: $l-text-700;
+        }
+
+        @include dark {
+            color: $d-text-muted;
+
+            &:hover {
+                color: $d-text;
+            }
+        }
     }
 }

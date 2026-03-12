@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-03-11 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "grouping_section",
+  "rule_group_idx",
+  "column_break_grouping",
+  "logic",
+  "condition_section",
+  "data_source",
+  "field_name",
+  "column_break_condition",
+  "operator",
+  "value"
+ ],
+ "fields": [
+  {
+   "fieldname": "grouping_section",
+   "fieldtype": "Section Break",
+   "label": "Group Reference"
+  },
+  {
+   "description": "Row index (idx) of the Segment Rule Group this condition belongs to. Links condition to its logical group without nested child tables.",
+   "fieldname": "rule_group_idx",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Rule Group Idx",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_grouping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "AND",
+   "description": "Logical operator to combine with the next condition within the same group",
+   "fieldname": "logic",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Logic",
+   "options": "AND\nOR"
+  },
+  {
+   "fieldname": "condition_section",
+   "fieldtype": "Section Break",
+   "label": "Condition"
+  },
+  {
+   "description": "Data source to evaluate (e.g., Buyer Profile, Seller Metrics, Marketplace Order)",
+   "fieldname": "data_source",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Data Source",
+   "options": "Buyer Profile\nSeller Metrics\nMarketplace Order\nBuyer Feedback\nSeller Feedback\nCustomer Grade\nBuyer KPI Score Log\nCustom",
+   "reqd": 1
+  },
+  {
+   "description": "Field name from the data source to evaluate",
+   "fieldname": "field_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Field Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_condition",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "=",
+   "description": "Comparison operator for evaluating the condition",
+   "fieldname": "operator",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Operator",
+   "options": "=\n!=\n>\n<\n>=\n<=\ncontains\nnot contains\nin\nnot in\nis set\nis not set",
+   "reqd": 1
+  },
+  {
+   "description": "Value to compare against. For 'in' operator, use comma-separated values.",
+   "fieldname": "value",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Value"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Segment Rule Condition",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 0,
+ "search_fields": "data_source, field_name, operator, value",
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

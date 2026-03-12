@@ -1,0 +1,706 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2024-01-23 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "basic_info_section",
+  "naming_series",
+  "buyer",
+  "buyer_name",
+  "grade_type",
+  "grade_period",
+  "column_break_basic",
+  "status",
+  "tenant",
+  "tenant_name",
+  "calculation_date",
+  "grade_tab",
+  "grade_section",
+  "grade",
+  "overall_score",
+  "previous_score",
+  "score_change",
+  "column_break_grade",
+  "score_trend",
+  "percentile_rank",
+  "buyer_level_at_calculation",
+  "is_provisional",
+  "criteria_tab",
+  "criteria_table_section",
+  "criteria",
+  "criterion_scores_section",
+  "total_spend_score",
+  "total_spend_weight",
+  "total_spend_raw",
+  "column_break_criterion_1",
+  "order_frequency_score",
+  "order_frequency_weight",
+  "order_frequency_raw",
+  "criterion_scores_section_2",
+  "on_time_payment_score",
+  "on_time_payment_weight",
+  "on_time_payment_raw",
+  "column_break_criterion_2",
+  "return_cancel_score",
+  "return_cancel_weight",
+  "return_cancel_raw",
+  "criterion_scores_section_3",
+  "account_age_score",
+  "account_age_weight",
+  "account_age_raw",
+  "column_break_criterion_3",
+  "dispute_rate_score",
+  "dispute_rate_weight",
+  "dispute_rate_raw",
+  "criterion_scores_section_4",
+  "feedback_rate_score",
+  "feedback_rate_weight",
+  "feedback_rate_raw",
+  "metrics_tab",
+  "raw_metrics_section",
+  "orders_evaluated",
+  "total_spend_amount",
+  "order_frequency_value",
+  "on_time_payment_rate",
+  "column_break_metrics",
+  "return_cancel_rate",
+  "account_age_days",
+  "dispute_rate_value",
+  "feedback_rate_value",
+  "system_tab",
+  "notes_section",
+  "calculation_notes",
+  "manual_adjustments",
+  "adjusted_by",
+  "timestamps_section",
+  "created_at",
+  "created_by",
+  "column_break_timestamps",
+  "finalized_at",
+  "finalized_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "default": "CGRADE-.YYYY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "CGRADE-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Buyer",
+   "options": "Buyer Profile",
+   "reqd": 1,
+   "description": "The buyer this grade belongs to",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "buyer_name",
+   "fieldtype": "Data",
+   "label": "Buyer Name",
+   "fetch_from": "buyer.buyer_name",
+   "read_only": 1
+  },
+  {
+   "default": "Periodic",
+   "fieldname": "grade_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Grade Type",
+   "options": "Periodic\nWeekly\nMonthly\nQuarterly\nAnnual\nManual",
+   "reqd": 1,
+   "description": "Type of grade calculation"
+  },
+  {
+   "fieldname": "grade_period",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Grade Period",
+   "description": "Period identifier (e.g., 2024-01, 2024-Q1, 2024-W05)"
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nCalculating\nFinalized\nOverridden",
+   "reqd": 1,
+   "permlevel": 1
+  },
+  {
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "description": "Tenant for multi-tenant isolation",
+   "fetch_from": "buyer.tenant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tenant_name",
+   "fieldtype": "Data",
+   "label": "Tenant Name",
+   "fetch_from": "tenant.tenant_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "calculation_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Calculation Date",
+   "reqd": 1,
+   "description": "Date when grade was calculated"
+  },
+  {
+   "fieldname": "grade_tab",
+   "fieldtype": "Tab Break",
+   "label": "Grade"
+  },
+  {
+   "fieldname": "grade_section",
+   "fieldtype": "Section Break",
+   "label": "Grade Result"
+  },
+  {
+   "default": "C",
+   "fieldname": "grade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Grade",
+   "options": "A\nB\nC\nD\nE\nF",
+   "reqd": 1,
+   "description": "Letter grade (A-F). A>=85, B>=70, C>=55, D>=40, E>=25, F<25"
+  },
+  {
+   "default": "0",
+   "fieldname": "overall_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Overall Score",
+   "precision": 2,
+   "reqd": 1,
+   "description": "Final calculated score (0-100)"
+  },
+  {
+   "default": "0",
+   "fieldname": "previous_score",
+   "fieldtype": "Float",
+   "label": "Previous Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Score from previous grading period"
+  },
+  {
+   "default": "0",
+   "fieldname": "score_change",
+   "fieldtype": "Float",
+   "label": "Score Change",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Change from previous score"
+  },
+  {
+   "fieldname": "column_break_grade",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Stable",
+   "fieldname": "score_trend",
+   "fieldtype": "Select",
+   "label": "Score Trend",
+   "options": "Rising\nStable\nDeclining",
+   "read_only": 1,
+   "description": "Trend direction based on recent grades"
+  },
+  {
+   "default": "0",
+   "fieldname": "percentile_rank",
+   "fieldtype": "Float",
+   "label": "Percentile Rank",
+   "precision": 1,
+   "read_only": 1,
+   "description": "Buyer's rank among all buyers (0-100%)"
+  },
+  {
+   "fieldname": "buyer_level_at_calculation",
+   "fieldtype": "Link",
+   "label": "Buyer Level at Calculation",
+   "options": "Buyer Level",
+   "read_only": 1,
+   "description": "Buyer's level when this grade was calculated"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_provisional",
+   "fieldtype": "Check",
+   "label": "Is Provisional",
+   "read_only": 1,
+   "description": "Checked if buyer has fewer than 3 orders (provisional grade C)"
+  },
+  {
+   "fieldname": "criteria_tab",
+   "fieldtype": "Tab Break",
+   "label": "Criteria"
+  },
+  {
+   "fieldname": "criteria_table_section",
+   "fieldtype": "Section Break",
+   "label": "Grading Criteria"
+  },
+  {
+   "fieldname": "criteria",
+   "fieldtype": "Table",
+   "label": "Criteria",
+   "options": "Grading Criterion",
+   "description": "Criteria used for grading with weights (must sum to 100)"
+  },
+  {
+   "fieldname": "criterion_scores_section",
+   "fieldtype": "Section Break",
+   "label": "Spend & Frequency Scores",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_spend_score",
+   "fieldtype": "Float",
+   "label": "Total Spend Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for total spend (0-100)"
+  },
+  {
+   "default": "25",
+   "fieldname": "total_spend_weight",
+   "fieldtype": "Float",
+   "label": "Total Spend Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to total spend score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_spend_raw",
+   "fieldtype": "Currency",
+   "label": "Total Spend Raw",
+   "read_only": 1,
+   "description": "Raw total spend value"
+  },
+  {
+   "fieldname": "column_break_criterion_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "order_frequency_score",
+   "fieldtype": "Float",
+   "label": "Order Frequency Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for order frequency (0-100)"
+  },
+  {
+   "default": "20",
+   "fieldname": "order_frequency_weight",
+   "fieldtype": "Float",
+   "label": "Order Frequency Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to order frequency score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "order_frequency_raw",
+   "fieldtype": "Float",
+   "label": "Order Frequency Raw",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Raw order frequency value (orders per month)"
+  },
+  {
+   "fieldname": "criterion_scores_section_2",
+   "fieldtype": "Section Break",
+   "label": "Payment & Return Scores",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "on_time_payment_score",
+   "fieldtype": "Float",
+   "label": "On-Time Payment Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for on-time payment rate (0-100)"
+  },
+  {
+   "default": "15",
+   "fieldname": "on_time_payment_weight",
+   "fieldtype": "Float",
+   "label": "On-Time Payment Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to on-time payment score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "on_time_payment_raw",
+   "fieldtype": "Percent",
+   "label": "On-Time Payment Raw",
+   "read_only": 1,
+   "description": "Raw on-time payment rate (%)"
+  },
+  {
+   "fieldname": "column_break_criterion_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "return_cancel_score",
+   "fieldtype": "Float",
+   "label": "Return/Cancel Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for return/cancel rate (0-100, inverted)"
+  },
+  {
+   "default": "15",
+   "fieldname": "return_cancel_weight",
+   "fieldtype": "Float",
+   "label": "Return/Cancel Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to return/cancel score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "return_cancel_raw",
+   "fieldtype": "Percent",
+   "label": "Return/Cancel Raw",
+   "read_only": 1,
+   "description": "Raw return/cancel rate (%)"
+  },
+  {
+   "fieldname": "criterion_scores_section_3",
+   "fieldtype": "Section Break",
+   "label": "Age & Dispute Scores",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "account_age_score",
+   "fieldtype": "Float",
+   "label": "Account Age Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for account age (0-100)"
+  },
+  {
+   "default": "10",
+   "fieldname": "account_age_weight",
+   "fieldtype": "Float",
+   "label": "Account Age Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to account age score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "account_age_raw",
+   "fieldtype": "Int",
+   "label": "Account Age Raw",
+   "read_only": 1,
+   "description": "Raw account age in days"
+  },
+  {
+   "fieldname": "column_break_criterion_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "dispute_rate_score",
+   "fieldtype": "Float",
+   "label": "Dispute Rate Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for dispute rate (0-100, inverted)"
+  },
+  {
+   "default": "10",
+   "fieldname": "dispute_rate_weight",
+   "fieldtype": "Float",
+   "label": "Dispute Rate Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to dispute rate score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "dispute_rate_raw",
+   "fieldtype": "Percent",
+   "label": "Dispute Rate Raw",
+   "read_only": 1,
+   "description": "Raw dispute rate (%)"
+  },
+  {
+   "fieldname": "criterion_scores_section_4",
+   "fieldtype": "Section Break",
+   "label": "Feedback Score",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "feedback_rate_score",
+   "fieldtype": "Float",
+   "label": "Feedback Rate Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Normalized score for feedback rate (0-100)"
+  },
+  {
+   "default": "5",
+   "fieldname": "feedback_rate_weight",
+   "fieldtype": "Float",
+   "label": "Feedback Rate Weight",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Weight applied to feedback rate score (%)"
+  },
+  {
+   "default": "0",
+   "fieldname": "feedback_rate_raw",
+   "fieldtype": "Percent",
+   "label": "Feedback Rate Raw",
+   "read_only": 1,
+   "description": "Raw feedback rate (%)"
+  },
+  {
+   "fieldname": "metrics_tab",
+   "fieldtype": "Tab Break",
+   "label": "Metrics"
+  },
+  {
+   "fieldname": "raw_metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Metrics"
+  },
+  {
+   "default": "0",
+   "fieldname": "orders_evaluated",
+   "fieldtype": "Int",
+   "label": "Orders Evaluated",
+   "read_only": 1,
+   "description": "Number of orders included in calculation"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_spend_amount",
+   "fieldtype": "Currency",
+   "label": "Total Spend Amount",
+   "read_only": 1,
+   "description": "Total spend amount for grading period"
+  },
+  {
+   "default": "0",
+   "fieldname": "order_frequency_value",
+   "fieldtype": "Float",
+   "label": "Order Frequency",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Orders per month"
+  },
+  {
+   "default": "0",
+   "fieldname": "on_time_payment_rate",
+   "fieldtype": "Percent",
+   "label": "On-Time Payment Rate",
+   "read_only": 1,
+   "description": "Percentage of orders paid on time"
+  },
+  {
+   "fieldname": "column_break_metrics",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "return_cancel_rate",
+   "fieldtype": "Percent",
+   "label": "Return/Cancel Rate",
+   "read_only": 1,
+   "description": "Combined return and cancellation rate"
+  },
+  {
+   "default": "0",
+   "fieldname": "account_age_days",
+   "fieldtype": "Int",
+   "label": "Account Age (Days)",
+   "read_only": 1,
+   "description": "Number of days since buyer account creation"
+  },
+  {
+   "default": "0",
+   "fieldname": "dispute_rate_value",
+   "fieldtype": "Percent",
+   "label": "Dispute Rate",
+   "read_only": 1,
+   "description": "Percentage of orders with disputes"
+  },
+  {
+   "default": "0",
+   "fieldname": "feedback_rate_value",
+   "fieldtype": "Percent",
+   "label": "Feedback Rate",
+   "read_only": 1,
+   "description": "Percentage of orders with buyer feedback"
+  },
+  {
+   "fieldname": "system_tab",
+   "fieldtype": "Tab Break",
+   "label": "System"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes & Adjustments",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "calculation_notes",
+   "fieldtype": "Text",
+   "label": "Calculation Notes",
+   "description": "Notes about the grade calculation",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "manual_adjustments",
+   "fieldtype": "Small Text",
+   "label": "Manual Adjustments",
+   "description": "Description of any manual grade adjustments",
+   "permlevel": 1
+  },
+  {
+   "fieldname": "adjusted_by",
+   "fieldtype": "Link",
+   "label": "Adjusted By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timestamps_section",
+   "fieldtype": "Section Break",
+   "label": "System Information",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_by",
+   "fieldtype": "Link",
+   "label": "Created By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_timestamps",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "finalized_at",
+   "fieldtype": "Datetime",
+   "label": "Finalized At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finalized_by",
+   "fieldtype": "Link",
+   "label": "Finalized By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "group": "Related",
+   "link_doctype": "Buyer Profile",
+   "link_fieldname": "buyer"
+  }
+ ],
+ "modified": "2024-01-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Customer Grade",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketplace Manager",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "buyer, grade, grade_type, grade_period, status",
+ "sort_field": "calculation_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "buyer",
+ "track_changes": 1
+}

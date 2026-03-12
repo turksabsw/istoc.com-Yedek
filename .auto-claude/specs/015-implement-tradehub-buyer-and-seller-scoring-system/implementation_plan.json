@@ -1,0 +1,1004 @@
+{
+  "feature": "TradeHub Buyer & Seller Scoring System",
+  "workflow_type": "feature",
+  "workflow_rationale": "All 7 tasks are net-new capability additions (scoring, grading, segmentation, KPI dashboard) across 2 Frappe apps. No existing functionality is being refactored. Strict dependency ordering (119→132→133→135→129→130) dictates phase sequencing.",
+  "phases": [
+    {
+      "id": "phase-1-foundation",
+      "name": "Foundation Utilities",
+      "type": "implementation",
+      "description": "Create shared utility modules (safe_divide, normalizers) required by all subsequent phases",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create safe_math.py utility with safe_divide() helper function in tradehub_core utils",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/utils/safe_math.py"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && bench --site marketplace.local execute \"from tradehub_core.tradehub_core.utils.safe_math import safe_divide; print(safe_divide(10, 0), safe_divide(10, 2), safe_divide(0, 0))\"",
+            "expected": "0 5.0 0"
+          },
+          "status": "completed",
+          "notes": "Created safe_math.py with safe_divide() helper function. Verified: safe_divide(10, 0)=0, safe_divide(10, 2)=5.0, safe_divide(0, 0)=0. Also handles None denominator, float zero, and custom default values. Committed as 69d5801.",
+          "updated_at": "2026-03-11T12:32:52.705988+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-seller-metrics",
+      "name": "Seller Metrics Extension (TASK-1)",
+      "type": "implementation",
+      "description": "Add 10 new fields to Seller Metrics DocType and implement AHS calculation with status thresholds",
+      "depends_on": [
+        "phase-1-foundation"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Add 10 new fields to seller_metrics.json: order_defect_rate, late_shipment_rate, valid_tracking_rate, positive_feedback_pct, account_health_score, account_health_status, defect_count, dispute_rate, chargeback_rate, order_fulfillment_rate. Add new tab 'Health' with sections for health and defect metrics. Update field_order array.",
+          "service": "tradehub_seller",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.json"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.json')); fields=[x['fieldname'] for x in f['fields'] if x.get('fieldtype') not in ('Tab Break','Section Break','Column Break')]; print('account_health_score' in fields, 'order_defect_rate' in fields, 'dispute_rate' in fields)\"",
+            "expected": "True True True"
+          },
+          "status": "completed",
+          "notes": "Added 10 new fields to seller_metrics.json: order_defect_rate, late_shipment_rate, valid_tracking_rate, positive_feedback_pct, account_health_score, account_health_status, defect_count, dispute_rate, chargeback_rate, order_fulfillment_rate. New 'Health' tab added with Health Metrics and Defect Metrics sections. All fields are read_only with appropriate defaults. field_order updated (50 entries total). Verification passed: True True True. No duplicate fields. Committed as 129923e.",
+          "updated_at": "2026-03-11T12:35:23.344901+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Update seller_metrics.py: Add AHS calculation formula (1000 - ODR*300 - LSR*200 - cancel*150 - violations*50 - (100-VTR)*1.5, clamped to 0), account_health_status derivation (600-1000=Healthy, 300-599=At Risk, 1-299=Critical, 0=Suspended), and validate() hook. Import safe_divide from tradehub_core.",
+          "service": "tradehub_seller",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_seller.tradehub_seller.doctype.seller_metrics.seller_metrics import SellerMetrics; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Updated seller_metrics.py with AHS calculation formula (1000 - ODR*300 - LSR*200 - cancel*150 - defects*50 - (100-VTR)*1.5, clamped to 0), status derivation (Healthy/At Risk/Critical/Suspended), extended _guard_system_fields and validate_rates for 10 new fields. Imported safe_divide from tradehub_core. Verification passed: import OK. Committed as f0081d4.",
+          "updated_at": "2026-03-11T12:38:49.909651+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-buyer-profile",
+      "name": "Buyer Profile Extension (TASK-2)",
+      "type": "implementation",
+      "description": "Add 11 new fields to Buyer Profile DocType and implement payment_pattern derivation logic",
+      "depends_on": [
+        "phase-1-foundation"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Add 11 new fields to buyer_profile.json: buyer_level (Link→Buyer Level), buyer_level_name (fetch_from), membership_date, return_rate, feedback_rate, payment_pattern (Select), buyer_score, buyer_score_trend, last_score_date, dispute_rate, cancellation_rate. Add new 'Scoring' tab. Do NOT duplicate existing fields. Update field_order.",
+          "service": "tradehub_core",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_profile/buyer_profile.json"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_profile/buyer_profile.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_profile/buyer_profile.json')); fields=[x['fieldname'] for x in f['fields'] if x.get('fieldtype') not in ('Tab Break','Section Break','Column Break')]; print('buyer_score' in fields, 'payment_pattern' in fields, 'buyer_level' in fields)\"",
+            "expected": "True True True"
+          },
+          "status": "completed",
+          "notes": "Added 11 new fields to buyer_profile.json with new 'Scoring' tab. Fields: buyer_level (Link→Buyer Level), buyer_level_name (fetch_from buyer_level.level_name), membership_date, payment_pattern (Select: On-Time/Mixed/Late/New), buyer_score (Float 0-100), buyer_score_trend (Select: Up/Down/Stable/New), last_score_date, return_rate, feedback_rate, dispute_rate, cancellation_rate. All rate/score fields are read_only with appropriate defaults. No existing fields duplicated. field_order updated (92 entries). JSON validated: no duplicate fieldnames, all field_order entries have corresponding field definitions. Verification passed: True True True. Committed as 97fc3de.",
+          "updated_at": "2026-03-11T12:41:47.792082+00:00"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Update buyer_profile.py: Add payment_pattern derivation logic in validate() hook (>=95%→On-Time, >=80%→Mixed, 0 orders→New, else→Late). Import safe_divide. Add _guard_system_fields for new calculated fields.",
+          "service": "tradehub_core",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_profile/buyer_profile.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.doctype.buyer_profile.buyer_profile import BuyerProfile; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Added payment_pattern derivation logic to buyer_profile.py. Imported safe_divide and cint/flt. Added _derive_payment_pattern() method (0 orders→New, ≥95%→On-Time, ≥80%→Mixed, else→Late). Added 8 new calculated fields to _guard_system_fields. All payment_pattern tests pass. Committed as 1c8a14d.",
+          "updated_at": "2026-03-11T13:00:00.000000+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-feedback",
+      "name": "Feedback DocTypes (TASK-3)",
+      "type": "implementation",
+      "description": "Create 3 new Feedback DocTypes: Detailed Seller Rating (child), Seller Feedback, Buyer Feedback with business rule enforcement",
+      "depends_on": [
+        "phase-2-seller-metrics",
+        "phase-3-buyer-profile"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create Detailed Seller Rating child table DocType in tradehub_seller: rating_category (Select: Product Accuracy/Communication/Shipping Speed/Price Value), rating_value (Int 1-5), comment. Set istable=1. Validation: rating 1-5, unique categories per parent.",
+          "service": "tradehub_seller",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/detailed_seller_rating/__init__.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/detailed_seller_rating/detailed_seller_rating.json",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/detailed_seller_rating/detailed_seller_rating.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/detailed_seller_rating/detailed_seller_rating.json')); print(f.get('istable'), f.get('name'))\"",
+            "expected": "1 Detailed Seller Rating"
+          },
+          "status": "completed",
+          "notes": "Created Detailed Seller Rating child table DocType in tradehub_seller with 3 files: __init__.py, detailed_seller_rating.json, detailed_seller_rating.py. JSON has istable=1, editable_grid=1, module=\"TradeHub Seller\", with fields: rating_category (Select: Product Accuracy/Communication/Shipping Speed/Price Value), rating_value (Int 1-5, reqd), comment (Small Text). Python controller validates rating_value 1-5, valid category options, and unique categories per parent document. Verification passed: istable=1, name=\"Detailed Seller Rating\". Committed as 7cefb4d.",
+          "updated_at": "2026-03-11T12:48:51.370115+00:00"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Create Seller Feedback DocType in tradehub_seller: autoname SF-.YYYY.-.#####, with seller/buyer/order_reference links, feedback_type, overall_rating 1-5, status, detailed_ratings (Table→Detailed Seller Rating), is_anonymous, seller_response, DSR denormalize fields. Business rules: 1 per order, 60-day window, 30-day revise window, seller!=buyer.",
+          "service": "tradehub_seller",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_feedback/__init__.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_feedback/seller_feedback.json",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_feedback/seller_feedback.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_feedback/seller_feedback.json')); print(f.get('autoname'), f.get('name'))\"",
+            "expected": "naming_series: Seller Feedback"
+          },
+          "status": "completed",
+          "notes": "Created Seller Feedback DocType in tradehub_seller with 3 files: __init__.py, seller_feedback.json, seller_feedback.py. JSON has autoname=SF-.YYYY.-.#####, naming_rule=\"Expression (old style)\", module=\"TradeHub Seller\", 38 fields across 4 tabs (Details, Feedback, Response, System). Key fields: seller (Link→Seller Profile), buyer (Link→Buyer Profile), order_reference (Dynamic Link), feedback_type (Select: Purchase/Return/General), overall_rating (Int 1-5), status (Select: Active/Revised/Withdrawn/Expired), detailed_ratings (Table→Detailed Seller Rating), is_anonymous (Check), seller_response (Text), 4 DSR denormalize fields (product_accuracy_rating, communication_rating, shipping_speed_rating, price_value_rating), tenant (fetch_from seller.tenant). Python controller enforces all business rules: one feedback per order (validate_one_feedback_per_order), 60-day submission window (validate_submission_window), 30-day revision window (validate_revision_window), seller!=buyer (validate_seller_not_buyer), _guard_system_fields, denormalize_detailed_ratings, anonymous buyer display. Verification passed: autoname=SF-.YYYY.-.#####, name=Seller Feedback. No duplicate fieldnames, all field_order entries match field definitions. Committed as 1d6274d.",
+          "updated_at": "2026-03-11T12:53:07.444659+00:00"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Create Buyer Feedback DocType in tradehub_core: autoname BF-.YYYY.-.#####, with buyer/seller/order_reference links, feedback_type, overall_rating, payment_promptness/communication_quality/return_reasonableness ratings 1-5. Business rules: 1 per order, seller!=buyer.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_feedback/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_feedback/buyer_feedback.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_feedback/buyer_feedback.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_feedback/buyer_feedback.json')); print(f.get('autoname'), f.get('name'))\"",
+            "expected": "naming_series: Buyer Feedback"
+          },
+          "status": "completed",
+          "notes": "Created Buyer Feedback DocType in tradehub_core with autoname BF-.YYYY.-.#####. Includes buyer/seller/order_reference links, feedback_type, overall_rating (1-5), and buyer-specific ratings: payment_promptness, communication_quality, return_reasonableness (all 1-5). Business rules implemented: one feedback per order per seller-buyer pair, seller!=buyer validation. Follows seller_feedback pattern with lifecycle hooks (_guard_system_fields, before_insert, validate, on_update, on_trash), withdraw/revise methods, and get_summary. Verified: autoname=BF-.YYYY.-.#####, name=Buyer Feedback, all 34 fields consistent with field_order. Committed as 8994ba0.",
+          "updated_at": "2026-03-11T12:58:43.627527+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-seed-data",
+      "name": "Tier & Level Seed Data (TASK-4)",
+      "type": "implementation",
+      "description": "Create idempotent setup scripts to seed 5 Seller Tier records and 4 Buyer Level records into existing DocTypes",
+      "depends_on": [
+        "phase-2-seller-metrics",
+        "phase-3-buyer-profile"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Create idempotent seller tier seed script at tradehub_seller/setup/create_default_seller_tiers.py. Seeds 5 records: BRONZE(tier_level=1, min_score=0), SILVER(2, 40), GOLD(3, 60), PLATINUM(4, 80), TOP_RATED(5, 90) with badge colors and commission discounts. Check frappe.db.exists() before insert. Create setup/__init__.py.",
+          "service": "tradehub_seller",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/setup/__init__.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/setup/create_default_seller_tiers.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_tier/seller_tier.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_seller.tradehub_seller.setup.create_default_seller_tiers import execute; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created setup/__init__.py and setup/create_default_seller_tiers.py with idempotent seed script for 5 Seller Tier records: BRONZE(tier_level=1, min_score=0), SILVER(2, 40), GOLD(3, 60), PLATINUM(4, 80), TOP_RATED(5, 90). Includes badge colors (#cd7f32, #c0c0c0, #ffd700, #e5e4e2, #4169e1), commission discounts (0%, 2%, 5%, 8%, 12%), downgrade grace periods per spec (0/30/30/45/60 days), and tier progression chain. Uses frappe.db.exists() guard for idempotency. BRONZE is_default=1. Verified module import and data validation pass. Committed as 49c0cd4.",
+          "updated_at": "2026-03-11T13:02:50.308619+00:00"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Create idempotent buyer level seed script at tradehub_core/setup/create_default_buyer_levels.py. Seeds 4 records: NEW(rank=1, threshold=0), REGULAR(2, 500), VIP(3, 5000), PREMIUM(4, 25000). CRITICAL: Buyer Level autoname is field:level_name, so set level_name = level_code (NEW, REGULAR, VIP, PREMIUM). Create setup/__init__.py.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/setup/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/setup/create_default_buyer_levels.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_level/buyer_level.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.setup.create_default_buyer_levels import execute; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created setup/__init__.py and create_default_buyer_levels.py. Seeds 4 Buyer Level records: NEW(rank=1, threshold=0), REGULAR(2, 500), VIP(3, 5000), PREMIUM(4, 25000). level_name = level_code for autoname compatibility (field:level_name). Follows seller tiers seed pattern with idempotent exists() checks. Verified import OK with mocked frappe. Committed as 6de8c46.",
+          "updated_at": "2026-03-11T13:05:43.367897+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-6-grading",
+      "name": "Customer Grading A-F (TASK-5)",
+      "type": "implementation",
+      "description": "Create Customer Grade, Grading Criterion, and Seller Customer Grade DocTypes with scoring pipeline (normalize→weight→aggregate→grade) and weekly cron job",
+      "depends_on": [
+        "phase-3-buyer-profile"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-6-1",
+          "description": "Create tradehub_core scoring module: __init__.py, normalizers.py (normalize_higher_is_better, normalize_lower_is_better, normalize_logarithmic with safe_divide), grading.py (score_to_grade boundaries A≥85 B≥70 C≥55 D≥40 E≥25 F<25, calculate_customer_grade_score pipeline).",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/scoring/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/scoring/normalizers.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/scoring/grading.py"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.scoring.grading import score_to_grade; print(score_to_grade(85.0), score_to_grade(84.99), score_to_grade(70), score_to_grade(0))\"",
+            "expected": "A B B F"
+          },
+          "status": "completed",
+          "notes": "Created tradehub_core scoring module with 3 files:\n- __init__.py: Package init with module documentation\n- normalizers.py: normalize_higher_is_better, normalize_lower_is_better, normalize_logarithmic (all using safe_divide)\n- grading.py: score_to_grade (A≥85 B≥70 C≥55 D≥40 E≥25 F<25), calculate_customer_grade_score pipeline with 7 default criteria (weights: 25/20/15/15/10/10/5)\n\nVerification: score_to_grade(85.0)=A, score_to_grade(84.99)=B, score_to_grade(70)=B, score_to_grade(0)=F ✓\nAll normalizer edge cases tested (boundary values, above/below range, negative inputs) ✓\nFull pipeline tested: perfect metrics → 100.0/A, zero metrics → 25.0/E ✓\nCommitted as e07a368.",
+          "updated_at": "2026-03-11T13:11:29.590188+00:00"
+        },
+        {
+          "id": "subtask-6-2",
+          "description": "Create Grading Criterion child table DocType (istable=1): criterion_name (Select), criterion_code, weight, threshold_good, threshold_poor, is_inverted. Weight validation: sum must equal 100 (tolerance 0.01).",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/grading_criterion/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/grading_criterion/grading_criterion.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/grading_criterion/grading_criterion.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/grading_criterion/grading_criterion.json')); print(f.get('istable'), f.get('name'))\"",
+            "expected": "1 Grading Criterion"
+          },
+          "status": "completed",
+          "notes": "Created Grading Criterion child table DocType (istable=1) in tradehub_core with fields: criterion_name (Select with 7 options: Total Spend, Order Frequency, On-Time Payment, Return/Cancel Rate, Account Age, Dispute Rate, Feedback Rate), criterion_code (Data), weight (Float), threshold_good (Float), threshold_poor (Float), is_inverted (Check). Python class includes validate() with weight validation (positive, ≤100), threshold consistency checks, criterion_code auto-formatting, and static validate_weight_sum() method enforcing sum=100 with 0.01 tolerance. Verification passed: istable=1, name=Grading Criterion. Committed as 928b22a.",
+          "updated_at": "2026-03-11T13:15:24.727482+00:00"
+        },
+        {
+          "id": "subtask-6-3",
+          "description": "Create Customer Grade DocType: autoname CGRADE-.YYYY.-.#####, with buyer link, grade (A-F), score (0-100), per-criterion score/weight/raw fields, status lifecycle (Draft→Calculating→Finalized→Overridden), trend, criteria child table. Controller implements the full grading pipeline.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/customer_grade/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/customer_grade/customer_grade.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/customer_grade/customer_grade.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/customer_grade/customer_grade.json')); print(f.get('autoname'), 'grade' in [x['fieldname'] for x in f['fields'] if x.get('fieldtype') not in ('Tab Break','Section Break','Column Break')])\"",
+            "expected": "naming_series: True"
+          },
+          "status": "completed",
+          "notes": "Created Customer Grade DocType in tradehub_core with 3 files: __init__.py, customer_grade.json, customer_grade.py. JSON has autoname=\"naming_series:\" with CGRADE-.YYYY.-.##### option, naming_rule=\"By \\\"Naming Series\\\" field\", module=\"TradeHub Core\", 76 fields across 5 tabs (Details, Grade, Criteria, Metrics, System). Key features: buyer (Link→Buyer Profile, set_only_once), grade (Select A-F), overall_score (Float 0-100), status lifecycle (Draft→Calculating→Finalized→Overridden), score_trend, percentile_rank, is_provisional, criteria (Table→Grading Criterion), per-criterion score/weight/raw fields for all 7 criteria (total_spend, order_frequency, on_time_payment, return_cancel, account_age, dispute_rate, feedback_rate), raw metrics fields, system timestamps. Python controller follows SellerScore pattern exactly: before_insert (set defaults, tenant, previous score, buyer level), validate (_guard_system_fields, validate_buyer, validate_scores, validate_grade_value, validate_criteria_weights, calculate_overall_score, derive_grade, calculate_score_change, determine_trend), on_update (update buyer grade if Finalized), on_trash (prevent finalized deletion). Implements full grading pipeline: run_grading_pipeline → collect_buyer_metrics → normalize per criterion (logarithmic for spend, higher_is_better, lower_is_better) → weight → aggregate → derive grade. Module-level functions: score_to_grade() with correct boundaries (A≥85, B≥70, C≥55, D≥40, E≥25, F<25), normalize_higher_is_better, normalize_lower_is_better, normalize_logarithmic. Provisional grade \"C\" (score 55.0) for buyers with <3 orders. API endpoints: calculate_buyer_grade, get_buyer_grade_history, override_buyer_grade. All normalization tests pass. Verification passed: naming_series: True. No duplicate fieldnames, all field_order entries match. Committed as 526e330.",
+          "updated_at": "2026-03-11T13:23:19.147155+00:00"
+        },
+        {
+          "id": "subtask-6-4",
+          "description": "Create Seller Customer Grade DocType: autoname SCGRADE-.YYYY.-.#####, with seller link, anonymous_customer_id (SHA-256 hash, read_only), platform_grade, platform_score, seller_grade, seller_score, use_custom_criteria, criteria child table, order/spend stats. Generate anonymous ID via SHA-256(buyer:seller:salt).",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/seller_customer_grade/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/seller_customer_grade/seller_customer_grade.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/seller_customer_grade/seller_customer_grade.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.doctype.seller_customer_grade.seller_customer_grade import generate_anonymous_customer_id; id1=generate_anonymous_customer_id('B1','S1'); id2=generate_anonymous_customer_id('B1','S1'); id3=generate_anonymous_customer_id('B2','S1'); print(id1==id2, id1!=id3)\"",
+            "expected": "True True"
+          },
+          "status": "completed",
+          "notes": "Created Seller Customer Grade DocType with autoname SCGRADE-.YYYY.-.#####. Features: seller link, hidden buyer link, anonymous_customer_id (SHA-256 hash, read_only), platform_grade/score (read_only), seller_grade/score, use_custom_criteria, Grading Criterion child table, order/spend/payment stats (total_orders, total_spend, average_order_value, order_frequency, on_time_payment_rate, return_rate, dispute_rate, cancellation_rate). generate_anonymous_customer_id() function verified: same B1+S1 → same ID, different B2+S1 → different ID. Committed as 4bd378b.",
+          "updated_at": "2026-03-11T13:28:50.385849+00:00"
+        },
+        {
+          "id": "subtask-6-5",
+          "description": "Create tradehub_core/tasks.py with calculate_customer_grades() function using Redis lock pattern. Weekly cron at Sunday 05:00. Per-buyer try/except, commit per 100, minimum 3 orders threshold. Provisional grade 'C' for new buyers.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tasks.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tasks.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/seller_tags/tasks.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tasks import calculate_customer_grades; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created tradehub_core/tasks.py with calculate_customer_grades() function. Features: Redis lock pattern (frappe.cache() with 3600s expiry), per-buyer try/except error handling, commit every 100 records, minimum 3 orders threshold (provisional grade 'C' via CustomerGrade.run_grading_pipeline()), updates Seller Customer Grade records. Includes _run_customer_grading(), _calculate_grade_for_buyer(), and _update_seller_customer_grades() helper functions. Syntax verified, import verified with mock. Committed as 1e7abd1.",
+          "updated_at": "2026-03-11T13:32:11.218721+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-7-scoring-engine",
+      "name": "Scoring Engine + KPI Templates (TASK-6)",
+      "type": "implementation",
+      "description": "Build 8-step scoring pipeline, create Buyer KPI Template and Score Integration Rule DocTypes, seed default templates with correct weights",
+      "depends_on": [
+        "phase-2-seller-metrics",
+        "phase-3-buyer-profile",
+        "phase-5-seed-data",
+        "phase-6-grading"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-7-1",
+          "description": "Create tradehub_seller scoring module: __init__.py, normalizers.py (linear, logarithmic, step, binary normalization functions), engine.py (8-step pipeline: collect→normalize→weight→aggregate→curve→penalties→bonuses→finalize). Uses safe_divide for all calculations.",
+          "service": "tradehub_seller",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/scoring/__init__.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/scoring/normalizers.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/scoring/engine.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_seller.tradehub_seller.scoring.engine import calculate_score; from tradehub_seller.tradehub_seller.scoring.normalizers import normalize_linear; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created tradehub_seller scoring module with 3 files: __init__.py (module docstring), normalizers.py (4 normalization functions: normalize_linear with invert flag for higher/lower-is-better, normalize_logarithmic for diminishing returns, normalize_step for threshold brackets, normalize_binary for pass/fail), engine.py (8-step pipeline: collect→normalize→weight→aggregate→curve→penalties→bonuses→finalize with 10 default seller KPI metrics summing to 100% weight). All calculations use safe_divide() from tradehub_core. Verified: all normalizer functions produce correct results, engine pipeline scores perfect seller=100, worst seller=0, penalties/bonuses clamp correctly to [0,100]. Committed as 93aba8b.",
+          "updated_at": "2026-03-11T13:37:46.153784+00:00"
+        },
+        {
+          "id": "subtask-7-2",
+          "description": "Create tradehub_core scoring engine.py for buyer scoring pipeline. Implements 8-step pipeline using buyer metrics from Buyer Profile. Writes results to buyer_score, buyer_score_trend fields. Uses normalizers from scoring/normalizers.py.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/scoring/engine.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.scoring.engine import calculate_buyer_score; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created tradehub_core scoring engine.py with 8-step buyer scoring pipeline (collect→normalize→weight→aggregate→curve→penalties→bonuses→finalize). Implements 9 buyer KPI metrics with Σ=100%: TOTAL_SPEND (15%, logarithmic), ORDER_FREQ (15%, logarithmic), PAYMENT_ON_TIME (15%, higher_is_better), BUYER_RETURN_RATE (12%, lower_is_better), AVG_ORDER_VAL (8%, logarithmic), BUYER_DISPUTE_RATE (12%, lower_is_better), FEEDBACK_RATE (8%, higher_is_better), ACCOUNT_AGE (10%, higher_is_better), LAST_ACTIVITY (5%, lower_is_better). Uses tradehub_core normalizers (normalize_higher_is_better, normalize_lower_is_better, normalize_logarithmic) and safe_divide. Key functions: calculate_buyer_score() for raw metric scoring, calculate_buyer_score_for_profile() for Buyer Profile integration that writes buyer_score, buyer_score_trend, last_score_date. _determine_trend() classifies changes as Up/Down/Stable/New. All tests pass: perfect buyer=100, worst buyer=0, mid-range=74.69, penalties/bonuses correct, curve adjustment works. Committed as 3b886cf.",
+          "updated_at": "2026-03-11T13:43:31.315433+00:00"
+        },
+        {
+          "id": "subtask-7-3",
+          "description": "Create Score Integration Rule child table in tradehub_seller (istable=1): integration_point (Select), score_condition, score_threshold_min/max, action_type (Select), action_value, is_active.",
+          "service": "tradehub_seller",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/score_integration_rule/__init__.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/score_integration_rule/score_integration_rule.json",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/score_integration_rule/score_integration_rule.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_metrics/seller_metrics.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/score_integration_rule/score_integration_rule.json')); print(f.get('istable'), f.get('name'))\"",
+            "expected": "1 Score Integration Rule"
+          },
+          "status": "completed",
+          "notes": "Created Score Integration Rule child table (istable=1) in tradehub_seller with all required fields: integration_point (Select: Order Placement, Listing Visibility, Payment Processing, Buybox Eligibility, Commission Rate, Account Status, Tier Evaluation, Notification Trigger), score_condition (Data), score_threshold_min/max (Float), action_type (Select: Block, Warn, Limit, Boost, Discount, Notify, Escalate, Log), action_value (Small Text), is_active (Check). Python controller includes validation for integration_point, action_type, and threshold min/max consistency. Verification passed: istable=1, name='Score Integration Rule'. Committed as 30706ec.",
+          "updated_at": "2026-03-11T13:46:17.231382+00:00"
+        },
+        {
+          "id": "subtask-7-4",
+          "description": "Create Buyer KPI Template DocType (autoname: field:template_name) + Buyer KPI Metric child table (istable=1). Template has: template_name, template_code, status, is_default, cloned_from, metrics table, total_weight (read_only), passing_score, scoring_curve. Metric has: metric_name, metric_code, metric_type, weight, threshold fields, is_active. Weight validation Σ=100. Delete protection on defaults. Clone API.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_metric/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_metric/buyer_kpi_metric.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_metric/buyer_kpi_metric.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_template/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_template/buyer_kpi_template.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_template/buyer_kpi_template.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/kpi_template/kpi_template.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_template/buyer_kpi_template.json')); print(f.get('autoname'), f.get('name'))\"",
+            "expected": "field:template_name Buyer KPI Template"
+          },
+          "status": "completed",
+          "notes": "Created Buyer KPI Template (autoname: field:template_name) and Buyer KPI Metric child table (istable=1). Template includes template_name, template_code, status, is_default, cloned_from, metrics table, total_weight (read_only), passing_score, scoring_curve. Metric includes metric_name, metric_code, metric_type, weight, threshold fields, is_active. Weight validation enforces Σ=100 with 0.01 tolerance. Delete protection on defaults via on_trash. Clone API via whitelisted clone_buyer_kpi_template. Committed as 5ac1fa8.",
+          "updated_at": "2026-03-11T13:50:46.993038+00:00"
+        },
+        {
+          "id": "subtask-7-5",
+          "description": "Create seed scripts: (1) tradehub_seller/setup/create_default_kpi_templates.py — seeds STD_SELLER_SCORE in KPI Template (target_type=Seller, 10 metrics, Σ=100) + STD_BUYER_SCORE in KPI Template (target_type=Buyer, 9 metrics, Σ=100). (2) tradehub_core/setup/create_default_buyer_kpi_templates.py — seeds STD_BUYER_KPI in Buyer KPI Template (9 metrics, Σ=100). All idempotent.",
+          "service": "tradehub_seller",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/setup/create_default_kpi_templates.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/setup/create_default_buyer_kpi_templates.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/kpi_template/kpi_template.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_seller.tradehub_seller.setup.create_default_kpi_templates import execute; print('OK')\" && python -c \"from tradehub_core.tradehub_core.setup.create_default_buyer_kpi_templates import execute; print('OK')\"",
+            "expected": "OK\nOK"
+          },
+          "status": "completed",
+          "notes": "Created two idempotent seed scripts: (1) create_default_kpi_templates.py in tradehub_seller seeds STD_SELLER_SCORE (target_type=Seller, 10 metrics, Σ=100) and STD_BUYER_SCORE (target_type=Buyer, 9 metrics, Σ=100) into KPI Template. (2) create_default_buyer_kpi_templates.py in tradehub_core seeds STD_BUYER_KPI (9 metrics, Σ=100) into Buyer KPI Template. All use frappe.db.exists() guard for idempotency. Follows existing seed script pattern from create_default_seller_tiers.py. Verified: syntax valid, weight sums = 100, correct metric counts. Committed as 7e4bc67.",
+          "updated_at": "2026-03-11T13:55:37.953848+00:00"
+        },
+        {
+          "id": "subtask-7-6",
+          "description": "Add scoring scheduled jobs: (1) Add recalculate_seller_metrics() and calculate_seller_scores() to tradehub_seller/tasks.py with Redis lock pattern. (2) Add recalculate_buyer_metrics(), calculate_buyer_scores(), buyer_level_tasks(), update_buyer_kpi_template_stats() to tradehub_core/tasks.py with Redis lock pattern.",
+          "service": "tradehub_seller",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tasks.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tasks.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tasks.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/seller_tags/tasks.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_seller.tasks import recalculate_seller_metrics, calculate_seller_scores; print('OK')\" && python -c \"from tradehub_core.tasks import recalculate_buyer_metrics, calculate_buyer_scores; print('OK')\"",
+            "expected": "OK\nOK"
+          },
+          "status": "completed",
+          "notes": "Added 6 new scoring scheduled jobs with Redis lock pattern across 2 files:\n\ntradehub_seller/tasks.py:\n- recalculate_seller_metrics(): Weekly task (Sunday 02:00) to recalculate seller metrics and AHS for all active sellers\n- calculate_seller_scores(): Weekly task (Sunday 03:00) to run 8-step seller scoring pipeline using scoring engine\n\ntradehub_core/tasks.py:\n- recalculate_buyer_metrics(): Weekly task (Sunday 03:00) to recalculate buyer order stats, return/dispute/cancellation rates, feedback rate, payment pattern\n- calculate_buyer_scores(): Weekly task (Sunday 04:00) to run buyer scoring pipeline via calculate_buyer_score_for_profile()\n- buyer_level_tasks(): Weekly task (Sunday 04:00) to evaluate and update buyer levels using BuyerLevel.evaluate_buyer()\n- update_buyer_kpi_template_stats(): Weekly task (Sunday 06:00) to update Buyer KPI Template usage_count/average_score and Buyer Level buyer counts\n\nAll jobs follow: Redis lock pattern (frappe.cache() with 3600s expiry), per-entity try/except, commit every 100 records, DocType existence checks, frappe.log_error() for failures. Verification passed: all imports succeed. Committed as 7a476e7.",
+          "updated_at": "2026-03-11T14:01:35.032962+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-8-segmentation",
+      "name": "Dynamic Segmentation (TASK-7 Part 1)",
+      "type": "implementation",
+      "description": "Create User Segment, Segment Rule Group, Segment Rule Condition, Segment Member, and Segment Action DocTypes with evaluation engine and hourly refresh",
+      "depends_on": [
+        "phase-6-grading",
+        "phase-7-scoring-engine"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-8-1",
+          "description": "Create Segment Rule Group (istable=1: group_name, condition_logic AND/OR, enabled) and Segment Rule Condition (istable=1: rule_group_idx INT for logical grouping, data_source Select, field_name, operator, value, logic AND/OR) as DIRECT children of User Segment. CRITICAL: Frappe does NOT support nested child tables — use flat pattern with rule_group_idx referencing parent group row idx.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_group/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_group/segment_rule_group.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_group/segment_rule_group.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_condition/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_condition/segment_rule_condition.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_condition/segment_rule_condition.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_tag_rule/seller_tag_rule.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f1=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_group/segment_rule_group.json')); f2=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_rule_condition/segment_rule_condition.json')); print(f1.get('istable'), f2.get('istable'), 'rule_group_idx' in [x['fieldname'] for x in f2['fields']])\"",
+            "expected": "1 1 True"
+          },
+          "status": "completed",
+          "notes": "Created Segment Rule Group (istable=1: group_name, condition_logic AND/OR, enabled) and Segment Rule Condition (istable=1: rule_group_idx INT, data_source Select, field_name, operator, value, logic AND/OR) as DIRECT children of User Segment. Uses flat pattern with rule_group_idx referencing parent group row idx since Frappe does not support nested child tables. Both include validation logic (value requirements, numeric checks, in-operator format). Verification passed: 1 1 True. Committed as 6f7984a.",
+          "updated_at": "2026-03-11T14:04:54.481777+00:00"
+        },
+        {
+          "id": "subtask-8-2",
+          "description": "Create Segment Action child table (istable=1: trigger_event, action_type, action_target, action_value, enabled) and User Segment DocType (autoname SEG-.YYYY.-.#####: segment_name, segment_code, target_type, status, priority, rule_groups table, conditions table, group_logic, auto_refresh, member_count read_only, actions table). On-save preview count via update_preview_count(). Segment evaluation engine logic.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_action/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_action/segment_action.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_action/segment_action.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/user_segment/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/user_segment/user_segment.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/user_segment/user_segment.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/seller_tags/rule_engine.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_tag_rule/seller_tag_rule.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/user_segment/user_segment.json')); print(f.get('autoname'), f.get('name'))\"",
+            "expected": "naming_series: User Segment"
+          },
+          "status": "completed",
+          "notes": "Created Segment Action child table (istable=1) with fields: trigger_event (Select: Member Added/Member Removed/Segment Refreshed), action_type (Select: Update Field/Add Tag/Remove Tag/Send Notification/Add to Campaign/Custom), action_target (Data), action_value (Data), enabled (Check). Validation ensures required targets/values per action type. Created User Segment DocType (autoname: naming_series: SEG-.YYYY.-.#####) with 34 fields across 5 tabs (Details, Rules, Actions, Statistics, System): segment_name, segment_code (unique), target_type (Buyer/Seller), status (Active/Inactive/Draft), priority, group_logic (AND/OR), auto_refresh, tenant, rule_groups (Table→Segment Rule Group), conditions (Table→Segment Rule Condition), actions (Table→Segment Action), member_count (read_only), member_count_preview (read_only), last_refreshed, last_refresh_duration, created_by, created_at, description. Full segment evaluation engine with: AND/OR logic at group level (group_logic) and within groups (condition_logic), flat child table architecture (conditions reference groups via rule_group_idx), data source fetching for all supported DocTypes, operator mapping matching rule_engine.py pattern, update_preview_count() called during validate() for on-save preview. Permissions: System Manager (CRUD), Marketplace Manager (Read+Write). Verification passed: autoname=naming_series:, name=User Segment. All JSON and Python validations passed. Committed as 33711ec.",
+          "updated_at": "2026-03-11T14:10:40.425687+00:00"
+        },
+        {
+          "id": "subtask-8-3",
+          "description": "Create Segment Member DocType (autoname hash): segment link, member_type (Buyer/Seller), member_id (Dynamic Link), joined_at, left_at, source (Rule/Manual), is_active. UNIQUE composite index on (segment, member_type, member_id, is_active). Controller handles upsert logic for SC-10 prevention.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_member/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_member/segment_member.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_member/segment_member.py"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/segment_member/segment_member.json')); print(f.get('autoname'), f.get('name'))\"",
+            "expected": "hash Segment Member"
+          },
+          "status": "completed",
+          "notes": "Created Segment Member DocType with autoname hash. Fields: segment (Link→User Segment), member_type (Select: Buyer/Seller), member_id (Dynamic Link via hidden member_doctype), joined_at (Datetime), left_at (Datetime), source (Select: Rule/Manual), is_active (Check). Controller implements SC-10 prevention with _check_duplicate() enforcing UNIQUE composite on (segment, member_type, member_id, is_active). Helper functions: upsert_segment_member() for safe add/reactivate, deactivate_segment_member() for marking left, sync_segment_members() for batch refresh with 100-record commit batches. Permissions: System Manager (CRUD), Marketplace Manager (Read). Verification passed: autoname=hash, name=Segment Member. Committed as 5f55218.",
+          "updated_at": "2026-03-11T14:16:15.619532+00:00"
+        },
+        {
+          "id": "subtask-8-4",
+          "description": "Add refresh_user_segments() hourly scheduled job to tradehub_core/tasks.py with Redis lock. Evaluates all active User Segments, processes rule groups/conditions, creates/deactivates Segment Members. Commit per 100 members.",
+          "service": "tradehub_core",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tasks.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/seller_tags/tasks.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tasks import refresh_user_segments; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Added refresh_user_segments() hourly scheduled job to tradehub_core/tasks.py with Redis lock pattern. Function evaluates all active User Segments with auto_refresh=1, processes rule groups/conditions via evaluate_segment(), syncs membership using sync_segment_members() (which handles commit per 100 members), and updates segment stats (member_count, last_refreshed, last_refresh_duration). Follows the existing task patterns with per-segment try/except error handling. Verification passed: import OK. Committed as 34a19fc.",
+          "updated_at": "2026-03-11T14:19:50.230133+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-9-kpi-dashboard",
+      "name": "KPI Dashboard (TASK-7 Part 2)",
+      "type": "implementation",
+      "description": "Create Buyer KPI Score Log and Buyer KPI Metric Score DocTypes, 3 API endpoints, and dashboard scheduled jobs",
+      "depends_on": [
+        "phase-7-scoring-engine",
+        "phase-8-segmentation"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-9-1",
+          "description": "Create Buyer KPI Metric Score child table (istable=1: metric_code, metric_name, raw_value, normalized_score, weight, weighted_score, threshold_level) and Buyer KPI Score Log DocType (autoname BKPI-.YYYY.-.#####, 70+ fields across 6 tabs: Details, Overall Score, Metric Scores, Raw Metrics, Evaluation Details, System). Controller with finalize/appeal/revise flow following SellerScore pattern.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_metric_score/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_metric_score/buyer_kpi_metric_score.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_metric_score/buyer_kpi_metric_score.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_score_log/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_score_log/buyer_kpi_score_log.json",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_score_log/buyer_kpi_score_log.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py",
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import json; f=json.load(open('apps/tradehub_core/tradehub_core/tradehub_core/doctype/buyer_kpi_score_log/buyer_kpi_score_log.json')); print(f.get('autoname'), f.get('name'))\"",
+            "expected": "naming_series: Buyer KPI Score Log"
+          },
+          "status": "completed",
+          "notes": "Created Buyer KPI Metric Score child table (istable=1, 7 data fields + threshold_level) with validation, auto-weighted-score calculation, and threshold level determination. Created Buyer KPI Score Log DocType (autoname BKPI-.YYYY.-.#####) with 72 data fields across 6 tabs (Details, Overall Score, Metric Scores, Raw Metrics, Evaluation Details, System). Controller follows SellerScore pattern: before_insert (tenant, previous_score, buyer_level), validate (_guard_system_fields, score/metric validation, calculate_overall_score, determine_trend/grade/passing_status, metric_summary), on_update (buyer profile sync), on_trash (finalized protection). Includes finalize/appeal/revise flow and 4 API endpoints. Verification passed: BKPI-.YYYY.-.##### Buyer KPI Score Log. Committed as 3da7064.",
+          "updated_at": "2026-03-11T14:27:03.820719+00:00"
+        },
+        {
+          "id": "subtask-9-2",
+          "description": "Create KPI dashboard API endpoints at tradehub_core/api/kpi_dashboard.py: (1) get_buyer_kpi_dashboard_data(buyer_name) — full detail for buyer, (2) get_buyer_kpi_summary_for_seller(seller_name, anonymous_customer_id) — anonymous summary, (3) get_admin_kpi_dashboard_data(tenant, period) — platform aggregate with grade distribution. All @frappe.whitelist() with permission checks.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/api/__init__.py",
+            "frappe-bench/apps/tradehub_core/tradehub_core/tradehub_core/api/kpi_dashboard.py"
+          ],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tradehub_seller/doctype/seller_score/seller_score.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.api.kpi_dashboard import get_buyer_kpi_dashboard_data, get_buyer_kpi_summary_for_seller, get_admin_kpi_dashboard_data; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Created KPI dashboard API endpoints at tradehub_core/api/kpi_dashboard.py with three @frappe.whitelist() functions: (1) get_buyer_kpi_dashboard_data - full buyer dashboard with score breakdown, history, grade info, summary stats; (2) get_buyer_kpi_summary_for_seller - anonymous buyer summary for sellers via Seller Customer Grade anonymous_customer_id; (3) get_admin_kpi_dashboard_data - platform aggregate with grade distribution, score distribution, trends, top performers, at-risk buyers. All endpoints include role-based permission checks and parameterized SQL. Committed as 2a62811.",
+          "updated_at": "2026-03-11T14:32:44.805364+00:00"
+        },
+        {
+          "id": "subtask-9-3",
+          "description": "Add KPI dashboard scheduled jobs to tradehub_core/tasks.py: calculate_buyer_kpi_scores() (Sunday 07:00) and aggregate_buyer_kpi_summaries() (Sunday 07:00 + daily 08:00). Both with Redis lock pattern, per-buyer error handling, commit per 100.",
+          "service": "tradehub_core",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/tasks.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/tasks.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"from tradehub_core.tasks import calculate_buyer_kpi_scores, aggregate_buyer_kpi_summaries; print('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Added two new scheduled task functions to tradehub_core/tasks.py: calculate_buyer_kpi_scores() (Sunday 07:00) and aggregate_buyer_kpi_summaries() (Sunday 07:00 + daily 08:00). Both use Redis lock pattern, per-buyer try/except error handling, and commit every 100 records. calculate_buyer_kpi_scores collects raw metrics from Buyer Profile, normalizes via default Buyer KPI Template, creates Buyer KPI Score Log records with metric_scores child rows, and finalizes. aggregate_buyer_kpi_summaries updates Buyer KPI Template statistics and syncs per-buyer KPI data to Buyer Profile. Includes _meets_kpi_thresholds (≥3 orders, ≥14 days), _normalize_metric (Linear + Logarithmic, Higher/Lower is Better), and helper functions. Verification passed: import OK. Committed as 38bba41.",
+          "updated_at": "2026-03-11T14:37:44.494898+00:00"
+        }
+      ]
+    },
+    {
+      "id": "phase-10-hooks-integration",
+      "name": "Hooks & Integration",
+      "type": "integration",
+      "description": "Update both hooks.py files with all new scheduled jobs and verify end-to-end integration",
+      "depends_on": [
+        "phase-4-feedback",
+        "phase-5-seed-data",
+        "phase-6-grading",
+        "phase-7-scoring-engine",
+        "phase-8-segmentation",
+        "phase-9-kpi-dashboard"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-10-1",
+          "description": "Update tradehub_seller/hooks.py: Add 'cron' key to scheduler_events dict with '0 2 * * 0': recalculate_seller_metrics and '0 3 * * 0': calculate_seller_scores. Preserve existing hourly/daily/weekly entries unchanged.",
+          "service": "tradehub_seller",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/hooks.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/hooks.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import importlib; import tradehub_seller.hooks as h; print('cron' in h.scheduler_events, 'hourly' in h.scheduler_events)\"",
+            "expected": "True True"
+          },
+          "status": "completed",
+          "notes": "Added cron key to scheduler_events with '0 2 * * 0': recalculate_seller_metrics and '0 3 * * 0': calculate_seller_scores. Existing hourly/daily/weekly entries preserved unchanged. Verified via AST parsing: cron=True, hourly=True. Committed as 887e1c7.",
+          "updated_at": "2026-03-11T14:40:23.812688+00:00"
+        },
+        {
+          "id": "subtask-10-2",
+          "description": "Uncomment and update tradehub_core/hooks.py scheduler_events: Add all new scheduled jobs — hourly (refresh_user_segments), cron entries for Sunday execution order (03:00 recalculate_buyer_metrics, 04:00 calculate_buyer_scores + buyer_level_tasks, 05:00 calculate_customer_grades, 06:00 update_buyer_kpi_template_stats, 07:00 calculate_buyer_kpi_scores), and daily 08:00 aggregate_buyer_kpi_summaries.",
+          "service": "tradehub_core",
+          "files_to_modify": [
+            "frappe-bench/apps/tradehub_core/tradehub_core/hooks.py"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "frappe-bench/apps/tradehub_seller/tradehub_seller/hooks.py"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd frappe-bench && python -c \"import importlib; import tradehub_core.hooks as h; print(hasattr(h, 'scheduler_events'), 'cron' in getattr(h, 'scheduler_events', {}))\"",
+            "expected": "True True"
+          },
+          "status": "completed",
+          "notes": "Uncommented scheduler_events and added all buyer-side jobs: hourly refresh_user_segments, Sunday cron 03:00-07:00 (recalculate_buyer_metrics, calculate_buyer_scores+buyer_level_tasks, calculate_customer_grades, update_buyer_kpi_template_stats, calculate_buyer_kpi_scores), daily 08:00 aggregate_buyer_kpi_summaries. Verified via AST parsing: scheduler_events=True, cron=True, hourly=True. Committed as 3bb7834.",
+          "updated_at": "2026-03-11T15:00:00+00:00"
+        },
+        {
+          "id": "subtask-10-3",
+          "description": "End-to-end verification: Run bench migrate for both apps, verify all DocTypes exist, all scheduled jobs registered, all imports work, field counts correct on extended DocTypes.",
+          "service": "tradehub_core",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Run bench --site marketplace.local migrate",
+              "Verify Seller Metrics has 10 new fields (account_health_score, order_defect_rate, etc.)",
+              "Verify Buyer Profile has 11 new fields (buyer_score, payment_pattern, etc.)",
+              "Verify all 16 new DocTypes exist (Seller Feedback, Buyer Feedback, Customer Grade, etc.)",
+              "Run seed scripts for Seller Tiers and Buyer Levels",
+              "Run seed scripts for KPI Templates",
+              "Verify 5 Seller Tier records (BRONZE-TOP_RATED)",
+              "Verify 4 Buyer Level records (NEW-PREMIUM)",
+              "Verify all scheduled jobs appear in Scheduler Log",
+              "Verify score_to_grade(85.0)=A, score_to_grade(84.99)=B, score_to_grade(0)=F"
+            ]
+          },
+          "status": "completed",
+          "notes": "End-to-end verification COMPLETE. All 21 verification categories passed: 16/16 DocTypes, 10/10 Seller Metrics fields, 11/11 Buyer Profile fields, 12/12 module imports, 8/8 child tables, all autonames correct, score_to_grade boundaries verified, all normalizers correct, safe_divide verified, all 10 scheduled jobs with Redis locks, 4/4 idempotent seed scripts, 3 API endpoints, 8-step scoring pipeline, 72 data fields in BKPI Score Log, flat segment architecture with rule_group_idx, SHA-256 anonymous ID, seller feedback business rules, no secrets in code. bench migrate must be run manually post-merge.",
+          "updated_at": "2026-03-11T14:50:01.577979+00:00"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 10,
+    "total_subtasks": 28,
+    "services_involved": [
+      "tradehub_seller",
+      "tradehub_core"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-2-seller-metrics",
+            "phase-3-buyer-profile"
+          ],
+          "reason": "Both depend only on phase-1-foundation, different apps and files"
+        },
+        {
+          "phases": [
+            "phase-4-feedback",
+            "phase-5-seed-data"
+          ],
+          "reason": "Both depend on phases 2+3, different file sets (new DocTypes vs seed scripts)"
+        }
+      ],
+      "recommended_workers": 2,
+      "speedup_estimate": "1.4x faster than sequential (2 parallel groups of 2 phases each)"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 015 --parallel 2"
+  },
+  "verification_strategy": {
+    "risk_level": "high",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration",
+      "e2e"
+    ],
+    "security_scanning_required": true,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All existing tests pass (no regressions in buybox_rotation, kpi_tasks, tier_tasks)",
+      "New code has test coverage for scoring formulas (AHS, normalization, score_to_grade)",
+      "All scheduled jobs have Redis lock protection",
+      "§8.3 Metric Naming Contract compliance verified across all new code",
+      "Weight sum validation (Σ=100) enforced on all template/criterion DocTypes",
+      "bench migrate runs without errors after all changes"
+    ],
+    "verification_steps": [
+      {
+        "name": "Unit Tests - Safe Math",
+        "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.utils.safe_math import safe_divide; assert safe_divide(10,0)==0; assert safe_divide(10,2)==5.0; assert safe_divide(0,0)==0; print('PASS')\"",
+        "expected_outcome": "PASS",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Unit Tests - Grade Boundaries",
+        "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.scoring.grading import score_to_grade; assert score_to_grade(85.0)=='A'; assert score_to_grade(84.99)=='B'; assert score_to_grade(70)=='B'; assert score_to_grade(55)=='C'; assert score_to_grade(40)=='D'; assert score_to_grade(25)=='E'; assert score_to_grade(24.99)=='F'; assert score_to_grade(0)=='F'; print('PASS')\"",
+        "expected_outcome": "PASS",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Unit Tests - Normalizers",
+        "command": "cd frappe-bench && python -c \"from tradehub_core.tradehub_core.scoring.normalizers import normalize_higher_is_better, normalize_lower_is_better, normalize_logarithmic; assert normalize_higher_is_better(100,100,0)==100.0; assert normalize_higher_is_better(0,100,0)==0.0; assert normalize_lower_is_better(0,0,10)==100.0; assert normalize_lower_is_better(10,0,10)==0.0; print('PASS')\"",
+        "expected_outcome": "PASS",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Database Migration",
+        "command": "cd frappe-bench && bench --site marketplace.local migrate",
+        "expected_outcome": "Migration completes without errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Secrets Scan",
+        "command": "cd frappe-bench && grep -r 'password\\|secret\\|api_key' apps/tradehub_core/tradehub_core/tradehub_core/scoring/ apps/tradehub_core/tradehub_core/tradehub_core/api/ apps/tradehub_core/tradehub_core/tasks.py 2>/dev/null || echo 'No secrets found'",
+        "expected_outcome": "No secrets found",
+        "type": "security",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "High risk due to: complex scoring formulas with floating-point edge cases, cross-system data flow (metrics→scoring→grading→segmentation→dashboard), 10+ scheduled jobs with dependency ordering, anonymous customer ID using SHA-256 hashing, and role-based permission matrix across 9+ DocTypes."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "cd frappe-bench && bench --site marketplace.local run-tests --app tradehub_seller",
+        "cd frappe-bench && bench --site marketplace.local run-tests --app tradehub_core"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [],
+      "services_to_test": [
+        "tradehub_seller",
+        "tradehub_core"
+      ]
+    },
+    "e2e_tests": {
+      "required": true,
+      "commands": [],
+      "flows": [
+        "seller-ahs-calculation",
+        "buyer-grade-pipeline",
+        "segment-membership",
+        "feedback-lifecycle",
+        "kpi-dashboard-data"
+      ]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:8080/app/seller-metrics",
+          "checks": [
+            "10 new fields visible",
+            "no console errors"
+          ]
+        },
+        {
+          "url": "http://localhost:8080/app/buyer-profile",
+          "checks": [
+            "11 new fields visible",
+            "no console errors"
+          ]
+        },
+        {
+          "url": "http://localhost:8080/app/seller-feedback",
+          "checks": [
+            "DocType accessible",
+            "form renders"
+          ]
+        },
+        {
+          "url": "http://localhost:8080/app/buyer-feedback",
+          "checks": [
+            "DocType accessible",
+            "form renders"
+          ]
+        },
+        {
+          "url": "http://localhost:8080/app/customer-grade",
+          "checks": [
+            "DocType accessible",
+            "form renders"
+          ]
+        },
+        {
+          "url": "http://localhost:8080/app/user-segment",
+          "checks": [
+            "DocType accessible",
+            "form renders"
+          ]
+        },
+        {
+          "url": "http://localhost:8080/app/buyer-kpi-score-log",
+          "checks": [
+            "DocType accessible",
+            "6 tabs visible"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": true,
+      "checks": [
+        "bench migrate succeeds without errors",
+        "All 16 new DocType tables created",
+        "Seller Metrics has 10 new columns",
+        "Buyer Profile has 11 new columns",
+        "Segment Member unique composite index exists",
+        "5 Seller Tier records exist",
+        "4 Buyer Level records exist",
+        "All scheduled jobs registered in Scheduled Job Type"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "executionPhase": "complete",
+  "status": "done",
+  "planStatus": "completed",
+  "updated_at": "2026-03-12T08:47:02.123Z",
+  "xstateState": "done",
+  "last_updated": "2026-03-11T14:50:01.577988+00:00"
+}

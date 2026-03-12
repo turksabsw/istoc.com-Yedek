@@ -1,0 +1,287 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:template_name",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "basic_info_section",
+  "template_name",
+  "template_code",
+  "column_break_basic",
+  "status",
+  "is_default",
+  "cloned_from",
+  "metrics_tab",
+  "metrics_section",
+  "metrics",
+  "scoring_section",
+  "total_weight",
+  "passing_score",
+  "column_break_scoring",
+  "scoring_curve",
+  "display_tab",
+  "display_section",
+  "display_name",
+  "description",
+  "system_tab",
+  "statistics_section",
+  "usage_count",
+  "last_evaluated_at",
+  "average_score",
+  "timestamps_section",
+  "created_at",
+  "modified_at"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Template Name",
+   "reqd": 1,
+   "unique": 1,
+   "description": "Unique name for this Buyer KPI template (e.g., Standard Buyer KPI, Premium Buyer KPI)"
+  },
+  {
+   "fieldname": "template_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Template Code",
+   "description": "Short code for programmatic use (e.g., STD_BUYER_KPI)"
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nActive\nInactive\nDeprecated",
+   "reqd": 1,
+   "permlevel": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Is Default Template",
+   "description": "Use this template when no specific buyer KPI template is assigned"
+  },
+  {
+   "fieldname": "cloned_from",
+   "fieldtype": "Link",
+   "label": "Cloned From",
+   "options": "Buyer KPI Template",
+   "read_only": 1,
+   "description": "Source template this was cloned from (if applicable)"
+  },
+  {
+   "fieldname": "metrics_tab",
+   "fieldtype": "Tab Break",
+   "label": "Metrics"
+  },
+  {
+   "fieldname": "metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Buyer KPI Metrics"
+  },
+  {
+   "fieldname": "metrics",
+   "fieldtype": "Table",
+   "label": "Buyer KPI Metrics",
+   "options": "Buyer KPI Metric",
+   "reqd": 1,
+   "description": "Individual buyer KPI metrics to measure"
+  },
+  {
+   "fieldname": "scoring_section",
+   "fieldtype": "Section Break",
+   "label": "Scoring Configuration"
+  },
+  {
+   "fieldname": "total_weight",
+   "fieldtype": "Float",
+   "label": "Total Weight",
+   "read_only": 1,
+   "precision": 2,
+   "description": "Sum of all metric weights (auto-calculated, must equal 100)"
+  },
+  {
+   "default": "60",
+   "fieldname": "passing_score",
+   "fieldtype": "Float",
+   "label": "Passing Score",
+   "precision": 2,
+   "description": "Minimum score to pass KPI evaluation (0-100)"
+  },
+  {
+   "fieldname": "column_break_scoring",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "scoring_curve",
+   "fieldtype": "Select",
+   "label": "Scoring Curve",
+   "options": "Linear\nBell Curve\nExponential\nStep",
+   "default": "Linear",
+   "description": "How to calculate final score from individual metrics"
+  },
+  {
+   "fieldname": "display_tab",
+   "fieldtype": "Tab Break",
+   "label": "Display"
+  },
+  {
+   "fieldname": "display_section",
+   "fieldtype": "Section Break",
+   "label": "Display Settings"
+  },
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "label": "Display Name",
+   "description": "Name shown to users (can be different from template_name)"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "description": "Internal description of this template"
+  },
+  {
+   "fieldname": "system_tab",
+   "fieldtype": "Tab Break",
+   "label": "System"
+  },
+  {
+   "fieldname": "statistics_section",
+   "fieldtype": "Section Break",
+   "label": "Statistics",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "usage_count",
+   "fieldtype": "Int",
+   "label": "Usage Count",
+   "read_only": 1,
+   "description": "Number of times this template has been used for evaluation"
+  },
+  {
+   "fieldname": "last_evaluated_at",
+   "fieldtype": "Datetime",
+   "label": "Last Evaluated At",
+   "read_only": 1,
+   "description": "When this template was last used for evaluation"
+  },
+  {
+   "default": "0",
+   "fieldname": "average_score",
+   "fieldtype": "Float",
+   "label": "Average Score",
+   "read_only": 1,
+   "precision": 2,
+   "description": "Average score across all evaluations"
+  },
+  {
+   "fieldname": "timestamps_section",
+   "fieldtype": "Section Break",
+   "label": "System Information",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "modified_at",
+   "fieldtype": "Datetime",
+   "label": "Modified At",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Buyer KPI Template",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "template_name, template_code, status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "gray",
+   "title": "Draft"
+  },
+  {
+   "color": "green",
+   "title": "Active"
+  },
+  {
+   "color": "orange",
+   "title": "Inactive"
+  },
+  {
+   "color": "red",
+   "title": "Deprecated"
+  }
+ ],
+ "title_field": "template_name",
+ "track_changes": 1
+}

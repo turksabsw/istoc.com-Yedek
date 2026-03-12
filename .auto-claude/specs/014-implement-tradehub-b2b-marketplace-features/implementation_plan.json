@@ -991,17 +991,16 @@
     }
   },
   "qa_signoff": null,
-  "status": "human_review",
-  "planStatus": "review",
-  "xstateState": "human_review",
+  "status": "done",
+  "planStatus": "completed",
+  "xstateState": "done",
   "executionPhase": "complete",
-  "updated_at": "2026-03-11T09:27:39.692Z",
+  "updated_at": "2026-03-11T10:25:23.525Z",
   "lastEvent": {
     "eventId": "934e2184-5724-43c5-b9ba-620d48e9481e",
     "sequence": 0,
     "type": "PLANNING_COMPLETE",
     "timestamp": "2026-03-11T08:16:28.588667+00:00"
   },
-  "last_updated": "2026-03-11T09:23:43.959762+00:00",
-  "reviewReason": "completed"
+  "last_updated": "2026-03-11T09:23:43.959762+00:00"
 }

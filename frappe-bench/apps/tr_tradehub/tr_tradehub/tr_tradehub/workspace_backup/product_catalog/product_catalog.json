@@ -109,6 +109,26 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Category Proposal",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Category Proposal"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Custom Category",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Custom Category"
   }
  ],
  "modified": "2026-02-13 16:18:26.396339",

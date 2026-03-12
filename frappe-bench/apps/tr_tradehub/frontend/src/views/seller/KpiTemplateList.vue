@@ -3,12 +3,13 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
       <div>
-        <h1 class="text-[15px] font-bold text-gray-900">KPI Şablonları</h1>
+        <h1 class="text-[15px] font-bold text-gray-900 dark:text-gray-100">KPI Şablonları</h1>
         <p class="text-xs text-gray-400">{{ totalCount }} kayıt bulundu</p>
       </div>
       <div class="flex items-center gap-2">
-        <button class="hdr-btn-outlined" @click="loadData()"><i class="fas fa-refresh mr-1.5 text-xs"></i>Yenile</button>
-        <button class="hdr-btn-primary"><i class="fas fa-plus mr-1.5 text-xs"></i>Yeni Ekle</button>
+        <ViewModeToggle v-model="viewMode" />
+        <button class="hdr-btn-outlined" @click="loadData()"><AppIcon name="refresh-cw" :size="14" /><span>Yenile</span></button>
+        <button class="hdr-btn-primary"><AppIcon name="plus" :size="14" /><span>Yeni Ekle</span></button>
       </div>
     </div>
 
@@ -23,8 +24,8 @@
     <div class="card mb-5 !p-3">
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div class="relative flex-1 min-w-0">
-          <i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input v-model="searchQuery" type="text" placeholder="Şablon ara..." class="w-full pl-9 pr-3 py-2 text-[13px] bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all">
+          <AppIcon name="search" :size="13" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input v-model="searchQuery" type="text" placeholder="Şablon ara..." class="w-full pl-9 pr-3 py-2 text-[13px] bg-gray-50 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all dark:bg-white/5 dark:border-white/10 dark:text-gray-100 dark:placeholder:text-gray-500">
         </div>
         <select v-model="sortBy" class="form-input-sm w-auto" @change="currentPage = 1; loadData()">
           <option value="modified desc">Son Düzenlenen</option>
@@ -34,15 +35,15 @@
       </div>
     </div>
 
-    <div v-if="loading" class="card text-center py-12"><i class="fas fa-spinner fa-spin text-2xl text-violet-500"></i></div>
+    <div v-if="loading" class="card text-center py-12"><AppIcon name="loader" :size="24" class="text-violet-500 animate-spin" /></div>
     <div v-else-if="items.length === 0" class="card text-center py-12">
-      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-50 flex items-center justify-center"><i class="fas fa-inbox text-2xl text-gray-500 dark:text-gray-300"></i></div>
+      <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-50 flex items-center justify-center"><AppIcon name="inbox" :size="24" class="text-gray-400 dark:text-gray-500" /></div>
       <h3 class="text-sm font-bold text-gray-700 mb-1">Henüz kayıt yok</h3>
     </div>
 
     <!-- Table -->
     <div v-else class="card p-0 overflow-hidden">
-      <div class="overflow-x-auto">
+      <div v-if="viewMode === 'table'" class="overflow-x-auto">
         <table class="w-full">
           <thead>
             <tr class="border-b border-gray-100">
@@ -82,21 +83,64 @@
           </tbody>
         </table>
       </div>
-      <div class="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-        <span class="text-xs text-gray-400">{{ items.length }} / {{ totalCount }}</span>
-        <div class="flex items-center gap-1">
-          <button class="hdr-btn text-xs" :disabled="currentPage === 1" @click="currentPage--; loadData()"><i class="fas fa-chevron-left"></i></button>
-          <span class="text-xs text-gray-600 px-2">{{ currentPage }}</span>
-          <button class="hdr-btn text-xs" :disabled="items.length < pageSize" @click="currentPage++; loadData()"><i class="fas fa-chevron-right"></i></button>
+      <!-- LIST VIEW -->
+      <div v-else-if="viewMode === 'list'">
+        <div v-for="item in items" :key="item.name" class="list-compact-item" @click="$router.push(`/app/kpi-template/${encodeURIComponent(item.name)}`)">
+          <span class="list-compact-name">{{ item.template_name || item.name }}</span>
+          <span class="tpl-status-badge" :class="getTplStatusCls(item.status)"><span class="tpl-dot"></span>{{ getTplStatusLabel(item.status) }}</span>
+          <span class="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">{{ getPeriodLabel(item.evaluation_period) }}</span>
+          <span class="text-xs font-bold text-violet-400 flex-shrink-0">{{ item.passing_score || 0 }}</span>
+          <span class="list-compact-date">{{ item.usage_count || 0 }} kullanım</span>
         </div>
       </div>
+
+      <!-- GRID VIEW -->
+      <div v-else-if="viewMode === 'grid'" class="list-grid">
+        <div v-for="item in items" :key="item.name" class="list-grid-card" @click="$router.push(`/app/kpi-template/${encodeURIComponent(item.name)}`)">
+          <div class="flex items-center justify-between mb-3">
+            <span class="list-grid-card-title">{{ item.template_name || item.name }}</span>
+            <span class="tpl-status-badge text-[10px]" :class="getTplStatusCls(item.status)"><span class="tpl-dot"></span>{{ getTplStatusLabel(item.status) }}</span>
+          </div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-gray-400 dark:text-gray-500">Hedef Tipi</span>
+            <span class="text-xs text-gray-500 dark:text-gray-300">{{ item.target_type || '-' }}</span>
+          </div>
+          <div class="list-grid-card-meta">
+            <span>{{ getPeriodLabel(item.evaluation_period) }}</span>
+            <span>Ağırlık: {{ item.weight || 0 }}</span>
+            <span>{{ item.usage_count || 0 }} kullanım</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANBAN VIEW -->
+      <div v-else-if="viewMode === 'kanban'" class="list-kanban">
+        <div v-for="col in kanbanColumns" :key="col.status" class="kanban-col">
+          <div class="kanban-col-header" :style="{ borderColor: col.color }">
+            <span>{{ col.label }}</span>
+            <span class="kanban-col-count">{{ col.items.length }}</span>
+          </div>
+          <div class="kanban-col-body">
+            <div v-for="item in col.items" :key="item.name" class="kanban-card" @click="$router.push(`/app/kpi-template/${encodeURIComponent(item.name)}`)">
+              <div class="kanban-card-title">{{ item.template_name || item.name }}</div>
+              <div class="kanban-card-meta">{{ getPeriodLabel(item.evaluation_period) }} · {{ item.usage_count || 0 }} kullanım</div>
+            </div>
+            <div v-if="col.items.length === 0" class="text-center py-6 text-xs text-gray-400 dark:text-gray-500">Kayıt yok</div>
+          </div>
+        </div>
+      </div>
+
+      <ListPagination v-model="currentPage" :total="totalCount" :page-size="pageSize" @update:model-value="loadData()" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import api from '@/utils/api'
+import AppIcon from '@/components/common/AppIcon.vue'
+import ListPagination from '@/components/common/ListPagination.vue'
+import ViewModeToggle from '@/components/common/ViewModeToggle.vue'
 
 const items = ref([])
 const totalCount = ref(0)
@@ -105,7 +149,22 @@ const searchQuery = ref('')
 const activeStatus = ref('')
 const sortBy = ref('modified desc')
 const currentPage = ref(1)
-const pageSize = 20
+const pageSize = 12
+const viewMode = ref('table')
+
+const kanbanColumns = computed(() => {
+  const cols = [
+    { status: 'Active', label: 'Aktif', color: '#10b981', items: [] },
+    { status: 'Inactive', label: 'Pasif', color: '#9ca3af', items: [] },
+    { status: 'Deprecated', label: 'Kullanım Dışı', color: '#ef4444', items: [] },
+  ]
+  for (const item of items.value) {
+    const col = cols.find(c => c.status === item.status)
+    if (col) col.items.push(item)
+    else cols[1].items.push(item)
+  }
+  return cols
+})
 
 const statusFilters = [
   { value: '', label: 'Tümü', dot: 'bg-violet-400' },

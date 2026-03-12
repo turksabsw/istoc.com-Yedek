@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2024-01-23 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "criterion_name",
+  "criterion_code",
+  "weight",
+  "column_break_thresholds",
+  "threshold_good",
+  "threshold_poor",
+  "is_inverted"
+ ],
+ "fields": [
+  {
+   "fieldname": "criterion_name",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Criterion Name",
+   "options": "Total Spend\nOrder Frequency\nOn-Time Payment\nReturn/Cancel Rate\nAccount Age\nDispute Rate\nFeedback Rate",
+   "reqd": 1,
+   "description": "Name of the grading criterion"
+  },
+  {
+   "fieldname": "criterion_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Criterion Code",
+   "reqd": 1,
+   "description": "Unique code for programmatic use (e.g., TOTAL_SPEND, ORDER_FREQ)"
+  },
+  {
+   "default": "0",
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight",
+   "precision": 2,
+   "reqd": 1,
+   "description": "Weight percentage for this criterion (all weights must sum to 100)"
+  },
+  {
+   "fieldname": "column_break_thresholds",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "threshold_good",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Threshold Good",
+   "precision": 2,
+   "description": "Target value for maximum score (100 points)"
+  },
+  {
+   "default": "0",
+   "fieldname": "threshold_poor",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Threshold Poor",
+   "precision": 2,
+   "description": "Target value for minimum score (0 points)"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_inverted",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Inverted",
+   "description": "Check if lower values are better (e.g., return rate, dispute rate)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Grading Criterion",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 0,
+ "search_fields": "criterion_name, criterion_code",
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}
