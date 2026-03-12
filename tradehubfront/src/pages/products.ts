@@ -40,8 +40,25 @@ import {
 } from '../components/products'
 import { ShippingModal, initShippingModal } from '../components/product'
 
-import { getMockProductListingCards } from '../data/mockProductListing'
-const mockProductListingCards = getMockProductListingCards();
+import { searchProducts } from '../utils/api'
+import type { SearchProduct } from '../utils/api'
+import type { ProductListingCard } from '../types/productListing'
+
+function mapSearchProductToCard(p: SearchProduct): ProductListingCard {
+  return {
+    id: p.name,
+    name: p.product_name,
+    href: `/pages/product-detail.html?id=${encodeURIComponent(p.url_slug || p.name)}`,
+    price: p.formatted_price || (p.base_price ? `${p.base_price} ₺` : '-'),
+    moq: p.min_order_quantity ? `Min. ${p.min_order_quantity} adet` : '',
+    stats: p.total_orders ? `${p.total_orders} sipariş` : '',
+    imageKind: 'label',
+    imageSrc: p.primary_image || undefined,
+    supplierName: p.seller_name || undefined,
+    rating: p.average_rating || undefined,
+    reviewCount: p.total_reviews || undefined,
+  }
+}
 
 // Category data for ID → name mapping
 import { megaCategories } from '../components/header'
@@ -210,19 +227,43 @@ document.addEventListener('view-mode-change', (e: Event) => {
   setGridViewMode((e as CustomEvent).detail.mode);
 });
 
-// Initialize listing cart drawer
-initListingCartDrawer(mockProductListingCards);
 initShippingModal();
 
-// Initialize filter engine: connects filters + sorting to product grid
-// Note: Alpine $dispatch events (filter-change, sort-change, view-mode-change)
-// bubble through the DOM and reach these document-level listeners.
+// Initialize filter engine and load real products from backend
 let engine: ReturnType<typeof initFilterEngine> | null = null;
-engine = initFilterEngine({
-  products: mockProductListingCards,
-  onUpdate: (filtered, count) => {
-    rerenderProductGrid(filtered);
-    updateSearchHeader({ totalProducts: count });
-    if (engine) updateFilterChips(engine.getState());
-  },
-});
+
+async function loadAndInitProducts() {
+  try {
+    const res = await searchProducts({
+      q: queryParam || undefined,
+      category: categoryParam || undefined,
+      limit: 48,
+    })
+    const products: ProductListingCard[] = (res.products || []).map(mapSearchProductToCard)
+
+    initListingCartDrawer(products)
+    updateSearchHeader({ totalProducts: res.total || products.length })
+
+    engine = initFilterEngine({
+      products,
+      onUpdate: (filtered, count) => {
+        rerenderProductGrid(filtered)
+        updateSearchHeader({ totalProducts: count })
+        if (engine) updateFilterChips(engine.getState())
+      },
+    })
+  } catch {
+    // Backend erişilemiyorsa boş grid göster
+    initListingCartDrawer([])
+    engine = initFilterEngine({
+      products: [],
+      onUpdate: (filtered, count) => {
+        rerenderProductGrid(filtered)
+        updateSearchHeader({ totalProducts: count })
+        if (engine) updateFilterChips(engine.getState())
+      },
+    })
+  }
+}
+
+loadAndInitProducts();

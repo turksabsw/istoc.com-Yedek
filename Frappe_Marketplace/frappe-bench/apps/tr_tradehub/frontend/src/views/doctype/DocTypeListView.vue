@@ -12,7 +12,7 @@
           <AppIcon name="refresh-cw" :size="14" />
           <span>Yenile</span>
         </button>
-        <button class="hdr-btn-primary" @click="showCreateModal = true">
+        <button class="hdr-btn-primary" @click="createNew">
           <AppIcon name="plus" :size="14" />
           <span>Yeni Ekle</span>
         </button>
@@ -64,7 +64,7 @@
       </div>
       <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Henüz kayıt yok</h3>
       <p class="text-xs text-gray-400 mb-4">İlk {{ doctypeLabel }} kaydınızı oluşturun</p>
-      <button class="hdr-btn-primary" @click="showCreateModal = true">
+      <button class="hdr-btn-primary" @click="createNew">
         <AppIcon name="plus" :size="14" />
         <span>Yeni Ekle</span>
       </button>
@@ -211,8 +211,21 @@ const statusFilter = ref('')
 const sortBy = ref('modified desc')
 const currentPage = ref(1)
 const pageSize = 12
-const showCreateModal = ref(false)
 const viewMode = ref('table')
+
+// Belirli doctype'lar için özel create route'ları
+const CUSTOM_CREATE_ROUTES = {
+  'Product': '/app/product-add',
+}
+
+function createNew() {
+  const custom = CUSTOM_CREATE_ROUTES[doctype.value]
+  if (custom) {
+    router.push(custom)
+  } else {
+    router.push(`/app/${encodeURIComponent(doctype.value)}/new`)
+  }
+}
 
 const doctype = computed(() => {
   const raw = route.params.doctype || ''

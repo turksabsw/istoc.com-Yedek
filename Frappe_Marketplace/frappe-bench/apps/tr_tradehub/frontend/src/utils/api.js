@@ -123,4 +123,7 @@ export default {
     const qs = new URLSearchParams({ filters: JSON.stringify(filters) })
     return request('GET', `/api/method/frappe.client.get_count?doctype=${encodeURIComponent(doctype)}&${qs}`)
   },
+  async getMeta(doctype) {
+    return request('GET', `/api/method/frappe.client.get_meta?doctype=${encodeURIComponent(doctype)}`)
+  },
 }

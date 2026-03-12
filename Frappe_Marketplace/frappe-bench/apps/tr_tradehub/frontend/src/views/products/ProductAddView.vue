@@ -13,8 +13,11 @@
       </div>
       <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
         <button class="hdr-btn-outlined" @click="$router.push('/dashboard')">İptal</button>
-        <button class="hdr-btn-outlined" @click="saveDraft"><i class="fas fa-floppy-disk mr-1.5 text-xs"></i>Taslak</button>
-        <button class="hdr-btn-primary" @click="submitForm"><i class="fas fa-check mr-1.5 text-xs"></i>Yayınla</button>
+        <button class="hdr-btn-outlined" :disabled="saving" @click="saveDraft"><i class="fas fa-floppy-disk mr-1.5 text-xs"></i>Taslak</button>
+        <button class="hdr-btn-primary" :disabled="saving" @click="submitForm">
+          <i v-if="saving" class="fas fa-spinner fa-spin mr-1.5 text-xs"></i>
+          <i v-else class="fas fa-check mr-1.5 text-xs"></i>Yayınla
+        </button>
       </div>
     </div>
 
@@ -180,13 +183,18 @@
               <label class="form-label">Kategori <span class="text-red-500">*</span></label>
               <select v-model="form.category" class="form-input">
                 <option value="">Seçin</option>
-                <option>Kimyasallar</option><option>Solventler</option><option>Reçineler</option><option>Yapıştırıcılar</option><option>Endüstriyel</option>
+                <option v-for="cat in categories" :key="cat.name" :value="cat.name">
+                  {{ cat.category_name || cat.name }}
+                </option>
               </select>
             </div>
             <div>
               <label class="form-label">Marka</label>
               <select v-model="form.brand" class="form-input">
-                <option>Anadolu Kimya</option>
+                <option value="">Seçin</option>
+                <option v-for="b in brands" :key="b.name" :value="b.name">
+                  {{ b.brand_name || b.name }}
+                </option>
               </select>
             </div>
             <div>
@@ -212,13 +220,19 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import AppIcon from '@/components/common/AppIcon.vue'
+import api from '@/utils/api'
 
 const router = useRouter()
 const toast = useToast()
+const saving = ref(false)
+const categories = ref([])
+const brands = ref([])
+
+const STATUS_MAP = { 'Aktif': 'Active', 'Taslak': 'Draft', 'Pasif': 'Inactive' }
 
 const certOptions = ['ISO 9001', 'CE Belgesi', 'REACH Uyumlu', 'TSE Belgesi']
 
@@ -239,7 +253,7 @@ const form = reactive({
   status: 'Aktif',
   visibility: 'Herkese Açık',
   category: '',
-  brand: 'Anadolu Kimya',
+  brand: '',
   tags: '',
   certifications: [],
   images: [],
@@ -248,6 +262,21 @@ const form = reactive({
     { min: 50, max: 99, price: null, discount: 10 },
   ],
 })
+
+async function loadOptions() {
+  try {
+    const [catRes, brandRes] = await Promise.all([
+      api.callMethod('tr_tradehub.api.v1.catalog.get_categories'),
+      api.callMethod('tr_tradehub.api.v1.catalog.get_brands'),
+    ])
+    categories.value = catRes.message?.data || []
+    brands.value = brandRes.message?.data || []
+  } catch {
+    // Yüklenemezse boş bırak
+  }
+}
+
+onMounted(loadOptions)
 
 function addTier() {
   form.priceTiers.push({ min: null, max: null, price: null, discount: null })
@@ -269,16 +298,52 @@ function handleDrop(e) {
   }
 }
 
+async function saveProduct(status) {
+  if (!form.name) {
+    toast.error('Ürün adı zorunludur')
+    return
+  }
+  if (!form.price) {
+    toast.error('Birim fiyat zorunludur')
+    return
+  }
+
+  saving.value = true
+  try {
+    const res = await api.callMethod('tr_tradehub.api.v1.catalog.create_product', {
+      product_name: form.name,
+      status: STATUS_MAP[status] || 'Draft',
+      product_code: form.sku || undefined,
+      barcode: form.barcode || undefined,
+      brand: form.brand || undefined,
+      category: form.category || undefined,
+      base_price: form.price || undefined,
+      description: [form.shortDesc, form.description].filter(Boolean).join('\n\n') || undefined,
+      stock: form.stock || undefined,
+      min_order: form.minOrder || undefined,
+      weight: form.weight || undefined,
+    })
+    const newName = res.message?.name
+    const hasListing = res.message?.has_listing
+
+    if (status === 'Aktif') {
+      toast.success(hasListing ? 'Ürün yayınlandı ve mağazanıza eklendi!' : 'Ürün kataloga eklendi!')
+    } else {
+      toast.info('Taslak kaydedildi')
+    }
+    router.push(newName ? `/app/Product/${encodeURIComponent(newName)}` : '/app/Product')
+  } catch (err) {
+    toast.error(err.message || 'Ürün kaydedilirken hata oluştu')
+  } finally {
+    saving.value = false
+  }
+}
+
 function saveDraft() {
-  toast.info('Taslak kaydedildi')
+  saveProduct('Taslak')
 }
 
 function submitForm() {
-  if (!form.name || !form.price || !form.sku || !form.stock) {
-    toast.error('Zorunlu alanları doldurun')
-    return
-  }
-  toast.success('Ürün başarıyla yayınlandı!')
-  setTimeout(() => router.push('/dashboard'), 1200)
+  saveProduct('Aktif')
 }
 </script>

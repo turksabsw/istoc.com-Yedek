@@ -226,3 +226,73 @@ export async function loadStorefrontProducts(
 export function yearsActive(joinedAt: string): number {
   return new Date().getFullYear() - new Date(joinedAt).getFullYear()
 }
+
+// ─── Product Listing Search Types ────────────────────────
+export interface SearchProduct {
+  name: string
+  product_name: string
+  sku_code: string
+  url_slug: string
+  short_description: string
+  category: string
+  category_name: string
+  brand: string
+  brand_name: string
+  seller: string
+  seller_name: string
+  base_price: number
+  formatted_price: string
+  currency: string
+  min_order_quantity: number
+  average_rating: number
+  total_reviews: number
+  total_orders: number
+  primary_image: string
+  in_stock: boolean
+}
+
+export interface SearchProductsResponse {
+  success: boolean
+  products: SearchProduct[]
+  total: number
+  count: number
+  limit: number
+  offset: number
+  has_more: boolean
+}
+
+export interface SearchProductsParams {
+  q?: string
+  category?: string
+  brand?: string
+  seller?: string
+  price_min?: number
+  price_max?: number
+  sort_by?: string
+  limit?: number
+  offset?: number
+}
+
+/**
+ * Search/list products from the marketplace.
+ * Calls GET /api/method/tr_tradehub.api.v1.search.search_products
+ */
+export async function searchProducts(
+  params: SearchProductsParams = {}
+): Promise<SearchProductsResponse> {
+  const p = new URLSearchParams()
+  if (params.q) p.set('q', params.q)
+  if (params.category) p.set('category', params.category)
+  if (params.brand) p.set('brand', params.brand)
+  if (params.seller) p.set('seller', params.seller)
+  if (params.price_min != null) p.set('price_min', String(params.price_min))
+  if (params.price_max != null) p.set('price_max', String(params.price_max))
+  if (params.sort_by) p.set('sort_by', params.sort_by)
+  if (params.limit != null) p.set('limit', String(params.limit))
+  if (params.offset != null) p.set('offset', String(params.offset))
+
+  const response = await api<FrappeResponse<SearchProductsResponse>>(
+    `/api/method/tr_tradehub.api.v1.search.search_products${p.toString() ? '?' + p.toString() : ''}`
+  )
+  return response.message
+}
