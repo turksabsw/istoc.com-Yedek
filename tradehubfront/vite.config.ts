@@ -86,6 +86,7 @@ function notFoundFallbackPlugin(): Plugin {
 export default defineConfig({
     base: process.env.GITHUB_PAGES === 'true' ? '/tradehubfront/' : '/',
     server: {
+        host: '0.0.0.0',
         proxy: {
             '/api': {
                 target: process.env.VITE_FRAPPE_BASE || 'http://localhost:8000',

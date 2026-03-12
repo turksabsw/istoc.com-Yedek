@@ -2,43 +2,49 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/Frappe_Marketplace/' : '/',
-  plugins: [vue()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
-  },
-  server: {
-    port: 8082,
-    strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-        headers: {
-          Host: 'marketplace.local:8000',
-        },
-      },
-      '/assets': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-        headers: {
-          Host: 'marketplace.local:8000',
-        },
-      },
-      '/socket.io': {
-        target: 'http://localhost:9000',
-        ws: true,
-        changeOrigin: true,
+export default defineConfig(({ command }) => {
+  const frappeBackend = process.env.VITE_FRAPPE_BACKEND || 'http://localhost:8000'
+  const frappeSocketio = process.env.VITE_FRAPPE_SOCKETIO || 'http://localhost:9000'
+
+  return {
+    base: command === 'build' ? '/Frappe_Marketplace/' : '/',
+    plugins: [vue()],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
       },
     },
-  },
-  build: {
-    outDir: 'dist',
-    emptyOutDir: true,
-  },
-}))
+    server: {
+      port: 8082,
+      strictPort: true,
+      host: '0.0.0.0',
+      proxy: {
+        '/api': {
+          target: frappeBackend,
+          changeOrigin: true,
+          secure: false,
+          headers: {
+            Host: 'marketplace.local:8000',
+          },
+        },
+        '/assets': {
+          target: frappeBackend,
+          changeOrigin: true,
+          secure: false,
+          headers: {
+            Host: 'marketplace.local:8000',
+          },
+        },
+        '/socket.io': {
+          target: frappeSocketio,
+          ws: true,
+          changeOrigin: true,
+        },
+      },
+    },
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+    },
+  }
+})
