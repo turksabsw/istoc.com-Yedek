@@ -1,0 +1,84 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-03-11 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "action_section",
+  "trigger_event",
+  "action_type",
+  "column_break_action",
+  "action_target",
+  "action_value",
+  "enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "action_section",
+   "fieldtype": "Section Break",
+   "label": "Action"
+  },
+  {
+   "description": "Event that triggers this action (e.g., Member Added, Member Removed, Segment Refreshed)",
+   "fieldname": "trigger_event",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Trigger Event",
+   "options": "Member Added\nMember Removed\nSegment Refreshed",
+   "reqd": 1
+  },
+  {
+   "description": "Type of action to perform when triggered",
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Action Type",
+   "options": "Update Field\nAdd Tag\nRemove Tag\nSend Notification\nAdd to Campaign\nCustom",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_action",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Target field, tag name, or notification template for the action",
+   "fieldname": "action_target",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Action Target"
+  },
+  {
+   "description": "Value to set, or additional configuration for the action",
+   "fieldname": "action_value",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Action Value"
+  },
+  {
+   "default": "1",
+   "description": "Enable or disable this action",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Segment Action",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 0,
+ "search_fields": "trigger_event, action_type, action_target",
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

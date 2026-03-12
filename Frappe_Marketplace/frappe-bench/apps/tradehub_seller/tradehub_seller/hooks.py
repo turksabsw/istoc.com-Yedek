@@ -135,7 +135,15 @@ scheduler_events = {
 	],
 	"weekly": [
 		"tradehub_seller.tradehub_seller.seller_tags.tasks.cleanup_old_metrics"
-	]
+	],
+	"cron": {
+		"0 2 * * 0": [
+			"tradehub_seller.tasks.recalculate_seller_metrics"
+		],
+		"0 3 * * 0": [
+			"tradehub_seller.tasks.calculate_seller_scores"
+		]
+	}
 }
 
 # Testing

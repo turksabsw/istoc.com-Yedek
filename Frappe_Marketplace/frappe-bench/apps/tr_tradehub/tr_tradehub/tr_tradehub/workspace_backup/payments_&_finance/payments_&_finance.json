@@ -109,6 +109,36 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Marketplace Payment Terms Template",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Marketplace Payment Terms Template"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Payment Method",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Payment Method"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Seller Payment Terms",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Seller Payment Terms"
   }
  ],
  "modified": "2026-02-13 16:18:26.420474",

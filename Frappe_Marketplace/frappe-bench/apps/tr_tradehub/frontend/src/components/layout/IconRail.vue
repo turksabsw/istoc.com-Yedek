@@ -1,5 +1,5 @@
 <template>
-  <div class="w-[72px] h-screen sticky top-0 z-50 sidebar-rail flex flex-col items-center border-r sidebar-rail-border flex-shrink-0">
+  <div class="w-[60px] h-screen sticky top-0 z-50 sidebar-rail flex flex-col items-center border-r sidebar-rail-border flex-shrink-0">
     <TenantSwitcher />
 
     <div class="flex-1 w-full flex flex-col items-center py-3 gap-1 overflow-y-auto rail-scroll">

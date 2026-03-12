@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-03-11 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "group_section",
+  "group_name",
+  "column_break_group",
+  "condition_logic",
+  "enabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "group_section",
+   "fieldtype": "Section Break",
+   "label": "Rule Group"
+  },
+  {
+   "description": "Descriptive name for this rule group (e.g., High Value Buyers, Active Sellers)",
+   "fieldname": "group_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Group Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_group",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "AND",
+   "description": "Logical operator for combining conditions within this group",
+   "fieldname": "condition_logic",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Condition Logic",
+   "options": "AND\nOR",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "description": "Enable or disable this rule group",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Segment Rule Group",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 0,
+ "search_fields": "group_name, condition_logic",
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

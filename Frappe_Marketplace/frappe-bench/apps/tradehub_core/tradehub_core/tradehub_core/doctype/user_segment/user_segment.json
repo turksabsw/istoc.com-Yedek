@@ -1,0 +1,314 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "naming_series:",
+ "creation": "2026-03-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "basic_info_section",
+  "naming_series",
+  "segment_name",
+  "segment_code",
+  "target_type",
+  "column_break_basic",
+  "status",
+  "priority",
+  "auto_refresh",
+  "tenant",
+  "rules_tab",
+  "group_logic_section",
+  "group_logic",
+  "rule_groups_section",
+  "rule_groups",
+  "conditions_section",
+  "conditions",
+  "actions_tab",
+  "actions_section",
+  "actions",
+  "statistics_tab",
+  "stats_section",
+  "member_count",
+  "member_count_preview",
+  "column_break_stats",
+  "last_refreshed",
+  "last_refresh_duration",
+  "system_tab",
+  "timestamps_section",
+  "created_by",
+  "created_at",
+  "column_break_system",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Segment Information"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "SEG-.YYYY.-.#####",
+   "default": "SEG-.YYYY.-.#####",
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "segment_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Segment Name",
+   "reqd": 1,
+   "description": "Descriptive name for this user segment (e.g., High Value Buyers, Premium Sellers)"
+  },
+  {
+   "fieldname": "segment_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Segment Code",
+   "unique": 1,
+   "description": "Unique code identifier for this segment (e.g., HIGH_VALUE_BUYER)"
+  },
+  {
+   "default": "Buyer",
+   "fieldname": "target_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Target Type",
+   "options": "Buyer\nSeller",
+   "reqd": 1,
+   "description": "Type of users this segment targets"
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nInactive\nDraft",
+   "reqd": 1,
+   "description": "Segment status — only Active segments are evaluated during refresh"
+  },
+  {
+   "default": "10",
+   "fieldname": "priority",
+   "fieldtype": "Int",
+   "label": "Priority",
+   "description": "Lower number = higher priority (evaluated first during refresh)"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_refresh",
+   "fieldtype": "Check",
+   "label": "Auto Refresh",
+   "description": "Automatically refresh this segment during scheduled hourly refresh"
+  },
+  {
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "description": "Tenant scope for this segment"
+  },
+  {
+   "fieldname": "rules_tab",
+   "fieldtype": "Tab Break",
+   "label": "Rules"
+  },
+  {
+   "fieldname": "group_logic_section",
+   "fieldtype": "Section Break",
+   "label": "Group Logic"
+  },
+  {
+   "default": "AND",
+   "fieldname": "group_logic",
+   "fieldtype": "Select",
+   "label": "Group Logic",
+   "options": "AND\nOR",
+   "description": "Logical operator for combining rule groups: AND (all groups must pass) or OR (any group can pass)"
+  },
+  {
+   "fieldname": "rule_groups_section",
+   "fieldtype": "Section Break",
+   "label": "Rule Groups"
+  },
+  {
+   "fieldname": "rule_groups",
+   "fieldtype": "Table",
+   "label": "Rule Groups",
+   "options": "Segment Rule Group",
+   "description": "Define logical groups for organizing conditions. Each group contains conditions linked via rule_group_idx."
+  },
+  {
+   "fieldname": "conditions_section",
+   "fieldtype": "Section Break",
+   "label": "Conditions"
+  },
+  {
+   "fieldname": "conditions",
+   "fieldtype": "Table",
+   "label": "Conditions",
+   "options": "Segment Rule Condition",
+   "description": "Individual conditions linked to rule groups via rule_group_idx. Frappe does not support nested child tables."
+  },
+  {
+   "fieldname": "actions_tab",
+   "fieldtype": "Tab Break",
+   "label": "Actions"
+  },
+  {
+   "fieldname": "actions_section",
+   "fieldtype": "Section Break",
+   "label": "Segment Actions"
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Table",
+   "label": "Actions",
+   "options": "Segment Action",
+   "description": "Actions to execute when segment membership changes"
+  },
+  {
+   "fieldname": "statistics_tab",
+   "fieldtype": "Tab Break",
+   "label": "Statistics"
+  },
+  {
+   "fieldname": "stats_section",
+   "fieldtype": "Section Break",
+   "label": "Membership Statistics"
+  },
+  {
+   "default": "0",
+   "fieldname": "member_count",
+   "fieldtype": "Int",
+   "label": "Member Count",
+   "read_only": 1,
+   "description": "Current number of active segment members (updated after refresh)"
+  },
+  {
+   "default": "0",
+   "fieldname": "member_count_preview",
+   "fieldtype": "Int",
+   "label": "Member Count Preview",
+   "read_only": 1,
+   "description": "Preview of matching members count (updated on save before actual refresh)"
+  },
+  {
+   "fieldname": "column_break_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_refreshed",
+   "fieldtype": "Datetime",
+   "label": "Last Refreshed",
+   "read_only": 1,
+   "description": "When this segment was last refreshed"
+  },
+  {
+   "fieldname": "last_refresh_duration",
+   "fieldtype": "Float",
+   "label": "Last Refresh Duration (sec)",
+   "read_only": 1,
+   "description": "Duration of the last refresh in seconds"
+  },
+  {
+   "fieldname": "system_tab",
+   "fieldtype": "Tab Break",
+   "label": "System"
+  },
+  {
+   "fieldname": "timestamps_section",
+   "fieldtype": "Section Break",
+   "label": "System Information",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "created_by",
+   "fieldtype": "Link",
+   "label": "Created By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_system",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description",
+   "description": "Human-readable description of this segment's purpose and criteria"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "group": "Related",
+   "link_doctype": "Segment Member",
+   "link_fieldname": "segment"
+  }
+ ],
+ "modified": "2026-03-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "User Segment",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Marketplace Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "segment_name, segment_code, target_type, status",
+ "sort_field": "priority",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "segment_name",
+ "track_changes": 1
+}

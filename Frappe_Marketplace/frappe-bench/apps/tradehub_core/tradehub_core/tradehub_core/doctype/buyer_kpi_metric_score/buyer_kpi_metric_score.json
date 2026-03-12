@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "metric_code",
+  "metric_name",
+  "raw_value",
+  "column_break_main",
+  "normalized_score",
+  "weight",
+  "weighted_score",
+  "threshold_section",
+  "threshold_level"
+ ],
+ "fields": [
+  {
+   "fieldname": "metric_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Metric Code",
+   "reqd": 1,
+   "description": "Unique metric identifier code (e.g., TOTAL_SPEND, ORDER_FREQ)"
+  },
+  {
+   "fieldname": "metric_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Metric Name",
+   "reqd": 1,
+   "description": "Display name of the metric"
+  },
+  {
+   "default": "0",
+   "fieldname": "raw_value",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Raw Value",
+   "precision": 4,
+   "description": "Original metric value before normalization"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "normalized_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Normalized Score",
+   "precision": 2,
+   "description": "Score after normalization (0-100)"
+  },
+  {
+   "default": "0",
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight",
+   "precision": 2,
+   "description": "Weight percentage applied to this metric"
+  },
+  {
+   "default": "0",
+   "fieldname": "weighted_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weighted Score",
+   "precision": 2,
+   "description": "Score after applying weight (normalized_score * weight / 100)"
+  },
+  {
+   "fieldname": "threshold_section",
+   "fieldtype": "Section Break",
+   "label": "Threshold"
+  },
+  {
+   "default": "Normal",
+   "fieldname": "threshold_level",
+   "fieldtype": "Select",
+   "label": "Threshold Level",
+   "options": "Excellent\nGood\nNormal\nWarning\nCritical",
+   "description": "Performance level based on threshold evaluation"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Buyer KPI Metric Score",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 0,
+ "search_fields": "metric_code, metric_name, threshold_level",
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

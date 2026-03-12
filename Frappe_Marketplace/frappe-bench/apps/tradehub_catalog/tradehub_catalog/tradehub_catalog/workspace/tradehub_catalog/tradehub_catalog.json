@@ -1,7 +1,7 @@
 {
  "charts": [],
- "content": "[{\"id\":\"card-tradehub_catalog\",\"type\":\"card\",\"data\":{\"card_name\":\"TradeHub Catalog\",\"col\":12}}]",
- "creation": "2026-02-16 16:18:57.270308",
+ "content": "[{\"id\":\"card-catalog-mgmt\",\"type\":\"card\",\"data\":{\"card_name\":\"Catalog Management\",\"col\":4}},{\"id\":\"card-classification\",\"type\":\"card\",\"data\":{\"card_name\":\"Classification\",\"col\":4}},{\"id\":\"card-brand\",\"type\":\"card\",\"data\":{\"card_name\":\"Brand & Media\",\"col\":4}},{\"id\":\"card-ranking\",\"type\":\"card\",\"data\":{\"card_name\":\"Ranking & Engagement\",\"col\":4}},{\"id\":\"card-config\",\"type\":\"card\",\"data\":{\"card_name\":\"Configuration\",\"col\":4}}]",
+ "creation": "2026-02-19 10:00:00",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -16,7 +16,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "TradeHub Catalog",
+   "label": "Catalog Management",
    "link_count": 0,
    "link_type": "",
    "onboard": 0,
@@ -25,9 +25,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Attribute",
+   "label": "Category",
    "link_count": 0,
-   "link_to": "Attribute",
+   "link_to": "Category",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -35,9 +35,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Attribute Label Override",
+   "label": "Product",
    "link_count": 0,
-   "link_to": "Attribute Label Override",
+   "link_to": "Product",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -45,32 +45,20 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Attribute Set",
+   "label": "Ranking & Engagement",
    "link_count": 0,
-   "link_to": "Attribute Set",
-   "link_type": "DocType",
+   "link_type": "",
    "onboard": 0,
-   "type": "Link"
+   "type": "Card Break"
   },
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Attribute Set Item",
+   "label": "Brand & Media",
    "link_count": 0,
-   "link_to": "Attribute Set Item",
-   "link_type": "DocType",
+   "link_type": "",
    "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Attribute Value",
-   "link_count": 0,
-   "link_to": "Attribute Value",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
+   "type": "Card Break"
   },
   {
    "hidden": 0,
@@ -88,77 +76,6 @@
    "label": "Brand Gating",
    "link_count": 0,
    "link_to": "Brand Gating",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Category",
-   "link_count": 0,
-   "link_to": "Category",
-   "link_type": "DocType",
-   "onboard": 0,
-   "only_for": "System Manager",
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Category Display Schema",
-   "link_count": 0,
-   "link_to": "Category Display Schema",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Channel Field Mapping",
-   "link_count": 0,
-   "link_to": "Channel Field Mapping",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Completeness Rule",
-   "link_count": 0,
-   "link_to": "Completeness Rule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Family Attribute",
-   "link_count": 0,
-   "link_to": "Family Attribute",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Family Default Value",
-   "link_count": 0,
-   "link_to": "Family Default Value",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Filter Config",
-   "link_count": 0,
-   "link_to": "Filter Config",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -186,9 +103,97 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Classification",
+   "link_count": 0,
+   "link_type": "",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attribute Set",
+   "link_count": 0,
+   "link_to": "Attribute Set",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Product Class",
+   "link_count": 0,
+   "link_to": "Product Class",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Product Family",
+   "link_count": 0,
+   "link_to": "Product Family",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Category Display Schema",
+   "link_count": 0,
+   "link_to": "Category Display Schema",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Configuration",
+   "link_count": 0,
+   "link_type": "",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attribute",
+   "link_count": 0,
+   "link_to": "Attribute",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Filter Config",
+   "link_count": 0,
+   "link_to": "Filter Config",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "PIM Attribute",
    "link_count": 0,
    "link_to": "PIM Attribute",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Ranking Weight Config",
+   "link_count": 0,
+   "link_to": "Ranking Weight Config",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -206,9 +211,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "PIM Attribute Option",
+   "label": "Sales Channel",
    "link_count": 0,
-   "link_to": "PIM Attribute Option",
+   "link_to": "Sales Channel",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -226,69 +231,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "PIM Product Attribute Value",
+   "label": "SEO Meta",
    "link_count": 0,
-   "link_to": "PIM Product Attribute Value",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Product Category Link",
-   "link_count": 0,
-   "link_to": "PIM Product Category Link",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Product Class Field Value",
-   "link_count": 0,
-   "link_to": "PIM Product Class Field Value",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Product Description",
-   "link_count": 0,
-   "link_to": "PIM Product Description",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Product Media",
-   "link_count": 0,
-   "link_to": "PIM Product Media",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Product Price",
-   "link_count": 0,
-   "link_to": "PIM Product Price",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Product Relation",
-   "link_count": 0,
-   "link_to": "PIM Product Relation",
+   "link_to": "SEO Meta",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -299,36 +244,6 @@
    "label": "PIM Product Variant",
    "link_count": 0,
    "link_to": "PIM Product Variant",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Variant Axis Value",
-   "link_count": 0,
-   "link_to": "PIM Variant Axis Value",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "PIM Variant Media",
-   "link_count": 0,
-   "link_to": "PIM Variant Media",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product",
-   "link_count": 0,
-   "link_to": "Product",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -376,96 +291,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Product Class",
-   "link_count": 0,
-   "link_to": "Product Class",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Class Allowed Status",
-   "link_count": 0,
-   "link_to": "Product Class Allowed Status",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Class Attribute Group",
-   "link_count": 0,
-   "link_to": "Product Class Attribute Group",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Class Display Field",
-   "link_count": 0,
-   "link_to": "Product Class Display Field",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Class Field",
-   "link_count": 0,
-   "link_to": "Product Class Field",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Class Role Permission",
-   "link_count": 0,
-   "link_to": "Product Class Role Permission",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Class Search Config",
-   "link_count": 0,
-   "link_to": "Product Class Search Config",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Family",
-   "link_count": 0,
-   "link_to": "Product Family",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Product Pricing Tier",
-   "link_count": 0,
-   "link_to": "Product Pricing Tier",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Product Variant",
    "link_count": 0,
    "link_to": "Product Variant",
@@ -476,9 +301,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Ranking Weight Config",
+   "label": "Brand Authorization Request",
    "link_count": 0,
-   "link_to": "Ranking Weight Config",
+   "link_to": "Brand Authorization Request",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -486,9 +311,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Required Image Angle",
+   "label": "Brand Ownership Claim",
    "link_count": 0,
-   "link_to": "Required Image Angle",
+   "link_to": "Brand Ownership Claim",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -496,9 +321,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "SEO Meta",
+   "label": "Category Proposal",
    "link_count": 0,
-   "link_to": "SEO Meta",
+   "link_to": "Category Proposal",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -506,9 +331,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Sales Channel",
+   "label": "Seller Custom Category",
    "link_count": 0,
-   "link_to": "Sales Channel",
+   "link_to": "Seller Custom Category",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -516,9 +341,9 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Translatable Attribute Flag",
+   "label": "Variant Request",
    "link_count": 0,
-   "link_to": "Translatable Attribute Flag",
+   "link_to": "Variant Request",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -526,25 +351,15 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Variant Axis",
+   "label": "TradeHub Catalog Settings",
    "link_count": 0,
-   "link_to": "Variant Axis",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Virtual Category Rule",
-   "link_count": 0,
-   "link_to": "Virtual Category Rule",
+   "link_to": "TradeHub Catalog Settings",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   }
  ],
- "modified": "2026-02-16 16:24:16.662300",
+ "modified": "2026-03-12 14:18:32.372287",
  "modified_by": "Administrator",
  "module": "TradeHub Catalog",
  "name": "TradeHub Catalog",
@@ -554,7 +369,56 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 2.0,
- "shortcuts": [],
+ "sequence_id": 3.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "list",
+   "label": "Brand Authorization Request",
+   "link_to": "Brand Authorization Request",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "list",
+   "label": "Brand Ownership Claim",
+   "link_to": "Brand Ownership Claim",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "list",
+   "label": "Category Proposal",
+   "link_to": "Category Proposal",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "list",
+   "label": "Seller Custom Category",
+   "link_to": "Seller Custom Category",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "list",
+   "label": "Variant Request",
+   "link_to": "Variant Request",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "list",
+   "label": "TradeHub Catalog Settings",
+   "link_to": "TradeHub Catalog Settings",
+   "type": "DocType"
+  }
+ ],
  "title": "TradeHub Catalog"
 }

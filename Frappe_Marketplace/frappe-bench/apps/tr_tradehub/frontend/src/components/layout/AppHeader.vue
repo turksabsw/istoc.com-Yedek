@@ -15,17 +15,26 @@
       <nav class="hdr-breadcrumb" aria-label="Breadcrumb">
         <router-link to="/dashboard" class="hdr-crumb-link">Ana Sayfa</router-link>
 
+        <!-- Section (clickable) -->
         <template v-if="sectionLabel && sectionLabel !== 'Ana Sayfa'">
           <AppIcon name="chevron-right" :size="10" class="hdr-crumb-sep" />
-          <span class="hdr-crumb-text">{{ sectionLabel }}</span>
+          <router-link :to="sectionRoute" class="hdr-crumb-link" @click="onSectionClick">{{ sectionLabel }}</router-link>
         </template>
 
+        <!-- Group title (not clickable) -->
+        <template v-if="groupLabel">
+          <AppIcon name="chevron-right" :size="10" class="hdr-crumb-sep" />
+          <span class="hdr-crumb-text">{{ groupLabel }}</span>
+        </template>
+
+        <!-- Parent item (clickable on form views) -->
         <template v-if="parentLabel">
           <AppIcon name="chevron-right" :size="10" class="hdr-crumb-sep" />
           <router-link v-if="parentRoute" :to="parentRoute" class="hdr-crumb-link">{{ parentLabel }}</router-link>
           <span v-else class="hdr-crumb-text">{{ parentLabel }}</span>
         </template>
 
+        <!-- Current page -->
         <template v-if="currentLabel && currentLabel !== sectionLabel">
           <AppIcon name="chevron-right" :size="10" class="hdr-crumb-sep" />
           <span class="hdr-crumb-current">{{ currentLabel }}</span>
@@ -56,7 +65,7 @@
 
       <!-- Raporlar -->
       <button class="hdr-btn-outlined" @click="navigateTo('/app/report/general')" title="Raporlar">
-        <AppIcon name="file-bar-chart" :size="14" />
+        <AppIcon name="clipboard-list" :size="14" />
         <span>Raporlar</span>
       </button>
 
@@ -120,7 +129,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useSidebarStore } from '@/stores/sidebar'
 import { useNotificationStore } from '@/stores/notification'
 import { useOverlay } from '@/composables/useOverlay'
-import { railSections } from '@/data/navigation'
+import { sectionTitles, lookupNavItem, getFirstSectionRoute } from '@/data/navigation'
+import { useNavigationStore } from '@/stores/navigation'
 import GlobalSearch from '@/components/common/GlobalSearch.vue'
 import AppIcon from '@/components/common/AppIcon.vue'
 
@@ -128,28 +138,109 @@ const route = useRoute()
 const router = useRouter()
 const sidebar = useSidebarStore()
 const notifications = useNotificationStore()
+const nav = useNavigationStore()
 const { active: activeOverlay, toggle: toggleOverlay, close: closeOverlays } = useOverlay()
 
 const searchQuery = ref('')
 const showSearchResults = ref(false)
 
 // ── Breadcrumb computed ─────────────────────────────────────
-const sectionLabelMap = Object.fromEntries(
-  railSections.map((s) => [s.id, s.label])
-)
+// Unified nav lookup — works for ALL route types (named + generic)
+const dynamicNav = computed(() => {
+  const routeName = route.name
 
+  // 1. Named routes: lookup by route path (ör: /app/rfq-list → sales/RFQ)
+  let found = lookupNavItem(route.path, 'route')
+  if (found) return found
+
+  // 2. Named detail routes: lookup by parent route (ör: /app/rfq/:name → parent /app/rfq-list)
+  if (route.meta?.breadcrumbParentRoute) {
+    found = lookupNavItem(route.meta.breadcrumbParentRoute, 'route')
+    if (found) return found
+  }
+
+  // 3. Generic DocTypeList / DocTypeForm
+  if (routeName === 'DocTypeList' || routeName === 'DocTypeForm') {
+    const dt = route.params.doctype
+    if (dt) {
+      found = lookupNavItem(decodeURIComponent(dt), 'doctype')
+      if (found) return found
+    }
+  }
+
+  // 4. ReportView
+  if (routeName === 'ReportView') {
+    const rpt = route.params.report
+    if (rpt) {
+      found = lookupNavItem(decodeURIComponent(rpt), 'report')
+      if (found) return found
+    }
+  }
+
+  return null
+})
+
+// Is this a form/detail view? (needs parent item as clickable link)
+const isFormView = computed(() => {
+  const n = route.name
+  return n === 'DocTypeForm' || !!route.meta?.breadcrumbParent
+})
+
+// Section: full title from sectionTitles (not short rail label)
 const sectionLabel = computed(() => {
+  if (dynamicNav.value) return dynamicNav.value.sectionTitle
   const section = route.meta?.section
   if (!section) return null
-  return sectionLabelMap[section] || null
+  return sectionTitles[section] || null
 })
 
-const parentLabel = computed(() => route.meta?.breadcrumbParent || null)
-const parentRoute = computed(() => route.meta?.breadcrumbParentRoute || null)
+// Section click target: first item route of that section
+const sectionRoute = computed(() => {
+  const sectionId = dynamicNav.value?.sectionId || route.meta?.section
+  if (!sectionId) return '/dashboard'
+  return getFirstSectionRoute(sectionId)
+})
 
+// Group title (new breadcrumb level)
+const groupLabel = computed(() => {
+  return dynamicNav.value?.groupTitle || null
+})
+
+// Parent item label (shown on form views as clickable link back to list)
+const parentLabel = computed(() => {
+  if (!isFormView.value) return null
+  if (dynamicNav.value) return dynamicNav.value.itemLabel
+  return route.meta?.breadcrumbParent || null
+})
+
+// Parent item route (list page for the current form)
+const parentRoute = computed(() => {
+  if (!isFormView.value) return null
+  if (route.name === 'DocTypeForm' && route.params.doctype) {
+    return `/app/${encodeURIComponent(route.params.doctype)}`
+  }
+  return route.meta?.breadcrumbParentRoute || null
+})
+
+// Current page label (last crumb, not clickable)
 const currentLabel = computed(() => {
+  // Form views: show record name or meta breadcrumb
+  if (isFormView.value) {
+    if (route.name === 'DocTypeForm') {
+      return route.params.name ? decodeURIComponent(route.params.name) : null
+    }
+    return route.meta?.breadcrumb || route.meta?.title || null
+  }
+  // List/report views: show item label from nav lookup
+  if (dynamicNav.value) return dynamicNav.value.itemLabel
   return route.meta?.breadcrumb || route.meta?.title || null
 })
+
+// Section click handler: also switch sidebar to matching section
+function onSectionClick() {
+  const sectionId = dynamicNav.value?.sectionId || route.meta?.section
+  if (sectionId) nav.switchSection(sectionId)
+}
 
 // ── Handlers ────────────────────────────────────────────────
 function handleNotificationClick() {

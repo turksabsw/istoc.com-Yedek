@@ -59,6 +59,56 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer Abuse Log",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer Abuse Log"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer Feedback",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer Feedback"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer KPI Score Log",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer KPI Score Log"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Buyer KPI Template",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Buyer KPI Template"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer Grade",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link",
+   "link_to": "Customer Grade"
   }
  ],
  "modified": "2026-02-13 16:18:26.685453",

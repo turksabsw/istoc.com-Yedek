@@ -7,10 +7,10 @@
         class="toast"
         :class="`toast-${t.type}`"
       >
-        <i :class="t.icon"></i>
-        <span class="text-xs text-gray-700 flex-1">{{ t.message }}</span>
-        <button @click="remove(t.id)" class="text-gray-400 hover:text-gray-600">
-          <i class="fas fa-xmark text-xs"></i>
+        <AppIcon :name="toastIcon(t.type)" :size="14" />
+        <span class="text-xs flex-1">{{ t.message }}</span>
+        <button @click="remove(t.id)" class="toast-close">
+          <AppIcon name="x" :size="12" />
         </button>
       </div>
     </TransitionGroup>
@@ -19,5 +19,13 @@
 
 <script setup>
 import { useToast } from '@/composables/useToast'
+import AppIcon from '@/components/common/AppIcon.vue'
+
 const { toasts, remove } = useToast()
+
+function toastIcon(type) {
+  if (type === 'success') return 'check-circle'
+  if (type === 'error') return 'alert-circle'
+  return 'info'
+}
 </script>

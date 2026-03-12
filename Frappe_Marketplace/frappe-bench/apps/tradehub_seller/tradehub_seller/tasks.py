@@ -8,6 +8,8 @@ This module contains scheduled task functions for seller-related operations:
 - buybox_rotation: Hourly task to rotate Buy Box winners
 - kpi_tasks: Daily task to calculate seller KPI metrics
 - tier_tasks: Daily task to update seller tier levels
+- recalculate_seller_metrics: Weekly task to recalculate seller metrics and AHS
+- calculate_seller_scores: Weekly task to run seller scoring pipeline
 """
 
 import frappe
@@ -389,3 +391,243 @@ def evaluate_seller_tier(seller, tiers):
             "reference_name": seller.name,
             "content": f"Tier upgraded to {new_tier}"
         }).insert(ignore_permissions=True)
+
+
+def recalculate_seller_metrics():
+    """
+    Weekly task to recalculate seller metrics and Account Health Score (AHS).
+
+    Scheduled: Sunday 02:00 (via hooks.py cron).
+
+    Steps:
+    1. Acquire Redis lock to prevent concurrent execution
+    2. Get all active seller profiles
+    3. For each seller, recalculate metrics from order/listing data
+    4. Trigger AHS calculation and health status derivation
+    5. Commit every 100 records
+
+    Uses per-seller try/except to ensure a single failure doesn't block others.
+    """
+    lock_key = "recalculate_seller_metrics_lock"
+    if frappe.cache().get_value(lock_key):
+        frappe.log_error(
+            "recalculate_seller_metrics already running",
+            "Scheduler Lock"
+        )
+        return
+
+    frappe.cache().set_value(lock_key, 1, expires_in_sec=3600)
+    try:
+        _run_seller_metrics_recalculation()
+    finally:
+        frappe.cache().delete_value(lock_key)
+
+
+def _run_seller_metrics_recalculation():
+    """Internal function to recalculate seller metrics for all active sellers."""
+    if not frappe.db.exists("DocType", "Seller Metrics"):
+        return
+
+    if not frappe.db.exists("DocType", "Seller Profile"):
+        return
+
+    sellers = frappe.get_all(
+        "Seller Profile",
+        filters={"status": "Active"},
+        fields=["name"]
+    )
+
+    if not sellers:
+        frappe.logger().info("No active sellers found for metrics recalculation")
+        return
+
+    frappe.logger().info(
+        f"Starting seller metrics recalculation for {len(sellers)} sellers..."
+    )
+
+    processed = 0
+    errors = 0
+
+    for seller in sellers:
+        try:
+            _recalculate_metrics_for_seller(seller.name)
+            processed += 1
+
+            # Commit every 100 records
+            if processed % 100 == 0:
+                frappe.db.commit()
+
+        except Exception as e:
+            errors += 1
+            frappe.log_error(
+                message=f"Metrics recalculation failed for seller {seller.name}: {str(e)}",
+                title="Seller Metrics Recalculation Error"
+            )
+
+    frappe.db.commit()
+
+    frappe.logger().info(
+        f"Seller metrics recalculation complete. Processed: {processed}, Errors: {errors}"
+    )
+
+
+def _recalculate_metrics_for_seller(seller_name):
+    """Recalculate metrics for a single seller.
+
+    Loads the Seller Metrics record, triggers validate() which runs
+    AHS calculation and health status derivation, then saves.
+
+    Args:
+        seller_name: Seller Profile name.
+    """
+    existing_metrics = frappe.db.exists("Seller Metrics", {"seller": seller_name})
+
+    if not existing_metrics:
+        return
+
+    metrics = frappe.get_doc("Seller Metrics", existing_metrics)
+
+    # Re-run AHS calculation and status derivation via validate
+    metrics.calculate_account_health_score()
+    metrics.derive_account_health_status()
+
+    # Persist using db_update to avoid triggering full validate (which guards system fields)
+    metrics.db_update()
+
+
+def calculate_seller_scores():
+    """
+    Weekly task to calculate seller scores using the 8-step scoring pipeline.
+
+    Scheduled: Sunday 03:00 (via hooks.py cron).
+
+    Steps:
+    1. Acquire Redis lock to prevent concurrent execution
+    2. Get all active seller profiles
+    3. For each seller:
+       - Collect raw metrics from Seller Metrics
+       - Run the 8-step scoring pipeline
+       - Create or update Seller Score record
+    4. Commit every 100 records
+
+    Uses per-seller try/except to ensure a single failure doesn't block others.
+    """
+    lock_key = "calculate_seller_scores_lock"
+    if frappe.cache().get_value(lock_key):
+        frappe.log_error(
+            "calculate_seller_scores already running",
+            "Scheduler Lock"
+        )
+        return
+
+    frappe.cache().set_value(lock_key, 1, expires_in_sec=3600)
+    try:
+        _run_seller_score_calculation()
+    finally:
+        frappe.cache().delete_value(lock_key)
+
+
+def _run_seller_score_calculation():
+    """Internal function to calculate scores for all active sellers."""
+    if not frappe.db.exists("DocType", "Seller Score"):
+        return
+
+    if not frappe.db.exists("DocType", "Seller Profile"):
+        return
+
+    sellers = frappe.get_all(
+        "Seller Profile",
+        filters={"status": "Active"},
+        fields=["name"]
+    )
+
+    if not sellers:
+        frappe.logger().info("No active sellers found for score calculation")
+        return
+
+    frappe.logger().info(
+        f"Starting seller score calculation for {len(sellers)} sellers..."
+    )
+
+    processed = 0
+    errors = 0
+
+    for seller in sellers:
+        try:
+            _calculate_score_for_seller(seller.name)
+            processed += 1
+
+            # Commit every 100 records
+            if processed % 100 == 0:
+                frappe.db.commit()
+
+        except Exception as e:
+            errors += 1
+            frappe.log_error(
+                message=f"Score calculation failed for seller {seller.name}: {str(e)}",
+                title="Seller Score Calculation Error"
+            )
+
+    frappe.db.commit()
+
+    frappe.logger().info(
+        f"Seller score calculation complete. Processed: {processed}, Errors: {errors}"
+    )
+
+
+def _calculate_score_for_seller(seller_name):
+    """Calculate and persist score for a single seller.
+
+    Collects raw metrics from the Seller Metrics DocType, runs the
+    scoring pipeline, and creates a new Seller Score record.
+
+    Args:
+        seller_name: Seller Profile name.
+    """
+    from frappe.utils import now_datetime, nowdate
+
+    from tradehub_seller.tradehub_seller.scoring.engine import calculate_score
+
+    # Get seller metrics
+    metrics_name = frappe.db.exists("Seller Metrics", {"seller": seller_name})
+    if not metrics_name:
+        return
+
+    metrics = frappe.get_doc("Seller Metrics", metrics_name)
+
+    # Collect raw metric values
+    raw_metrics = {
+        "order_defect_rate": metrics.order_defect_rate or 0,
+        "on_time_delivery_rate": metrics.on_time_delivery_rate or 0,
+        "late_shipment_rate": metrics.late_shipment_rate or 0,
+        "return_rate": metrics.return_rate or 0,
+        "cancellation_rate": metrics.cancellation_rate or 0,
+        "avg_rating": metrics.avg_rating or 0,
+        "avg_response_time_hours": metrics.avg_response_time_hours or 0,
+        "complaint_rate": metrics.complaint_rate or 0,
+        "repeat_customer_rate": metrics.repeat_customer_rate or 0,
+        "positive_feedback_pct": metrics.positive_feedback_pct or 0,
+    }
+
+    # Run scoring pipeline
+    result = calculate_score(raw_metrics)
+
+    # Create Seller Score record
+    score_doc = frappe.get_doc({
+        "doctype": "Seller Score",
+        "seller": seller_name,
+        "score_type": "Weekly",
+        "calculation_date": nowdate(),
+        "composite_score": result["score"],
+        "status": "Calculating",
+        "created_by": "Administrator",
+        "created_at": now_datetime(),
+    })
+    score_doc.insert(ignore_permissions=True)
+
+    # Finalize the score
+    if hasattr(score_doc, "finalize"):
+        score_doc.finalize(user="Administrator")
+    else:
+        score_doc.status = "Finalized"
+        score_doc.save(ignore_permissions=True)

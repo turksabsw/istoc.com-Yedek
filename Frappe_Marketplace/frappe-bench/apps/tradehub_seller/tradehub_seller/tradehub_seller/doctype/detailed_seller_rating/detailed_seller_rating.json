@@ -1,0 +1,67 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2024-01-23 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "rating_category",
+  "column_break_main",
+  "rating_value",
+  "comment_section",
+  "comment"
+ ],
+ "fields": [
+  {
+   "fieldname": "rating_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Rating Category",
+   "options": "Product Accuracy\nCommunication\nShipping Speed\nPrice Value",
+   "reqd": 1,
+   "description": "Category of the detailed seller rating"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "rating_value",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Rating Value",
+   "reqd": 1,
+   "description": "Rating value from 1 to 5"
+  },
+  {
+   "fieldname": "comment_section",
+   "fieldtype": "Section Break",
+   "label": "Comment"
+  },
+  {
+   "fieldname": "comment",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Comment",
+   "description": "Optional comment for this rating category"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2024-01-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Seller",
+ "name": "Detailed Seller Rating",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "quick_entry": 0,
+ "search_fields": "rating_category, rating_value",
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": [],
+ "track_changes": 0
+}

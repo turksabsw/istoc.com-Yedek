@@ -3,8 +3,9 @@
 // ============================================================
 
 // --- Brand ---
-$brand: #6c5dd3;
-$brand-glow: rgba(#6c5dd3, 0.35);
+$brand: #7c3aed;
+$brand-glow: rgba(#7c3aed, 0.35);
+$brand-light: #a78bfa;
 
 // --- Light Palette ---
 $l-bg: #ffffff;
@@ -21,23 +22,23 @@ $l-text-400: #9ca3af;
 $l-text-300: #d1d5db;
 
 // --- Dark Palette ---
-$d-bg: #0d1117;
-$d-bg-card: #161b22;
-$d-bg-elevated: #1c2128;
-$d-bg-hover: #21262d;
-$d-border: #30363d;
-$d-border-inner: #21262d;
-$d-text: #d1d5db;
-$d-text-hi: #e6edf3;
+$d-bg: #0f0f14;
+$d-bg-card: #16161d;
+$d-bg-elevated: #1e1e28;
+$d-bg-hover: #1e1e28;
+$d-border: #2a2a38;
+$d-border-inner: #222230;
+$d-text: #e8e8f0;
+$d-text-hi: #e8e8f0;
 $d-text-max: #f0f6fc;
-$d-text-muted: #8b949e;
-$d-text-faint: #6e7681;
+$d-text-muted: #8888a0;
+$d-text-faint: #5c5c74;
 
 // --- Sidebar Dark Specifics ---
-$d-rail-bg: #0f0f12;
-$d-panel-bg: #1c1c26;
-$d-panel-border: #26263a;
-$d-item-hover: #24243a;
+$d-rail-bg: #0a0a0f;
+$d-panel-bg: #16161d;
+$d-panel-border: #222230;
+$d-item-hover: #1e1e28;
 
 // --- Status Colors ---
 $c-success: #10b981;

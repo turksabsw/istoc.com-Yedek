@@ -1,0 +1,494 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "SCGRADE-.YYYY.-.#####",
+ "creation": "2024-01-23 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "details_tab",
+  "basic_info_section",
+  "seller",
+  "seller_name",
+  "buyer",
+  "anonymous_customer_id",
+  "column_break_basic",
+  "status",
+  "tenant",
+  "tenant_name",
+  "calculation_date",
+  "grade_tab",
+  "platform_grade_section",
+  "platform_grade",
+  "platform_score",
+  "column_break_platform",
+  "previous_platform_score",
+  "platform_score_change",
+  "seller_grade_section",
+  "seller_grade",
+  "seller_score",
+  "use_custom_criteria",
+  "column_break_seller_grade",
+  "previous_seller_score",
+  "seller_score_change",
+  "criteria_tab",
+  "criteria_section",
+  "criteria",
+  "stats_tab",
+  "order_stats_section",
+  "total_orders",
+  "total_spend",
+  "average_order_value",
+  "column_break_stats",
+  "first_order_date",
+  "last_order_date",
+  "order_frequency",
+  "payment_stats_section",
+  "on_time_payment_rate",
+  "return_rate",
+  "column_break_payment_stats",
+  "dispute_rate",
+  "cancellation_rate",
+  "system_tab",
+  "notes_section",
+  "calculation_notes",
+  "timestamps_section",
+  "created_at",
+  "created_by",
+  "column_break_timestamps",
+  "updated_at",
+  "updated_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details"
+  },
+  {
+   "fieldname": "basic_info_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Information"
+  },
+  {
+   "fieldname": "seller",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Seller",
+   "options": "Seller Profile",
+   "reqd": 1,
+   "description": "The seller who grades this customer",
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "seller_name",
+   "fieldtype": "Data",
+   "label": "Seller Name",
+   "fetch_from": "seller.seller_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Link",
+   "label": "Buyer",
+   "options": "Buyer Profile",
+   "reqd": 1,
+   "description": "The buyer being graded (hidden from seller view, used for computation)",
+   "set_only_once": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "anonymous_customer_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Anonymous Customer ID",
+   "read_only": 1,
+   "unique": 0,
+   "description": "SHA-256 hash of buyer:seller:salt for privacy-preserving identification"
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nActive\nArchived",
+   "reqd": 1,
+   "description": "Current status of this seller-customer grade record"
+  },
+  {
+   "fieldname": "tenant",
+   "fieldtype": "Link",
+   "label": "Tenant",
+   "options": "Tenant",
+   "description": "Tenant for multi-tenant isolation",
+   "fetch_from": "seller.tenant",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tenant_name",
+   "fieldtype": "Data",
+   "label": "Tenant Name",
+   "fetch_from": "tenant.tenant_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "calculation_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Calculation Date",
+   "reqd": 1,
+   "description": "Date when grade was last calculated"
+  },
+  {
+   "fieldname": "grade_tab",
+   "fieldtype": "Tab Break",
+   "label": "Grade"
+  },
+  {
+   "fieldname": "platform_grade_section",
+   "fieldtype": "Section Break",
+   "label": "Platform Grade"
+  },
+  {
+   "default": "C",
+   "fieldname": "platform_grade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Platform Grade",
+   "options": "A\nB\nC\nD\nE\nF",
+   "read_only": 1,
+   "description": "Grade assigned by platform scoring engine (A-F)"
+  },
+  {
+   "default": "0",
+   "fieldname": "platform_score",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Platform Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Score calculated by platform (0-100)"
+  },
+  {
+   "fieldname": "column_break_platform",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "previous_platform_score",
+   "fieldtype": "Float",
+   "label": "Previous Platform Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Platform score from previous calculation"
+  },
+  {
+   "default": "0",
+   "fieldname": "platform_score_change",
+   "fieldtype": "Float",
+   "label": "Platform Score Change",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Change in platform score from previous period"
+  },
+  {
+   "fieldname": "seller_grade_section",
+   "fieldtype": "Section Break",
+   "label": "Seller Grade"
+  },
+  {
+   "default": "C",
+   "fieldname": "seller_grade",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Seller Grade",
+   "options": "A\nB\nC\nD\nE\nF",
+   "description": "Grade assigned by seller (can override platform grade if use_custom_criteria is checked)"
+  },
+  {
+   "default": "0",
+   "fieldname": "seller_score",
+   "fieldtype": "Float",
+   "label": "Seller Score",
+   "precision": 2,
+   "description": "Score assigned by seller (0-100)"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_custom_criteria",
+   "fieldtype": "Check",
+   "label": "Use Custom Criteria",
+   "description": "If checked, seller can define custom grading criteria for this customer"
+  },
+  {
+   "fieldname": "column_break_seller_grade",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "previous_seller_score",
+   "fieldtype": "Float",
+   "label": "Previous Seller Score",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Seller score from previous calculation"
+  },
+  {
+   "default": "0",
+   "fieldname": "seller_score_change",
+   "fieldtype": "Float",
+   "label": "Seller Score Change",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Change in seller score from previous period"
+  },
+  {
+   "fieldname": "criteria_tab",
+   "fieldtype": "Tab Break",
+   "label": "Criteria"
+  },
+  {
+   "fieldname": "criteria_section",
+   "fieldtype": "Section Break",
+   "label": "Custom Grading Criteria",
+   "description": "Custom criteria used by the seller (only active when Use Custom Criteria is checked)"
+  },
+  {
+   "fieldname": "criteria",
+   "fieldtype": "Table",
+   "label": "Criteria",
+   "options": "Grading Criterion",
+   "description": "Custom grading criteria with weights (must sum to 100)"
+  },
+  {
+   "fieldname": "stats_tab",
+   "fieldtype": "Tab Break",
+   "label": "Statistics"
+  },
+  {
+   "fieldname": "order_stats_section",
+   "fieldtype": "Section Break",
+   "label": "Order Statistics"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_orders",
+   "fieldtype": "Int",
+   "label": "Total Orders",
+   "read_only": 1,
+   "description": "Total number of orders from this customer to this seller"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_spend",
+   "fieldtype": "Currency",
+   "label": "Total Spend",
+   "read_only": 1,
+   "description": "Total amount spent by this customer with this seller"
+  },
+  {
+   "default": "0",
+   "fieldname": "average_order_value",
+   "fieldtype": "Currency",
+   "label": "Average Order Value",
+   "read_only": 1,
+   "description": "Average order value for this customer-seller pair"
+  },
+  {
+   "fieldname": "column_break_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "first_order_date",
+   "fieldtype": "Date",
+   "label": "First Order Date",
+   "read_only": 1,
+   "description": "Date of first order from this customer to this seller"
+  },
+  {
+   "fieldname": "last_order_date",
+   "fieldtype": "Date",
+   "label": "Last Order Date",
+   "read_only": 1,
+   "description": "Date of most recent order from this customer to this seller"
+  },
+  {
+   "default": "0",
+   "fieldname": "order_frequency",
+   "fieldtype": "Float",
+   "label": "Order Frequency",
+   "precision": 2,
+   "read_only": 1,
+   "description": "Orders per month from this customer to this seller"
+  },
+  {
+   "fieldname": "payment_stats_section",
+   "fieldtype": "Section Break",
+   "label": "Payment & Return Statistics",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "on_time_payment_rate",
+   "fieldtype": "Percent",
+   "label": "On-Time Payment Rate",
+   "read_only": 1,
+   "description": "Percentage of orders paid on time"
+  },
+  {
+   "default": "0",
+   "fieldname": "return_rate",
+   "fieldtype": "Percent",
+   "label": "Return Rate",
+   "read_only": 1,
+   "description": "Percentage of orders returned"
+  },
+  {
+   "fieldname": "column_break_payment_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "dispute_rate",
+   "fieldtype": "Percent",
+   "label": "Dispute Rate",
+   "read_only": 1,
+   "description": "Percentage of orders with disputes"
+  },
+  {
+   "default": "0",
+   "fieldname": "cancellation_rate",
+   "fieldtype": "Percent",
+   "label": "Cancellation Rate",
+   "read_only": 1,
+   "description": "Percentage of orders cancelled"
+  },
+  {
+   "fieldname": "system_tab",
+   "fieldtype": "Tab Break",
+   "label": "System"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "calculation_notes",
+   "fieldtype": "Text",
+   "label": "Calculation Notes",
+   "description": "Notes about the grade calculation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "timestamps_section",
+   "fieldtype": "Section Break",
+   "label": "System Information",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "created_at",
+   "fieldtype": "Datetime",
+   "label": "Created At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_by",
+   "fieldtype": "Link",
+   "label": "Created By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_timestamps",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "updated_at",
+   "fieldtype": "Datetime",
+   "label": "Updated At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "updated_by",
+   "fieldtype": "Link",
+   "label": "Updated By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "group": "Related",
+   "link_doctype": "Seller Profile",
+   "link_fieldname": "seller"
+  },
+  {
+   "group": "Related",
+   "link_doctype": "Customer Grade",
+   "link_fieldname": "buyer"
+  }
+ ],
+ "modified": "2024-01-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "TradeHub Core",
+ "name": "Seller Customer Grade",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 1,
+   "read": 1,
+   "report": 0,
+   "role": "Marketplace Manager",
+   "share": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 0,
+   "export": 0,
+   "print": 0,
+   "read": 1,
+   "report": 0,
+   "role": "All",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "search_fields": "seller, anonymous_customer_id, platform_grade, seller_grade, status",
+ "sort_field": "calculation_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "anonymous_customer_id",
+ "track_changes": 1
+}

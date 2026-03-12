@@ -37,6 +37,21 @@
   "avg_response_time_hours",
   "column_break_activity",
   "repeat_customer_rate",
+  "health_tab",
+  "health_metrics_section",
+  "account_health_score",
+  "account_health_status",
+  "column_break_health",
+  "order_fulfillment_rate",
+  "positive_feedback_pct",
+  "defect_metrics_section",
+  "order_defect_rate",
+  "late_shipment_rate",
+  "valid_tracking_rate",
+  "column_break_defects",
+  "defect_count",
+  "dispute_rate",
+  "chargeback_rate",
   "system_tab",
   "status_section",
   "verification_status",
@@ -221,6 +236,99 @@
    "read_only": 1
   },
   {
+   "fieldname": "health_tab",
+   "fieldtype": "Tab Break",
+   "label": "Health"
+  },
+  {
+   "fieldname": "health_metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Health Metrics"
+  },
+  {
+   "default": "0",
+   "fieldname": "account_health_score",
+   "fieldtype": "Int",
+   "label": "Account Health Score",
+   "read_only": 1
+  },
+  {
+   "fieldname": "account_health_status",
+   "fieldtype": "Select",
+   "label": "Account Health Status",
+   "options": "\nHealthy\nAt Risk\nCritical\nSuspended",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_health",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "order_fulfillment_rate",
+   "fieldtype": "Percent",
+   "label": "Order Fulfillment Rate",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "positive_feedback_pct",
+   "fieldtype": "Percent",
+   "label": "Positive Feedback %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "defect_metrics_section",
+   "fieldtype": "Section Break",
+   "label": "Defect Metrics"
+  },
+  {
+   "default": "0",
+   "fieldname": "order_defect_rate",
+   "fieldtype": "Percent",
+   "label": "Order Defect Rate",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "late_shipment_rate",
+   "fieldtype": "Percent",
+   "label": "Late Shipment Rate",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "valid_tracking_rate",
+   "fieldtype": "Percent",
+   "label": "Valid Tracking Rate",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_defects",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "defect_count",
+   "fieldtype": "Int",
+   "label": "Defect Count",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "dispute_rate",
+   "fieldtype": "Percent",
+   "label": "Dispute Rate",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "chargeback_rate",
+   "fieldtype": "Percent",
+   "label": "Chargeback Rate",
+   "read_only": 1
+  },
+  {
    "fieldname": "system_tab",
    "fieldtype": "Tab Break",
    "label": "System"
@@ -269,7 +377,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-03-04 12:55:54.321726",
+ "modified": "2026-03-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "TradeHub Seller",
  "name": "Seller Metrics",

@@ -10,7 +10,9 @@ Manages buyer profiles for marketplace and group buy participation.
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.utils import cint, flt, now_datetime
+
+from tradehub_core.tradehub_core.utils.safe_math import safe_divide
 
 
 class BuyerProfile(Document):
@@ -22,6 +24,7 @@ class BuyerProfile(Document):
         self._validate_user()
         self.refetch_denormalized_fields()
         self._set_display_name()
+        self._derive_payment_pattern()
         self._validate_interest_categories()
         self._validate_addresses()
 
@@ -43,6 +46,14 @@ class BuyerProfile(Document):
             'payment_on_time_rate',
             'joined_at',
             'created_by',
+            'payment_pattern',
+            'buyer_score',
+            'buyer_score_trend',
+            'last_score_date',
+            'return_rate',
+            'feedback_rate',
+            'dispute_rate',
+            'cancellation_rate',
         ]
         for field in system_fields:
             if self.has_value_changed(field):
@@ -123,6 +134,27 @@ class BuyerProfile(Document):
         """Set display name if not provided."""
         if not self.display_name:
             self.display_name = self.buyer_name
+
+    def _derive_payment_pattern(self):
+        """Derive payment_pattern from payment_on_time_rate and total_orders.
+
+        Business rules:
+        - 0 orders → "New" (no payment history)
+        - ≥95% on-time → "On-Time"
+        - ≥80% on-time → "Mixed"
+        - else → "Late"
+        """
+        total_orders = cint(self.total_orders)
+        on_time_rate = flt(self.payment_on_time_rate)
+
+        if total_orders == 0:
+            self.payment_pattern = "New"
+        elif on_time_rate >= 95:
+            self.payment_pattern = "On-Time"
+        elif on_time_rate >= 80:
+            self.payment_pattern = "Mixed"
+        else:
+            self.payment_pattern = "Late"
 
     def _validate_interest_categories(self):
         """Validate interest categories to prevent duplicates.

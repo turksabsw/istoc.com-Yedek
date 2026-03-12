@@ -140,23 +140,34 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"tradehub_core.tasks.all"
-# 	],
-# 	"daily": [
-# 		"tradehub_core.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"tradehub_core.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"tradehub_core.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"tradehub_core.tasks.monthly"
-# 	]
-# }
+# Buyer-side scheduled tasks: metrics recalculation, scoring, grading, KPI, segmentation
+# Sunday execution order: 03:00→04:00→05:00→06:00→07:00; daily 08:00 aggregation; hourly segments
+scheduler_events = {
+	"hourly": [
+		"tradehub_core.tasks.refresh_user_segments"
+	],
+	"cron": {
+		"0 3 * * 0": [
+			"tradehub_core.tasks.recalculate_buyer_metrics"
+		],
+		"0 4 * * 0": [
+			"tradehub_core.tasks.calculate_buyer_scores",
+			"tradehub_core.tasks.buyer_level_tasks"
+		],
+		"0 5 * * 0": [
+			"tradehub_core.tasks.calculate_customer_grades"
+		],
+		"0 6 * * 0": [
+			"tradehub_core.tasks.update_buyer_kpi_template_stats"
+		],
+		"0 7 * * 0": [
+			"tradehub_core.tasks.calculate_buyer_kpi_scores"
+		],
+		"0 8 * * *": [
+			"tradehub_core.tasks.aggregate_buyer_kpi_summaries"
+		]
+	}
+}
 
 # Testing
 # -------
