@@ -6,7 +6,7 @@
 import '../style.css'
 import { initFlowbite } from 'flowbite'
 
-import { TopBar, initMobileDrawer, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 import { FloatingPanel } from '../components/floating'
 import { startAlpine } from '../alpine'
@@ -47,4 +47,5 @@ startAlpine();
 initHeaderCart();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initFavoritesLayout();

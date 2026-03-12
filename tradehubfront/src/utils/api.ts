@@ -68,6 +68,32 @@ export interface StorefrontInfo {
   factory_images: string[]
   capabilities: string[]
   capability_verified_by: string
+  slider_images: Array<{
+    image: string
+    title: string
+    subtitle: string
+    link_url: string
+  }>
+}
+
+export interface StorefrontBranding {
+  banner: string
+  tagline: string
+  short_description: string
+  store_name: string
+}
+
+export interface StorefrontProduct {
+  name: string
+  title: string
+  image: string
+  selling_price: number
+  base_price: number
+  currency: string
+  category: string
+  custom_category: string
+  rating: number
+  review_count: number
 }
 
 export interface TabCounts {
@@ -80,6 +106,8 @@ export interface SellerStorefrontApiData {
   seller: SellerInfo
   performance: PerformanceInfo
   storefront: StorefrontInfo
+  branding: StorefrontBranding
+  products: StorefrontProduct[]
   tabs: TabCounts
 }
 
@@ -141,8 +169,11 @@ export interface ManufacturersParams {
 export async function loadStorefrontData(
   slug: string
 ): Promise<SellerStorefrontApiData> {
+  // SELLER-xxxxx formatındaki değerler storefront_slug değil seller_id'dir
+  const isSellerId = slug.startsWith('SELLER-')
+  const paramName = isSellerId ? 'seller_name' : 'storefront_slug'
   const response = await api<FrappeResponse<SellerStorefrontApiData>>(
-    `/api/method/tr_tradehub.api.v1.seller.get_seller_storefront_data?storefront_slug=${encodeURIComponent(slug)}`
+    `/api/method/tr_tradehub.api.v1.seller.get_seller_storefront_data?${paramName}=${encodeURIComponent(slug)}`
   )
   return response.message
 }
@@ -166,6 +197,24 @@ export async function loadManufacturers(
   const query = searchParams.toString()
   const response = await api<FrappeResponse<ManufacturersResponse>>(
     `/api/method/tr_tradehub.api.v1.seller.get_manufacturers_list${query ? '?' + query : ''}`
+  )
+  return response.message
+}
+
+/**
+ * Load paginated products for a seller storefront.
+ * Calls GET /api/method/tr_tradehub.api.v1.seller.get_storefront_products
+ */
+export async function loadStorefrontProducts(
+  params: { storefront_slug?: string; seller_name?: string; page?: number; category?: string }
+): Promise<{ data: StorefrontProduct[]; total: number; page: number; page_size: number }> {
+  const p = new URLSearchParams()
+  if (params.storefront_slug) p.set('storefront_slug', params.storefront_slug)
+  if (params.seller_name) p.set('seller_name', params.seller_name)
+  if (params.page) p.set('page', String(params.page))
+  if (params.category) p.set('category', params.category)
+  const response = await api<FrappeResponse<{ data: StorefrontProduct[]; total: number; page: number; page_size: number }>>(
+    `/api/method/tr_tradehub.api.v1.seller.get_storefront_products?${p.toString()}`
   )
   return response.message
 }

@@ -10,7 +10,7 @@ import { initFlowbite } from 'flowbite'
 import { t } from '../i18n'
 
 // Header components
-import { TopBar, initMobileDrawer, SubHeader, MegaMenu, initMegaMenu, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, SubHeader, MegaMenu, initMegaMenu, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Shared components
@@ -200,6 +200,7 @@ startAlpine();
 initHeaderCart();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initCategoryTabs();
 initAnimatedPlaceholder('#topbar-compact-search-input');
 

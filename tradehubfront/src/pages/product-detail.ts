@@ -7,7 +7,7 @@ import '../style.css'
 import { initFlowbite } from 'flowbite'
 
 // Header components (reuse from main page)
-import { TopBar, initMobileDrawer, SubHeader, MegaMenu, initMegaMenu, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, SubHeader, MegaMenu, initMegaMenu, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Footer components
@@ -134,6 +134,7 @@ initFlowbite();
 initHeaderCart();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initAnimatedPlaceholder('#topbar-compact-search-input');
 
 // Product-specific inits

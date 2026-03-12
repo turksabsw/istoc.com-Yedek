@@ -9,7 +9,7 @@ import { initFlowbite } from 'flowbite'
 import { t } from '../i18n'
 
 // Header components (reuse from main page)
-import { TopBar, initMobileDrawer, MegaMenu, initMegaMenu, initHeaderCart, PromoBanner, initPromoBanner } from '../components/header'
+import { TopBar, initMobileDrawer, MegaMenu, initMegaMenu, initHeaderCart, PromoBanner, initPromoBanner, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Shared components
@@ -199,6 +199,7 @@ startAlpine();
 initHeaderCart();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initAnimatedPlaceholder('#topbar-compact-search-input');
 
 // Initialize product card image sliders (event delegation, not yet migrated)

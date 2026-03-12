@@ -133,7 +133,97 @@
         </div>
       </div>
 
-      <!-- Tab 2: Fabrika & Kapasite -->
+      <!-- Tab 2: Görünüm & Banner -->
+      <div v-if="activeTab === 'branding'">
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-5">
+          <div class="xl:col-span-2 space-y-5">
+            <!-- Banner Upload -->
+            <div class="card">
+              <h3 class="text-sm font-bold text-gray-900 mb-4">
+                <i class="fas fa-image text-blue-500 mr-2"></i>Ana Banner
+              </h3>
+              <div
+                class="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden cursor-pointer hover:border-violet-400 transition-colors"
+                @click="$refs.bannerInput.click()"
+              >
+                <img v-if="form.banner" :src="form.banner" class="w-full h-40 object-cover" alt="Banner">
+                <div v-else class="p-8 text-center">
+                  <i class="fas fa-image text-3xl text-gray-300 mb-2 block"></i>
+                  <p class="text-sm text-gray-400">Banner resmi yükleyin (1200x300px önerilen)</p>
+                </div>
+                <input ref="bannerInput" type="file" class="hidden" accept="image/*" @change="handleBannerUpload">
+              </div>
+              <button v-if="form.banner" class="mt-2 text-xs text-red-500 hover:text-red-700" @click="form.banner = ''">
+                <i class="fas fa-trash mr-1"></i>Kaldır
+              </button>
+            </div>
+            <!-- Tagline & Description -->
+            <div class="card">
+              <h3 class="text-sm font-bold text-gray-900 mb-4">
+                <i class="fas fa-pen text-violet-500 mr-2"></i>Mağaza Açıklaması
+              </h3>
+              <div class="space-y-4">
+                <div>
+                  <label class="form-label">Slogan / Tagline</label>
+                  <input v-model="form.tagline" type="text" class="form-input" placeholder="Kısa ve akılda kalıcı bir slogan...">
+                </div>
+                <div>
+                  <label class="form-label">Kısa Açıklama</label>
+                  <textarea v-model="form.short_description" class="form-input" rows="3" placeholder="Mağazanızı kısaca tanıtın..."></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-5">
+            <div class="card">
+              <h3 class="text-sm font-bold text-gray-900 mb-3"><i class="fas fa-info-circle text-blue-400 mr-2"></i>Önizleme</h3>
+              <p class="text-xs text-gray-400">Mağaza sayfasında görünecek şekilde ayarlayın.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Slider -->
+      <div v-if="activeTab === 'slider'">
+        <div class="card">
+          <h3 class="text-sm font-bold text-gray-900 mb-4">
+            <i class="fas fa-images text-blue-500 mr-2"></i>Slider Görselleri
+          </h3>
+          <p class="text-xs text-gray-400 mb-4">Mağaza ana sayfasında otomatik geçişli slider için görseller ekleyin (1200x450px önerilen).</p>
+          <!-- Upload area -->
+          <div
+            class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-violet-400 transition-colors cursor-pointer mb-4"
+            @click="$refs.sliderInput.click()"
+            @dragover.prevent
+            @drop.prevent="handleSliderDrop"
+          >
+            <input ref="sliderInput" type="file" class="hidden" multiple accept="image/*" @change="handleSliderFiles">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-gray-50 flex items-center justify-center">
+              <i class="fas fa-cloud-arrow-up text-xl text-gray-500"></i>
+            </div>
+            <p class="text-sm font-medium text-gray-600 mb-1">Slider görselleri yükleyin</p>
+            <p class="text-xs text-gray-400">PNG, JPG, WEBP - Maks 10MB per image</p>
+          </div>
+          <!-- Slider images preview -->
+          <div v-if="form.slider_images.length" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div v-for="(img, i) in form.slider_images" :key="i" class="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+              <img :src="img.preview || img.image" class="w-full h-28 object-cover">
+              <div class="p-2">
+                <input v-model="img.title" type="text" class="w-full text-xs border border-gray-200 rounded px-2 py-1 mb-1" placeholder="Başlık (opsiyonel)">
+              </div>
+              <button @click="form.slider_images.splice(i, 1)" class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px]">
+                <i class="fas fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+          <div v-else class="text-center py-6 text-gray-400">
+            <i class="fas fa-images text-2xl mb-2 block"></i>
+            <p class="text-sm">Henüz slider görseli yok</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Fabrika & Kapasite -->
       <div v-if="activeTab === 'factory'">
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-5">
           <div class="xl:col-span-2 space-y-5">
@@ -221,7 +311,46 @@
         </div>
       </div>
 
-      <!-- Tab 3: Vitrin Ayarları -->
+      <!-- Tab 5: Ürünler -->
+      <div v-if="activeTab === 'products'">
+        <div class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-gray-900">
+              <i class="fas fa-box text-violet-500 mr-2"></i>Ürünlerim
+            </h3>
+            <a href="/app/listing/new-listing-1" class="hdr-btn-primary text-xs" target="_blank">
+              <i class="fas fa-plus mr-1.5"></i>Yeni Ürün Ekle
+            </a>
+          </div>
+          <div v-if="loadingProducts" class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-violet-500"></i>
+          </div>
+          <div v-else-if="sellerProducts.length === 0" class="text-center py-8 text-gray-400">
+            <i class="fas fa-box-open text-2xl mb-2 block"></i>
+            <p class="text-sm">Henüz ürün eklenmemiş</p>
+            <p class="text-xs mt-1">Yeni ürün ekleyerek mağazanızı zenginleştirin</p>
+          </div>
+          <div v-else class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div v-for="product in sellerProducts" :key="product.name" class="border border-gray-200 rounded-lg overflow-hidden hover:border-violet-300 transition-colors">
+              <div class="aspect-square bg-gray-100 overflow-hidden">
+                <img v-if="product.primary_image" :src="product.primary_image" class="w-full h-full object-cover" :alt="product.title">
+                <div v-else class="w-full h-full flex items-center justify-center">
+                  <i class="fas fa-image text-2xl text-gray-300"></i>
+                </div>
+              </div>
+              <div class="p-2">
+                <p class="text-xs font-medium text-gray-800 truncate">{{ product.title }}</p>
+                <p class="text-xs text-gray-400">{{ product.status }}</p>
+              </div>
+            </div>
+          </div>
+          <p v-if="sellerProductsTotal > sellerProducts.length" class="text-xs text-center text-gray-400 mt-3">
+            {{ sellerProducts.length }} / {{ sellerProductsTotal }} ürün gösteriliyor
+          </p>
+        </div>
+      </div>
+
+      <!-- Tab 6: Vitrin Ayarları -->
       <div v-if="activeTab === 'settings'">
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-5">
           <div class="xl:col-span-2 space-y-5">
@@ -295,7 +424,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import api from '@/utils/api'
@@ -309,9 +438,16 @@ const hasStorefront = ref(true)
 const activeTab = ref('company')
 const storefrontName = ref('')
 
+const loadingProducts = ref(false)
+const sellerProducts = ref([])
+const sellerProductsTotal = ref(0)
+
 const tabs = [
   { key: 'company', label: 'Şirket Profili', icon: 'fas fa-building' },
+  { key: 'branding', label: 'Görünüm & Banner', icon: 'fas fa-palette' },
+  { key: 'slider', label: 'Slider', icon: 'fas fa-images' },
   { key: 'factory', label: 'Fabrika & Kapasite', icon: 'fas fa-industry' },
+  { key: 'products', label: 'Ürünler', icon: 'fas fa-box' },
   { key: 'settings', label: 'Vitrin Ayarları', icon: 'fas fa-cog' },
 ]
 
@@ -361,6 +497,10 @@ const form = reactive({
   storefront_slug: '',
   store_name: '',
   is_published: false,
+  banner: '',
+  tagline: '',
+  short_description: '',
+  slider_images: [],
 })
 
 async function loadStorefront() {
@@ -387,6 +527,9 @@ async function loadStorefront() {
     form.storefront_slug = data.slug || ''
     form.store_name = data.store_name || ''
     form.is_published = data.is_published === 1 || data.is_published === true
+    form.banner = data.banner || ''
+    form.tagline = data.tagline || ''
+    form.short_description = data.short_description || ''
 
     // Load certificates from child table
     if (data.certificates && Array.isArray(data.certificates)) {
@@ -402,6 +545,18 @@ async function loadStorefront() {
         url: typeof img === 'string' ? img : img.image,
         preview: typeof img === 'string' ? img : img.image,
         name: typeof img === 'string' ? '' : (img.name || ''),
+      }))
+    }
+    // Load slider images
+    if (data.slider_images && Array.isArray(data.slider_images)) {
+      form.slider_images = data.slider_images.map(img => ({
+        image: typeof img === 'string' ? img : img.image,
+        preview: typeof img === 'string' ? img : img.image,
+        title: img.title || '',
+        subtitle: img.subtitle || '',
+        link_url: img.link_url || '',
+        sort_order: img.sort_order || 0,
+        name: img.name || '',
       }))
     }
   } catch {
@@ -457,6 +612,14 @@ async function handleLogoUpload(e) {
   }
 }
 
+function handleBannerUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  uploadFile(file).then(url => {
+    if (url) form.banner = url
+  }).catch(() => toast.error('Banner yüklenirken hata oluştu'))
+}
+
 function handleFactoryFiles(e) {
   const files = e.target.files
   for (const file of files) {
@@ -470,6 +633,43 @@ function handleFactoryDrop(e) {
     if (file.type.startsWith('image/')) {
       form.factory_images.push({ file, preview: URL.createObjectURL(file) })
     }
+  }
+}
+
+function handleSliderFiles(e) {
+  const files = e.target.files
+  for (const file of files) {
+    form.slider_images.push({ file, image: '', preview: URL.createObjectURL(file), title: '', subtitle: '', link_url: '', sort_order: form.slider_images.length })
+  }
+}
+
+function handleSliderDrop(e) {
+  const files = e.dataTransfer.files
+  for (const file of files) {
+    if (file.type.startsWith('image/')) {
+      form.slider_images.push({ file, image: '', preview: URL.createObjectURL(file), title: '', subtitle: '', link_url: '', sort_order: form.slider_images.length })
+    }
+  }
+}
+
+async function getCurrentSellerName() {
+  const res = await api.callMethod('tr_tradehub.api.v1.identity.get_current_user_info')
+  return res.message?.seller_name || ''
+}
+
+async function loadSellerProducts() {
+  loadingProducts.value = true
+  try {
+    const sellerName = await getCurrentSellerName()
+    const res = await api.callMethod('tr_tradehub.api.v1.seller.get_storefront_products', {
+      seller_name: sellerName,
+    })
+    sellerProducts.value = res.message?.data || []
+    sellerProductsTotal.value = res.message?.total || 0
+  } catch {
+    // silently fail
+  } finally {
+    loadingProducts.value = false
   }
 }
 
@@ -505,6 +705,30 @@ async function saveForm() {
       }
     }
 
+    // Upload pending slider images
+    const uploadedSliderImages = []
+    for (const img of form.slider_images) {
+      if (img.file) {
+        const url = await uploadFile(img.file)
+        if (url) uploadedSliderImages.push({
+          image: url,
+          title: img.title || '',
+          subtitle: img.subtitle || '',
+          link_url: img.link_url || '',
+          sort_order: img.sort_order || 0,
+        })
+      } else if (img.image) {
+        uploadedSliderImages.push({
+          image: img.image,
+          title: img.title || '',
+          subtitle: img.subtitle || '',
+          link_url: img.link_url || '',
+          sort_order: img.sort_order || 0,
+          name: img.name || '',
+        })
+      }
+    }
+
     // Build certificates child table data
     const certificates = form.certificates.map(cert => ({
       certificate_type: cert,
@@ -529,6 +753,10 @@ async function saveForm() {
       factory_images: uploadedImages,
       certificates: certificates,
       capabilities: capabilities,
+      banner: form.banner,
+      tagline: form.tagline,
+      short_description: form.short_description,
+      slider_images: uploadedSliderImages,
     })
 
     toast.success('Vitrin başarıyla güncellendi')
@@ -538,6 +766,12 @@ async function saveForm() {
     saving.value = false
   }
 }
+
+watch(activeTab, (val) => {
+  if (val === 'products' && sellerProducts.value.length === 0) {
+    loadSellerProducts()
+  }
+})
 
 onMounted(loadStorefront)
 </script>

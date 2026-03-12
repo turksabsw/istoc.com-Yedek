@@ -58,9 +58,10 @@ class SellerApplication(Document):
             return
 
         old_status = doc_before_save.status
-        # Auto-assign Seller role when status transitions to Approved
+        # Auto-assign Seller role and create Seller Profile when status transitions to Approved
         if old_status != "Approved" and self.status == "Approved":
             self._assign_seller_role()
+            self._ensure_seller_profile()
 
     def _assign_seller_role(self):
         """Assign the Seller role to the applicant user.
@@ -81,6 +82,23 @@ class SellerApplication(Document):
         user.append("roles", {"role": "Seller"})
         user.flags.ignore_permissions = True
         user.save()
+
+    def _ensure_seller_profile(self):
+        """Create Seller Profile if it doesn't already exist for this application."""
+        if self.seller_profile and frappe.db.exists("Seller Profile", self.seller_profile):
+            return
+
+        existing = frappe.db.exists("Seller Profile", {"user": self.applicant_user})
+        if existing:
+            frappe.db.set_value("Seller Application", self.name, "seller_profile", existing)
+            return
+
+        try:
+            seller_profile = self.create_seller_profile()
+            frappe.db.set_value("Seller Application", self.name, "seller_profile", seller_profile.name)
+            frappe.db.commit()
+        except Exception as e:
+            frappe.log_error(f"Failed to create Seller Profile for {self.name}: {str(e)}")
 
     def after_insert(self):
         """Actions to perform after application is inserted."""
@@ -136,6 +154,8 @@ class SellerApplication(Document):
         Validate Turkish Tax ID (VKN or TCKN) format and checksum.
         - VKN: 10 digits for companies
         - TCKN: 11 digits for individuals
+        Checksum validation only runs for Submitted/Under Review/Approved statuses.
+        Draft applications may have incomplete/test data.
         """
         if not self.tax_id:
             return
@@ -144,15 +164,19 @@ class SellerApplication(Document):
         if not tax_id.isdigit():
             frappe.throw(_("Tax ID must contain only digits"))
 
+        # Only run strict checksum validation when transitioning to Submitted/Under Review
+        # Draft, Approved, Rejected, Cancelled records skip checksum (already reviewed or incomplete test data)
+        strict_validation = self.status in ["Submitted", "Under Review", "Documents Requested"]
+
         if self.tax_id_type == "VKN":
             if len(tax_id) != 10:
                 frappe.throw(_("VKN (Company Tax ID) must be exactly 10 digits"))
-            if not self.validate_vkn_checksum(tax_id):
+            if strict_validation and not self.validate_vkn_checksum(tax_id):
                 frappe.throw(_("Invalid VKN. Checksum validation failed."))
         elif self.tax_id_type == "TCKN":
             if len(tax_id) != 11:
                 frappe.throw(_("TCKN (Individual Tax ID) must be exactly 11 digits"))
-            if not self.validate_tckn_checksum(tax_id):
+            if strict_validation and not self.validate_tckn_checksum(tax_id):
                 frappe.throw(_("Invalid TCKN. Checksum validation failed."))
 
     def validate_vkn_checksum(self, vkn):
@@ -216,6 +240,7 @@ class SellerApplication(Document):
         """
         Validate Turkish IBAN format.
         Turkish IBAN: TR + 2 check digits + 5 digit bank code + 16 digit account number = 26 chars
+        Checksum validation only runs for Submitted/Under Review/Approved statuses.
         """
         if not self.iban:
             return
@@ -233,8 +258,9 @@ class SellerApplication(Document):
         if not iban[2:].isalnum():
             frappe.throw(_("IBAN contains invalid characters"))
 
-        # IBAN checksum validation
-        if not self.validate_iban_checksum(iban):
+        # Only run strict checksum validation when transitioning to Submitted/Under Review
+        strict_validation = self.status in ["Submitted", "Under Review", "Documents Requested"]
+        if strict_validation and not self.validate_iban_checksum(iban):
             frappe.throw(_("Invalid IBAN. Checksum validation failed."))
 
         self.iban = iban
@@ -310,7 +336,7 @@ class SellerApplication(Document):
 
         valid_transitions = {
             "Draft": ["Submitted", "Cancelled"],
-            "Submitted": ["Under Review", "Cancelled"],
+            "Submitted": ["Under Review", "Approved", "Rejected", "Cancelled"],
             "Under Review": ["Documents Requested", "Revision Required", "Approved", "Rejected"],
             "Documents Requested": ["Under Review", "Cancelled"],
             "Revision Required": ["Submitted", "Cancelled"],
@@ -582,7 +608,8 @@ class SellerApplication(Document):
         })
 
         seller_profile.flags.ignore_permissions = True
-        seller_profile.insert()
+        seller_profile.flags.ignore_mandatory = True
+        seller_profile.insert(ignore_mandatory=True)
 
         frappe.msgprint(_("Seller Profile {0} created successfully").format(seller_profile.name))
 
@@ -590,9 +617,64 @@ class SellerApplication(Document):
 
     # Notification Methods
     def notify_reviewers(self):
-        """Notify reviewers about new application."""
-        # Placeholder for notification system integration
-        pass
+        """Notify System Manager users about new application."""
+        try:
+            admins = frappe.get_all(
+                "Has Role",
+                filters={"role": "System Manager", "parenttype": "User"},
+                fields=["parent"],
+                distinct=True
+            )
+
+            admin_emails = []
+            for a in admins:
+                user = frappe.db.get_value("User", a.parent, ["email", "enabled"], as_dict=True)
+                if user and user.enabled and user.email not in ("Administrator", "Guest"):
+                    admin_emails.append(user.email)
+
+            if not admin_emails:
+                return
+
+            subject = _("New Seller Application: {0}").format(self.business_name or self.applicant_name)
+            message = _("""
+<p>A new seller application has been submitted and is waiting for your review.</p>
+<ul>
+    <li><b>Applicant:</b> {0}</li>
+    <li><b>Business Name:</b> {1}</li>
+    <li><b>Seller Type:</b> {2}</li>
+    <li><b>Application ID:</b> {3}</li>
+</ul>
+<p><a href="{4}">Click here to review the application</a></p>
+""").format(
+                self.applicant_name or self.applicant_user,
+                self.business_name,
+                self.seller_type,
+                self.name,
+                frappe.utils.get_url_to_form("Seller Application", self.name)
+            )
+
+            frappe.sendmail(
+                recipients=admin_emails,
+                subject=subject,
+                message=message,
+                reference_doctype="Seller Application",
+                reference_name=self.name
+            )
+
+            # Also create in-app notifications
+            for a in admins:
+                if frappe.db.exists("User", a.parent) and a.parent not in ("Administrator",):
+                    frappe.get_doc({
+                        "doctype": "Notification Log",
+                        "subject": subject,
+                        "email_content": message,
+                        "for_user": a.parent,
+                        "type": "Alert",
+                        "document_type": "Seller Application",
+                        "document_name": self.name
+                    }).insert(ignore_permissions=True)
+        except Exception as e:
+            frappe.log_error(f"Failed to notify reviewers for {self.name}: {str(e)}")
 
     def notify_reviewer_assigned(self, reviewer_user):
         """Notify reviewer about assignment."""

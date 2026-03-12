@@ -53,7 +53,8 @@ export function ManufacturerList(manufacturers: Manufacturer[]): string {
 
 function renderFactoryCard(mfg: Manufacturer, cardIndex: number): string {
   const displayName = sanitizeHtml(mfg.display_name);
-  const storefrontUrl = `/pages/seller/seller-storefront.html?store=${encodeURIComponent(mfg.storefront_slug)}`;
+  const storeParam = mfg.storefront_slug || mfg.seller_id;
+  const storefrontUrl = `/pages/seller/seller-storefront.html?store=${encodeURIComponent(storeParam)}`;
 
   const verifiedBadge = mfg.is_verified ? `
         <img src="https://img.icons8.com/fluency/16/verified-badge.png" alt="${t('mfr.list.verified')}" class="w-4 h-4" />

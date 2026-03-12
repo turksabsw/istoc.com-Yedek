@@ -15,7 +15,7 @@ required_apps = ["tradehub_core", "tradehub_catalog"]
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/tradehub_seller/css/tradehub_seller.css"
-# app_include_js = "/assets/tradehub_seller/js/tradehub_seller.js"
+app_include_js = "/assets/tradehub_seller/js/tradehub_seller.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/tradehub_seller/css/tradehub_seller.css"

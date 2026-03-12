@@ -9,7 +9,7 @@ import { t } from '../i18n'
 import { getBaseUrl } from '../utils/url'
 
 // Header components (reuse from main page)
-import { TopBar, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Shared components
@@ -207,6 +207,7 @@ startAlpine();
 initStickyHeaderSearch();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initHeaderCart();
 initStickyHeights();
 

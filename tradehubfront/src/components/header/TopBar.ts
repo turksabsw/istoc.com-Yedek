@@ -84,6 +84,10 @@ function renderCompactLogo(): string {
  * User profile button with dropdown for compact header (Alibaba-style)
  * Only shown when user is logged in.
  */
+const SELLER_PANEL_URL: string =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SELLER_PANEL_URL) ||
+  'http://localhost:8082/';
+
 function renderUserButton(): string {
   const user = getUser();
   const displayName = user?.name ?? t('topbar.defaultUser');
@@ -116,6 +120,16 @@ function renderUserButton(): string {
           <li><a href="/pages/dashboard/rfq.html" class="block px-4 py-2 text-[13px] text-[#222] hover:bg-gray-50 transition-colors"><span data-i18n="header.myRfq">${t('header.myRfq')}</span></a></li>
           <li><a href="/pages/dashboard/favorites.html" class="block px-4 py-2 text-[13px] text-[#222] hover:bg-gray-50 transition-colors"><span data-i18n="header.myFavorites">${t('header.myFavorites')}</span></a></li>
           <li><a href="/pages/dashboard/settings.html" class="block px-4 py-2 text-[13px] text-[#222] hover:bg-gray-50 transition-colors"><span data-i18n="header.accountSettings">${t('header.accountSettings')}</span></a></li>
+          ${user?.is_seller ? `
+          <li class="border-t border-gray-100 mt-1">
+            <a href="${SELLER_PANEL_URL}" target="_blank" rel="noopener noreferrer"
+               class="flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-primary-600 hover:bg-primary-50 transition-colors">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z"/>
+              </svg>
+              <span data-i18n="header.sellerPanel">${t('header.sellerPanel')}</span>
+            </a>
+          </li>` : ''}
         </ul>
         <div class="border-t border-gray-100 pt-1">
           <button id="logout-btn" class="w-full text-left block px-4 py-2 text-[13px] text-[#222] hover:bg-gray-50 transition-colors cursor-pointer"><span data-i18n="header.logout">${t('header.logout')}</span></button>
@@ -1110,7 +1124,7 @@ export function TopBar(props?: TopBarProps): string {
               ${renderCartButton(0)}
 
               <!-- Auth/User Button -->
-              <div class="hidden lg:block">
+              <div id="topbar-auth-desktop" class="hidden lg:block">
                 ${isLoggedIn() ? renderUserButton() : renderAuthButtons()}
               </div>
 
@@ -1214,7 +1228,7 @@ export function TopBar(props?: TopBarProps): string {
             ${renderCartButton(0)}
 
             <!-- Auth/User Button (hidden on mobile) -->
-            <div class="hidden lg:block">
+            <div id="topbar-auth-desktop" class="hidden lg:block">
               ${isLoggedIn() ? renderUserButton() : renderAuthButtons()}
             </div>
 
@@ -1439,6 +1453,94 @@ export function initHeaderCart(): void {
       renderFromStore();
     }
   }) as EventListener);
+}
+
+/**
+ * Initialize TopBar auth state asynchronously.
+ *
+ * Call this on every page that renders TopBar() — it checks the active
+ * Frappe session and replaces the auth area with the correct HTML
+ * (user dropdown vs. login button) without a full page re-render.
+ *
+ * Must be called AFTER appEl.innerHTML is set so the DOM is ready.
+ */
+export async function initTopBarAuth(): Promise<void> {
+  const { getSessionUser } = await import('../../utils/auth');
+  await getSessionUser();
+
+  const authArea = document.getElementById('topbar-auth-desktop');
+  if (!authArea) return;
+
+  authArea.innerHTML = isLoggedIn() ? renderUserButton() : renderAuthButtons();
+
+  // Re-initialize Flowbite dropdowns for the newly inserted markup
+  const { initDropdowns } = await import('flowbite');
+  initDropdowns();
+
+  // Satıcı veya admin ise sabit "Satıcı Paneli" butonu göster
+  const user = getUser();
+  if (user?.is_seller || user?.is_admin) {
+    initSellerPanelButton();
+  }
+}
+
+/**
+ * Sayfanın sağ alt köşesine sabit "Satıcı Paneli" butonu ekler.
+ * Sadece satıcı hesabı olan kullanıcılara gösterilir.
+ */
+function initSellerPanelButton(): void {
+  const BTN_ID = 'th-goto-seller-panel-btn';
+  if (document.getElementById(BTN_ID)) return;
+
+  const sellerPanelUrl = SELLER_PANEL_URL;
+
+  const btn = document.createElement('a');
+  btn.id = BTN_ID;
+  btn.href = sellerPanelUrl;
+  btn.target = '_blank';
+  btn.rel = 'noopener noreferrer';
+  btn.title = 'Satıcı Paneli';
+  btn.setAttribute('aria-label', 'Satıcı Paneli');
+
+  btn.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" ' +
+    'viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" ' +
+    'style="flex-shrink:0;margin-top:1px">' +
+    '<path stroke-linecap="round" stroke-linejoin="round" ' +
+    'd="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64' +
+    'm-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75' +
+    'c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015' +
+    'a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19' +
+    'A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72' +
+    'M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75' +
+    'v3.75c0 .414.336.75.75.75Z"/>' +
+    '</svg>' +
+    '<span style="margin-left:6px">Satıcı Paneli</span>';
+
+  Object.assign(btn.style, {
+    position:       'fixed',
+    bottom:         '20px',
+    left:           '20px',
+    zIndex:         '9999',
+    display:        'flex',
+    alignItems:     'center',
+    padding:        '8px 14px',
+    background:     '#2c3e50',
+    color:          '#ffffff',
+    borderRadius:   '8px',
+    textDecoration: 'none',
+    fontSize:       '13px',
+    fontWeight:     '500',
+    boxShadow:      '0 2px 8px rgba(0,0,0,0.25)',
+    transition:     'background 0.15s ease',
+    cursor:         'pointer',
+    lineHeight:     '1',
+  });
+
+  btn.addEventListener('mouseenter', () => { btn.style.background = '#1a252f'; });
+  btn.addEventListener('mouseleave', () => { btn.style.background = '#2c3e50'; });
+
+  document.body.appendChild(btn);
 }
 
 // Auto-init: logout handler via event delegation (works on any page that imports this module)

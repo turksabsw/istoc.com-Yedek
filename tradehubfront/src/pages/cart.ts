@@ -8,7 +8,7 @@ import { initFlowbite } from 'flowbite'
 import { initStickyHeights } from '../utils/stickyHeights'
 
 // Header components (reuse from main page)
-import { TopBar, initMobileDrawer, SubHeader, MegaMenu, initMegaMenu, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, SubHeader, MegaMenu, initMegaMenu, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Shared components
@@ -81,6 +81,7 @@ initMegaMenu();
 initFlowbite();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 
 // Initialize cart page logic (store zaten load() ile yüklendi)
 initCartPage();

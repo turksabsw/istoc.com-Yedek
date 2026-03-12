@@ -7,7 +7,7 @@
 
 import '../../style.css'
 import { initFlowbite } from 'flowbite'
-import { t } from '../../i18n'
+import { t, i18nReady } from '../../i18n'
 import { requireAuth } from '../../utils/auth-guard'
 import { getSessionUser, type AuthUser } from '../../utils/auth'
 
@@ -19,6 +19,7 @@ async function init(): Promise<void> {
 
   const user = await getSessionUser()
 
+  await i18nReady
   renderPage(user)
 
   // Initialize Flowbite components

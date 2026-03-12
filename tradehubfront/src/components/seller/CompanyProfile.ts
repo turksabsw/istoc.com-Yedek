@@ -141,7 +141,7 @@ function ContactSidebar(seller: SellerProfile): string {
 }
 
 // ─── Overview Tab (Genel Bakış) ────────────────────────────────
-function OverviewTab(stats: SellerPerformanceStats, mainProducts: SimpleProduct[]): string {
+function OverviewTab(stats: SellerPerformanceStats, _mainProducts: SimpleProduct[]): string {
   return `
     <div class="company-profile__tab-content" x-show="activeTab === 'overview'" x-transition.opacity.duration.300ms id="tab-overview">
       
@@ -193,12 +193,11 @@ function OverviewTab(stats: SellerPerformanceStats, mainProducts: SimpleProduct[
         </div>
       </section>
 
-      <!-- Main Products Section -->
+      <!-- Main Products Section — populated dynamically by renderProducts() -->
       <section class="bg-white rounded-(--radius-md) border border-gray-200 p-6">
         <h3 class="text-[18px] font-bold text-gray-900 mb-6 uppercase">${t('seller.sf.mainProducts')}</h3>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 product-grid">
-          ${mainProducts.map((product, idx) => renderSellerProductCard(product, idx)).join('')}
+        <div data-main-products-grid class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          <div class="col-span-full text-center py-8 text-gray-400 text-sm">${t('seller.sf.loadingProducts')}</div>
         </div>
       </section>
 

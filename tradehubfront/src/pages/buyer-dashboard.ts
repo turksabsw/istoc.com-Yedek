@@ -9,7 +9,7 @@ import { startAlpine } from '../alpine'
 import { t } from '../i18n'
 
 // Header components (simplified for dashboard — no search bar / mega menu)
-import { TopBar, initMobileDrawer, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Shared components
@@ -104,6 +104,7 @@ initHeaderCart();
 initFloatingPanel();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 
 // Init based on current view
 function initCurrentView(): void {

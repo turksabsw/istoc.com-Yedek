@@ -171,8 +171,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "options": "Draft\nSubmitted\nUnder Review\nDocuments Requested\nRevision Required\nApproved\nRejected\nCancelled",
-   "reqd": 1,
-   "read_only": 1
+   "reqd": 1
   },
   {
    "fieldname": "tenant",
@@ -434,7 +433,7 @@
    "fieldname": "identity_document_attachment",
    "fieldtype": "Attach",
    "label": "Identity Document Attachment",
-   "reqd": 1,
+   "reqd": 0,
    "description": "Upload a clear photo/scan of your identity document"
   },
   {
@@ -856,18 +855,7 @@
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [
-  {
-   "group": "Related",
-   "link_doctype": "Seller Profile",
-   "link_fieldname": "seller_profile"
-  },
-  {
-   "group": "Related",
-   "link_doctype": "KYC Profile",
-   "link_fieldname": "applicant_user"
-  }
- ],
+ "links": [],
  "modified": "2026-03-04 12:55:54.321726",
  "modified_by": "Administrator",
  "module": "TradeHub Seller",

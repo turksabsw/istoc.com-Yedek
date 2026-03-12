@@ -8,7 +8,7 @@ import { initFlowbite } from 'flowbite'
 import { t } from '../i18n'
 
 // Header components
-import { TopBar, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Footer components
@@ -87,5 +87,6 @@ initStickyHeaderSearch();
 initHeaderCart();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initAnimatedPlaceholder('#topbar-compact-search-input');
 initCategoryFilters();

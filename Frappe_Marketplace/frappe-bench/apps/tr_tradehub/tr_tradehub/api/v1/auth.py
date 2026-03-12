@@ -712,13 +712,13 @@ def get_session_user() -> Dict[str, Any]:
             seller_profile_data = frappe.db.get_value(
                 "Seller Profile",
                 seller_profile_name,
-                ["name", "business_name", "seller_type", "status"],
+                ["name", "seller_name", "seller_type", "status"],
                 as_dict=True
             )
             if seller_profile_data:
                 seller_profile = {
                     "name": seller_profile_data.get("name"),
-                    "business_name": seller_profile_data.get("business_name"),
+                    "business_name": seller_profile_data.get("seller_name"),
                     "seller_type": seller_profile_data.get("seller_type"),
                     "status": seller_profile_data.get("status"),
                 }

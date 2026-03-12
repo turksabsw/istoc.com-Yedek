@@ -17,8 +17,8 @@ function mergeIntoTranslation(resource: any): any {
   return { translation: { ...translation, ...rest } };
 }
 
-// Initialize i18next
-i18next.use(LanguageDetector).init({
+// Initialize i18next — export the promise so async entry points can await it
+export const i18nReady = i18next.use(LanguageDetector).init({
   resources: { en: mergeIntoTranslation(en), tr: mergeIntoTranslation(tr) },
   fallbackLng: 'en',
   defaultNS: 'translation',

@@ -3,7 +3,7 @@ import { initFlowbite } from 'flowbite'
 import { t } from '../i18n'
 
 // Header components
-import { TopBar, MobileSearchTabs, initMobileDrawer, initStickyHeaderSearch, MegaMenu, initMegaMenu, PromoBanner, initPromoBanner } from '../components/header'
+import { TopBar, MobileSearchTabs, initMobileDrawer, initStickyHeaderSearch, MegaMenu, initMegaMenu, PromoBanner, initPromoBanner, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 
 // Shared components
@@ -26,8 +26,7 @@ import { loadManufacturers } from '../utils/api'
 import type { ManufacturersParams, ManufacturersResponse } from '../utils/api'
 
 // Manufacturers components (imported individually for dynamic rendering)
-import { ManufacturersHero } from '../components/manufacturers/ManufacturersHero'
-import { initCategoryFlyout } from '../components/manufacturers/ManufacturersHero'
+import { ManufacturersHero, initCategoryFlyout, initProfilePanel } from '../components/manufacturers/ManufacturersHero'
 import { HorizontalCategoryBar, initHorizontalCategoryBar } from '../components/manufacturers/HorizontalCategoryBar'
 import { ManufacturerList, initFactorySliders } from '../components/manufacturers/ManufacturerList'
 
@@ -404,6 +403,7 @@ startAlpine();
 initStickyHeaderSearch();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth().then(() => initProfilePanel());
 initAnimatedPlaceholder('#topbar-compact-search-input');
 
 // Initialize Manufacturers specific behaviors

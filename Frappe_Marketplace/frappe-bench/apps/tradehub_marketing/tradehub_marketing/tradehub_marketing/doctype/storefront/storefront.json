@@ -106,6 +106,8 @@
   "capability_verified_by",
   "factory_images_section",
   "factory_images",
+  "slider_section",
+  "slider_images",
   "certificates_section",
   "certificates",
   "capabilities_section",
@@ -744,6 +746,18 @@
    "description": "Photos of the factory and production facilities"
   },
   {
+   "fieldname": "slider_section",
+   "fieldtype": "Section Break",
+   "label": "Slider Images"
+  },
+  {
+   "fieldname": "slider_images",
+   "fieldtype": "Table",
+   "label": "Slider Images",
+   "options": "Storefront Slider Image",
+   "description": "Images for the storefront hero slider (recommended size: 1200x450px)"
+  },
+  {
    "fieldname": "certificates_section",
    "fieldtype": "Section Break",
    "label": "Certificates"
@@ -817,7 +831,7 @@
    "link_fieldname": "storefront"
   }
  ],
- "modified": "2026-03-11 00:00:00.000000",
+ "modified": "2026-03-12 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "TradeHub Marketing",
  "name": "Storefront",

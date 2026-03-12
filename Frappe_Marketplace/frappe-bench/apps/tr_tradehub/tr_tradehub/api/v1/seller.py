@@ -488,13 +488,20 @@ def submit_application(application_name: str) -> Dict[str, Any]:
     if user == "Guest":
         frappe.throw(_("Not logged in"))
 
-    application = frappe.get_doc("Seller Application", application_name)
-
-    # Verify ownership
-    if application.applicant_user != user and not frappe.has_permission("Seller Application", "write"):
+    # Verify ownership via DB query (no DocType permission needed)
+    owner = frappe.db.get_value("Seller Application", application_name, "applicant_user")
+    if not owner:
+        frappe.throw(_("Application not found"))
+    if owner != user and not frappe.has_permission("Seller Application", "write"):
         frappe.throw(_("Not permitted to submit this application"))
 
+    # Get the document with elevated permissions
+    frappe.flags.ignore_permissions = True
+    application = frappe.get_doc("Seller Application", application_name)
+    frappe.flags.ignore_permissions = False
+
     # Submit the application
+    application.flags.ignore_permissions = True
     application.submit_application()
 
     _log_seller_event("application_submitted", user, {"application": application_name})
@@ -576,15 +583,22 @@ def update_application(application_name: str, **kwargs) -> Dict[str, Any]:
     if user == "Guest":
         frappe.throw(_("Not logged in"))
 
-    application = frappe.get_doc("Seller Application", application_name)
-
-    # Verify ownership
-    if application.applicant_user != user:
+    # Verify ownership via DB query (no DocType permission needed)
+    owner = frappe.db.get_value("Seller Application", application_name, "applicant_user")
+    if not owner:
+        frappe.throw(_("Application not found"))
+    if owner != user:
         frappe.throw(_("Not permitted to update this application"))
 
-    # Can only update in certain statuses
-    if application.status not in ["Draft", "Revision Required", "Documents Requested"]:
-        frappe.throw(_("Application cannot be updated in '{0}' status").format(application.status))
+    # Check status via DB query
+    current_status = frappe.db.get_value("Seller Application", application_name, "status")
+    if current_status not in ["Draft", "Revision Required", "Documents Requested"]:
+        frappe.throw(_("Application cannot be updated in '{0}' status").format(current_status))
+
+    # Get the document with elevated permissions
+    frappe.flags.ignore_permissions = True
+    application = frappe.get_doc("Seller Application", application_name)
+    frappe.flags.ignore_permissions = False
 
     # Allowed fields to update
     allowed_fields = [
@@ -593,9 +607,11 @@ def update_application(application_name: str, **kwargs) -> Dict[str, Any]:
         "address_line_2", "city", "state", "country", "postal_code", "tax_office",
         "trade_registry_number", "mersis_number", "e_invoice_registered",
         "e_invoice_alias", "bank_name", "bank_branch", "iban", "account_holder_name",
-        "swift_code", "identity_document_number", "identity_document_type",
-        "identity_document_expiry", "business_description", "main_categories",
-        "estimated_monthly_sales"
+        "swift_code", "identity_document", "identity_document_number",
+        "identity_document_type", "identity_document_expiry", "business_description",
+        "main_categories", "estimated_monthly_sales",
+        "terms_accepted", "privacy_accepted", "kvkk_accepted",
+        "commission_accepted", "return_policy_accepted",
     ]
 
     # Validate tax_id if being updated
@@ -617,13 +633,112 @@ def update_application(application_name: str, **kwargs) -> Dict[str, Any]:
         if field in kwargs:
             setattr(application, field, kwargs[field])
 
-    application.save()
+    application.flags.ignore_permissions = True
+    application.save(ignore_permissions=True)
 
     return {
         "success": True,
         "message": _("Application updated successfully"),
         "application": application_name,
         "status": application.status,
+    }
+
+
+@frappe.whitelist()
+def complete_registration_application(application_name: str, **kwargs) -> Dict[str, Any]:
+    """
+    Complete a seller application during the registration flow.
+
+    Called immediately after register_user() creates the Draft Seller Application.
+    Uses frappe.db.set_value() to bypass DocType permission and validation issues,
+    then sets status to Submitted via direct DB write.
+
+    Args:
+        application_name: The Draft Seller Application name from register_user response
+        **kwargs: All form fields (business_name, tax_id, iban, address_line_1, etc.)
+
+    Returns:
+        dict: Result with success status
+    """
+    user = frappe.session.user
+    if user == "Guest":
+        frappe.throw(_("Not logged in"))
+
+    # Verify ownership via direct DB query (no DocType permission required)
+    owner = frappe.db.get_value("Seller Application", application_name, "applicant_user")
+    if not owner:
+        frappe.throw(_("Application not found: {0}").format(application_name))
+    if owner != user:
+        frappe.throw(_("Not authorized to update this application"))
+
+    # Only allow update in Draft or Revision Required status
+    current_status = frappe.db.get_value("Seller Application", application_name, "status")
+    if current_status not in ["Draft", "Revision Required"]:
+        frappe.throw(_("Application is already submitted (status: {0})").format(current_status))
+
+    # Fields we accept from the registration form
+    allowed_fields = [
+        "business_name", "seller_type", "tax_id", "tax_id_type", "tax_office",
+        "contact_phone", "address_line_1", "address_line_2", "city", "state",
+        "country", "postal_code", "bank_name", "bank_branch", "iban",
+        "account_holder_name", "swift_code", "identity_document",
+        "identity_document_number", "identity_document_type",
+        "identity_document_expiry", "terms_accepted", "privacy_accepted",
+        "kvkk_accepted", "commission_accepted", "return_policy_accepted",
+    ]
+
+    # Build the update dict from kwargs
+    update_dict = {}
+    for field in allowed_fields:
+        if field in kwargs and kwargs[field] not in (None, ""):
+            value = kwargs[field]
+            # Normalize IBAN: strip spaces and uppercase
+            if field == "iban":
+                value = cstr(value).strip().upper().replace(" ", "")
+            # Convert country ISO code (e.g. "TR") to Frappe Country name (e.g. "Turkey")
+            if field == "country":
+                country_code = cstr(value).strip().upper()
+                frappe_country = frappe.db.get_value("Country", {"code": country_code}, "name")
+                if frappe_country:
+                    value = frappe_country
+                # If not found by code, keep the value as-is (might already be a name)
+            # Normalize identity_document to valid Select options
+            if field == "identity_document":
+                identity_doc_map = {
+                    "national_id": "National ID Card",
+                    "National ID": "National ID Card",
+                    "passport": "Passport",
+                    "drivers_license": "Driver License",
+                    "driver_license": "Driver License",
+                }
+                value = identity_doc_map.get(cstr(value).strip(), cstr(value).strip())
+            update_dict[field] = value
+
+    # Step 1: Update form data fields via direct DB write (bypasses all permission checks)
+    if update_dict:
+        frappe.db.set_value("Seller Application", application_name, update_dict)
+
+    # Step 2: Set status to Submitted
+    frappe.db.set_value("Seller Application", application_name, {
+        "status": "Submitted",
+        "workflow_state": "Pending Review",
+        "submitted_at": now_datetime(),
+        "submitted_by": user,
+    })
+
+    frappe.db.commit()
+
+    _log_seller_event(
+        "registration_application_completed",
+        user,
+        {"application": application_name, "fields_updated": list(update_dict.keys())},
+    )
+
+    return {
+        "success": True,
+        "message": _("Application submitted successfully"),
+        "application": application_name,
+        "status": "Submitted",
     }
 
 
@@ -1212,6 +1327,27 @@ def update_storefront(storefront_name: Optional[str] = None, **kwargs) -> Dict[s
                         "is_verified": cap.get("is_verified", 0),
                     })
 
+    # Handle child table: slider_images → Storefront Slider Image
+    if "slider_images" in kwargs:
+        slider_data = kwargs["slider_images"]
+        if isinstance(slider_data, str):
+            import json as json_lib
+            try:
+                slider_data = json_lib.loads(slider_data)
+            except (ValueError, TypeError):
+                slider_data = []
+        if isinstance(slider_data, list):
+            storefront.set("slider_images", [])
+            for idx, img in enumerate(slider_data):
+                if isinstance(img, dict) and img.get("image"):
+                    storefront.append("slider_images", {
+                        "image": img["image"],
+                        "title": img.get("title", ""),
+                        "subtitle": img.get("subtitle", ""),
+                        "link_url": img.get("link_url", ""),
+                        "sort_order": img.get("sort_order", idx),
+                    })
+
     storefront.save()
 
     _log_seller_event("storefront_updated", user, {"storefront": storefront_name})
@@ -1797,11 +1933,10 @@ def get_manufacturers_list(
     }
     order_clause = sort_map.get(cstr(sort_by).strip(), sort_map["popular"])
 
-    # Build WHERE conditions
+    # Build WHERE conditions — sadece aktif satıcı profili zorunlu,
+    # storefront olmayan veya henüz yayınlanmamış satıcılar da gösterilir
     conditions = [
         "sp.status = 'Active'",
-        "sf.status = 'Active'",
-        "sf.is_published = 1",
     ]
     params = []
 
@@ -1831,11 +1966,11 @@ def get_manufacturers_list(
 
     where_clause = " AND ".join(conditions)
 
-    # Count total matching sellers
+    # Count total matching sellers (LEFT JOIN — storefrontsuz satıcılar da sayılır)
     count_sql = (
         "SELECT COUNT(DISTINCT sp.name) AS total "
         "FROM `tabSeller Profile` sp "
-        "INNER JOIN `tabStorefront` sf ON sf.seller = sp.name "
+        "LEFT JOIN `tabStorefront` sf ON sf.seller = sp.name "
         "WHERE " + where_clause
     )
     count_result = frappe.db.sql(count_sql, params, as_dict=True)
@@ -1849,13 +1984,13 @@ def get_manufacturers_list(
             "page_size": page_size,
         }
 
-    # Main query: fetch sellers with storefront data
+    # Main query: fetch sellers with storefront data (LEFT JOIN — storefront opsiyonel)
     main_sql = (
         "SELECT "
         "sp.name AS seller_id, "
         "sf.name AS storefront_name, "
         "sf.slug AS storefront_slug, "
-        "sf.logo AS logo, "
+        "COALESCE(sf.logo, sp.logo) AS logo, "
         "sp.display_name, "
         "CASE WHEN sp.verification_status = 'Verified' THEN 1 ELSE 0 END AS is_verified, "
         "sp.joined_at, "
@@ -1867,7 +2002,7 @@ def get_manufacturers_list(
         "sp.response_time_hours, "
         "sp.on_time_delivery_rate "
         "FROM `tabSeller Profile` sp "
-        "INNER JOIN `tabStorefront` sf ON sf.seller = sp.name "
+        "LEFT JOIN `tabStorefront` sf ON sf.seller = sp.name "
         "WHERE " + where_clause + " "
         "ORDER BY " + order_clause + " "
         "LIMIT %s OFFSET %s"
@@ -2005,64 +2140,99 @@ def get_manufacturers_list(
 
 
 @frappe.whitelist(allow_guest=True)
-def get_seller_storefront_data(storefront_slug: str) -> Dict[str, Any]:
+def get_seller_storefront_data(storefront_slug: str = None, seller_name: str = None) -> Dict[str, Any]:
     """
     Get all data for a single seller storefront page.
 
-    Looks up the Storefront by its unique slug field, joins with the
-    associated Seller Profile, and returns seller info, performance metrics,
-    storefront details (factory images, capabilities), and tab counts.
+    Accepts either a storefront slug (for storefronts with published pages)
+    or a seller_name (Seller Profile name) as fallback when no storefront exists.
 
     Args:
-        storefront_slug: The unique URL slug of the storefront
+        storefront_slug: The unique URL slug of the storefront (preferred)
+        seller_name: The Seller Profile name as fallback (e.g. SELLER-00107)
 
     Returns:
         dict: Contains 4 objects — seller, performance, storefront, tabs
 
     Raises:
-        frappe.ValidationError: If slug is missing or storefront not found
+        frappe.ValidationError: If neither parameter resolves to an active seller
 
     Example:
-        GET /api/method/tr_tradehub.api.v1.seller.get_seller_storefront_data?storefront_slug=anadolu-endustriyel
+        GET .../get_seller_storefront_data?storefront_slug=anadolu-endustriyel
+        GET .../get_seller_storefront_data?seller_name=SELLER-00107
     """
     storefront_slug = cstr(storefront_slug).strip()
+    seller_name = cstr(seller_name).strip()
 
-    if not storefront_slug:
+    if not storefront_slug and not seller_name:
         frappe.throw(_("Storefront not found"))
 
-    # Look up Storefront by slug and join with Seller Profile
-    storefront_data = frappe.db.sql(
-        """
-        SELECT
-            sf.name AS storefront_name,
-            sf.slug,
-            sf.factory_video_url,
-            sf.capability_verified_by,
-            sp.name AS seller_id,
-            sp.display_name,
-            sp.logo,
-            sp.verification_status,
-            sp.verified_by,
-            sp.verified_at,
-            sp.joined_at,
-            sp.city,
-            sp.country,
-            sp.contact_email,
-            sp.average_rating,
-            sp.total_reviews,
-            sp.response_time_hours,
-            sp.on_time_delivery_rate,
-            sp.total_sales_count
-        FROM `tabStorefront` sf
-        INNER JOIN `tabSeller Profile` sp ON sf.seller = sp.name
-        WHERE sf.slug = %s
-        AND sf.status = 'Active'
-        AND sf.is_published = 1
-        LIMIT 1
-        """,
-        storefront_slug,
-        as_dict=True,
-    )
+    # Build lookup SQL — prefer slug, fall back to seller_name
+    if storefront_slug:
+        # Slug-based lookup (with LEFT JOIN so unpublished storefronts also work)
+        storefront_data = frappe.db.sql(
+            """
+            SELECT
+                sf.name AS storefront_name,
+                sf.slug,
+                sf.factory_video_url,
+                sf.capability_verified_by,
+                sp.name AS seller_id,
+                sp.display_name,
+                sp.logo,
+                sp.verification_status,
+                sp.verified_by,
+                sp.verified_at,
+                sp.joined_at,
+                sp.city,
+                sp.country,
+                sp.contact_email,
+                sp.average_rating,
+                sp.total_reviews,
+                sp.response_time_hours,
+                sp.on_time_delivery_rate,
+                sp.total_sales_count
+            FROM `tabStorefront` sf
+            INNER JOIN `tabSeller Profile` sp ON sf.seller = sp.name
+            WHERE sf.slug = %s
+            LIMIT 1
+            """,
+            storefront_slug,
+            as_dict=True,
+        )
+    else:
+        # Seller-name-based lookup — storefront is optional (LEFT JOIN)
+        storefront_data = frappe.db.sql(
+            """
+            SELECT
+                sf.name AS storefront_name,
+                sf.slug,
+                sf.factory_video_url,
+                sf.capability_verified_by,
+                sp.name AS seller_id,
+                sp.display_name,
+                sp.logo,
+                sp.verification_status,
+                sp.verified_by,
+                sp.verified_at,
+                sp.joined_at,
+                sp.city,
+                sp.country,
+                sp.contact_email,
+                sp.average_rating,
+                sp.total_reviews,
+                sp.response_time_hours,
+                sp.on_time_delivery_rate,
+                sp.total_sales_count
+            FROM `tabSeller Profile` sp
+            LEFT JOIN `tabStorefront` sf ON sf.seller = sp.name
+            WHERE sp.name = %s
+            AND sp.status = 'Active'
+            LIMIT 1
+            """,
+            seller_name,
+            as_dict=True,
+        )
 
     if not storefront_data:
         frappe.throw(_("Storefront not found"))
@@ -2127,6 +2297,29 @@ def get_seller_storefront_data(storefront_slug: str) -> Dict[str, Any]:
     )
     factory_images = [row.image for row in factory_images_rows if row.image]
 
+    # --- Fetch slider images from Storefront child table ---
+    slider_images_rows = []
+    if storefront_name:
+        slider_images_rows = frappe.db.sql(
+            """
+            SELECT image, title, subtitle, link_url, sort_order
+            FROM `tabStorefront Slider Image`
+            WHERE parent = %s
+            ORDER BY sort_order ASC, idx ASC
+            """,
+            storefront_name,
+            as_dict=True,
+        )
+    slider_images = [
+        {
+            "image": row.image,
+            "title": row.title or "",
+            "subtitle": row.subtitle or "",
+            "link_url": row.link_url or "",
+        }
+        for row in slider_images_rows if row.image
+    ]
+
     # --- Fetch capabilities from Storefront child table ---
     capability_rows = frappe.db.sql(
         """
@@ -2139,6 +2332,64 @@ def get_seller_storefront_data(storefront_slug: str) -> Dict[str, Any]:
         as_dict=True,
     )
     capabilities = [row.capability_name for row in capability_rows if row.capability_name]
+
+    # --- Fetch top products (active listings with images) ---
+    products_rows = frappe.db.sql(
+        """
+        SELECT
+            l.name,
+            l.title,
+            l.primary_image,
+            l.selling_price,
+            l.base_price,
+            l.currency,
+            l.category,
+            l.seller_custom_category,
+            l.average_rating,
+            l.review_count
+        FROM `tabListing` l
+        WHERE l.seller = %s
+        AND l.status = 'Active'
+        AND l.primary_image IS NOT NULL
+        AND l.primary_image != ''
+        ORDER BY l.ranking_score DESC, l.creation DESC
+        LIMIT 12
+        """,
+        seller_id,
+        as_dict=True,
+    )
+    products = [
+        {
+            "name": row.name,
+            "title": row.title or "",
+            "image": row.primary_image or "",
+            "selling_price": flt(row.selling_price, 2),
+            "base_price": flt(row.base_price, 2),
+            "currency": row.currency or "TRY",
+            "category": row.category or "",
+            "custom_category": row.seller_custom_category or "",
+            "rating": flt(row.average_rating, 1),
+            "review_count": cint(row.review_count),
+        }
+        for row in products_rows
+    ]
+
+    # --- Fetch branding from Storefront (if exists) ---
+    branding = {"banner": "", "tagline": "", "short_description": "", "store_name": sf.display_name or ""}
+    if storefront_name:
+        branding_row = frappe.db.get_value(
+            "Storefront",
+            storefront_name,
+            ["banner", "tagline", "short_description", "store_name"],
+            as_dict=True,
+        )
+        if branding_row:
+            branding = {
+                "banner": branding_row.banner or "",
+                "tagline": branding_row.tagline or "",
+                "short_description": branding_row.short_description or "",
+                "store_name": branding_row.store_name or sf.display_name or "",
+            }
 
     # --- Tab counts ---
     # Products count: active listings for this seller
@@ -2194,12 +2445,93 @@ def get_seller_storefront_data(storefront_slug: str) -> Dict[str, Any]:
             "factory_images": factory_images,
             "capabilities": capabilities,
             "capability_verified_by": sf.capability_verified_by or "",
+            "slider_images": slider_images,
         },
+        "branding": branding,
+        "products": products,
         "tabs": {
             "products_count": products_count,
             "categories_count": categories_count,
             "campaigns_count": campaigns_count,
         },
+    }
+
+
+@frappe.whitelist(allow_guest=True)
+def get_storefront_products(
+    storefront_slug: str = None,
+    seller_name: str = None,
+    page: int = 1,
+    page_size: int = 12,
+    category: str = None,
+) -> Dict[str, Any]:
+    """
+    Get paginated products for a seller storefront.
+    Accepts storefront_slug or seller_name as identifier.
+    """
+    page = cint(page) or 1
+    page_size = min(cint(page_size) or 12, 48)
+    offset = (page - 1) * page_size
+
+    # Resolve seller_id
+    seller_id = None
+    if storefront_slug:
+        seller_id = frappe.db.get_value(
+            "Storefront", {"slug": storefront_slug}, "seller"
+        )
+    elif seller_name:
+        if frappe.db.exists("Seller Profile", {"name": seller_name, "status": "Active"}):
+            seller_id = seller_name
+
+    if not seller_id:
+        frappe.throw(_("Storefront not found"))
+
+    filters = {"seller": seller_id, "status": "Active"}
+    if category:
+        filters["category"] = category
+
+    total = frappe.db.count("Listing", filters)
+
+    rows = frappe.db.sql(
+        """
+        SELECT
+            l.name, l.title, l.primary_image,
+            l.selling_price, l.base_price, l.currency,
+            l.category, l.seller_custom_category,
+            l.average_rating, l.review_count, l.min_order_qty
+        FROM `tabListing` l
+        WHERE l.seller = %s
+        AND l.status = 'Active'
+        {cat_filter}
+        ORDER BY l.ranking_score DESC, l.creation DESC
+        LIMIT %s OFFSET %s
+        """.format(cat_filter="AND l.category = %s" if category else ""),
+        (seller_id, category, page_size, offset) if category else (seller_id, page_size, offset),
+        as_dict=True,
+    )
+
+    products = [
+        {
+            "name": row.name,
+            "title": row.title or "",
+            "image": row.primary_image or "",
+            "selling_price": flt(row.selling_price, 2),
+            "base_price": flt(row.base_price, 2),
+            "currency": row.currency or "TRY",
+            "category": row.category or "",
+            "custom_category": row.seller_custom_category or "",
+            "rating": flt(row.average_rating, 1),
+            "review_count": cint(row.review_count),
+            "min_order_qty": cint(row.min_order_qty) or 1,
+        }
+        for row in rows
+    ]
+
+    return {
+        "data": products,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
     }
 
 

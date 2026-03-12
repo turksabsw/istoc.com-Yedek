@@ -5,7 +5,7 @@ import { initFlowbite } from 'flowbite'
 import { initLanguageSelector } from './components/header/TopBar'
 
 // Header components
-import { TopBar, MobileSearchTabs, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initHeaderCart } from './components/header'
+import { TopBar, MobileSearchTabs, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initHeaderCart, initTopBarAuth } from './components/header'
 
 // Hero components
 import {
@@ -123,4 +123,7 @@ initProductGrid();
 initMobileDrawer();
 initHeaderCart();
 initLanguageSelector();
+
+// Check Frappe session and update TopBar auth area (login button ↔ user dropdown)
+initTopBarAuth();
 initAnimatedPlaceholder('#topbar-compact-search-input');

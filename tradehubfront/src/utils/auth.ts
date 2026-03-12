@@ -6,7 +6,7 @@
  * and sync accessors (getUser, isLoggedIn) for template rendering.
  */
 
-const FRAPPE_BASE = 'http://marketplace.local:8000';
+export const FRAPPE_BASE = import.meta.env.VITE_FRAPPE_BASE ?? '';
 
 export interface AuthUser {
   email: string;
@@ -94,7 +94,7 @@ export function getRedirectUrl(user: AuthUser): string {
     return `${FRAPPE_BASE}/app/tradehub`;
   }
   if (user.is_seller && user.has_seller_profile) {
-    return 'http://localhost:5174/';
+    return import.meta.env.VITE_SELLER_PANEL_URL ?? 'http://localhost:8082/';
   }
   if (user.pending_seller_application) {
     return '/pages/seller/application-pending.html';
@@ -147,8 +147,18 @@ export async function register(
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || 'Registration failed');
+    const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+    let message = 'Registration failed';
+    if (data._server_messages) {
+      try {
+        const msgs = JSON.parse(data._server_messages as string) as string[];
+        const first = JSON.parse(msgs[0]) as { message?: string };
+        if (first.message) message = first.message;
+      } catch { /* fallback to generic message */ }
+    } else if (typeof data.message === 'string') {
+      message = data.message;
+    }
+    throw new Error(message);
   }
 
   const data = await res.json();

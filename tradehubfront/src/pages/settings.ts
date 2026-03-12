@@ -8,7 +8,7 @@ import { initFlowbite } from 'flowbite'
 import { t } from '../i18n'
 import { startAlpine } from '../alpine'
 
-import { TopBar, initMobileDrawer, initHeaderCart } from '../components/header'
+import { TopBar, initMobileDrawer, initHeaderCart, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 import { Breadcrumb } from '../components/shared/Breadcrumb'
 import { FooterLinks } from '../components/footer'
@@ -56,6 +56,7 @@ initHeaderCart();
 initFloatingPanel();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initSidebar();
 initSettingsLayout();
 

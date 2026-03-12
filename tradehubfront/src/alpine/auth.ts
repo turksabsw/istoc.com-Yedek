@@ -31,7 +31,7 @@ import {
   type ForgotPasswordStep,
 } from '../components/auth/ForgotPasswordPage'
 import { getBaseUrl } from '../components/auth/AuthLayout'
-import { register, login, getSessionUser, getRedirectUrl } from '../utils/auth'
+import { register, login, getSessionUser, getRedirectUrl, FRAPPE_BASE } from '../utils/auth'
 
 Alpine.data('registerPage', () => ({
   currentStep: 'account-type' as RegisterStep,
@@ -130,7 +130,7 @@ Alpine.data('registerPage', () => ({
           const container = (this.$refs as Record<string, HTMLElement>).setupContainer;
 
           if (this.accountType === 'supplier') {
-            // Supplier: render SupplierSetupForm with business-specific fields
+            // Supplier: render SupplierSetupForm — multi-step form
             if (container) {
               container.innerHTML = SupplierSetupForm('TR');
             }
@@ -138,25 +138,122 @@ Alpine.data('registerPage', () => ({
               defaultCountry: 'TR',
               onSubmit: async (formData: SupplierSetupFormData) => {
                 if (!this.accountType) return;
+
+                const submitBtn = document.getElementById('supplier-setup-submit-btn') as HTMLButtonElement | null;
+                const submitSpan = submitBtn?.querySelector('span');
+                const originalText = submitSpan?.textContent || '';
+                if (submitBtn) submitBtn.disabled = true;
+                if (submitSpan) submitSpan.textContent = t('common.loading');
+
                 try {
-                  await register(
+                  // 1. Kullanıcı hesabını oluştur (supplier için Draft Seller Application da oluşturulur)
+                  const regResult = await register(
                     this.email,
                     formData.password,
                     formData.firstName,
                     formData.lastName,
                     this.accountType,
-                    '',
+                    formData.contactPhone,
                     formData.country?.code || 'TR',
                     true,
                     true,
                   );
+
+                  // 2. Oturum aç
                   await login(this.email, formData.password);
-                  // Supplier: redirect to application form to complete seller application
-                  const baseUrl = getBaseUrl();
-                  window.location.href = `${baseUrl}pages/seller/application-form.html`;
+
+                  // 3. register() tarafından oluşturulan Draft başvurusunu güncelle
+                  const sellerTypeMap: Record<string, string> = {
+                    individual: 'Individual',
+                    business: 'Business',
+                    enterprise: 'Enterprise',
+                  };
+                  const identityDocMap: Record<string, string> = {
+                    national_id: 'National ID Card',
+                    passport: 'Passport',
+                    drivers_license: 'Driver License',
+                  };
+
+                  // register() mevcut Draft başvuruyu döndürür
+                  const existingApplicationName = (regResult as Record<string, unknown>).seller_application as string | undefined;
+                  let applicationName: string | undefined = existingApplicationName;
+
+                  if (existingApplicationName) {
+                    // complete_registration_application: tek endpoint, doğrudan DB yazımı (izin sorunu yok)
+                    const completeRes = await fetch(`${FRAPPE_BASE}/api/method/tr_tradehub.api.v1.seller.complete_registration_application`, {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Frappe-CSRF-Token': 'fetch',
+                      },
+                      body: JSON.stringify({
+                        application_name: existingApplicationName,
+                        business_name: formData.businessName,
+                        seller_type: sellerTypeMap[formData.sellerType || ''] || formData.sellerType,
+                        tax_id_type: formData.taxIdType,
+                        tax_id: formData.taxId,
+                        tax_office: formData.taxOffice,
+                        contact_phone: formData.contactPhone,
+                        address_line_1: formData.addressLine1,
+                        city: formData.city,
+                        country: formData.country?.code || 'TR',
+                        bank_name: formData.bankName,
+                        iban: formData.iban,
+                        account_holder_name: formData.accountHolderName,
+                        identity_document: identityDocMap[formData.identityDocumentType || ''] || formData.identityDocumentType,
+                        identity_document_number: formData.documentNumber,
+                        identity_document_expiry: formData.documentExpiryDate,
+                        terms_accepted: 1,
+                        privacy_accepted: 1,
+                        kvkk_accepted: 1,
+                        commission_accepted: 1,
+                        return_policy_accepted: 1,
+                      }),
+                    });
+
+                    if (!completeRes.ok) {
+                      const errData = await completeRes.json().catch(() => ({})) as Record<string, unknown>;
+                      let errMsg = 'Başvuru kaydedilemedi';
+                      if (errData._server_messages) {
+                        try {
+                          const msgs = JSON.parse(errData._server_messages as string) as string[];
+                          const first = JSON.parse(msgs[0]) as { message?: string };
+                          if (first.message) errMsg = first.message;
+                        } catch { /* ignore */ }
+                      } else if (typeof errData.message === 'string') {
+                        errMsg = errData.message;
+                      }
+                      throw new Error(errMsg);
+                    }
+                  }
+
+                  // 4. Kimlik belgesi dosyasını yükle
+                  if (formData.identityDocumentAttachment && applicationName) {
+                    const fileForm = new FormData();
+                    fileForm.append('file', formData.identityDocumentAttachment);
+                    fileForm.append('doctype', 'Seller Application');
+                    fileForm.append('docname', applicationName);
+                    fileForm.append('fieldname', 'identity_document_attachment');
+                    fileForm.append('is_private', '1');
+
+                    await fetch(`${FRAPPE_BASE}/api/method/upload_file`, {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: { 'X-Frappe-CSRF-Token': 'fetch' },
+                      body: fileForm,
+                    });
+                  }
+
+                  // 5. Onay bekleme sayfasına yönlendir
+                  window.location.href = '/pages/seller/application-pending.html';
+
                 } catch (err) {
                   const message = err instanceof Error ? err.message : t('auth.register.error');
                   showToast({ message, type: 'error' });
+                  if (submitBtn) submitBtn.disabled = false;
+                  if (submitSpan) submitSpan.textContent = originalText;
                 }
               }
             });

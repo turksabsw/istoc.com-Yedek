@@ -1,7 +1,5 @@
 import { getBaseUrl } from './url'
-import { getSessionUser } from './auth'
-
-const FRAPPE_BASE = 'http://marketplace.local:8000'
+import { getSessionUser, FRAPPE_BASE } from './auth'
 
 /** Require authenticated user — redirect to login if not */
 export async function requireAuth(): Promise<boolean> {

@@ -556,7 +556,7 @@ function renderTopRankingColumn(): string {
   `;
 }
 
-function renderProfileColumn(): string {
+function renderProfileUserArea(loggedIn: boolean, userName: string): string {
   const thumbs = [
     'https://picsum.photos/seed/hist1/80/80',
     'https://picsum.photos/seed/hist2/80/80',
@@ -564,15 +564,7 @@ function renderProfileColumn(): string {
     'https://picsum.photos/seed/hist4/80/80',
   ];
 
-  const loggedIn = isLoggedIn();
-  const user = getUser();
-  const userName = user ? user.name : 'Guest';
-
   return `
-    <div class="flex-1 h-[400px] overflow-hidden flex flex-col" style="border-radius: var(--mfr-hero-card-radius, 6px)">
-
-      <!-- Top card: user-info -->
-      <div class="h-[268px] mb-4 py-3 px-4 flex flex-col" style="background-color: var(--mfr-hero-card-bg, #ffffff); border-radius: var(--mfr-hero-card-radius, 6px); box-shadow: var(--mfr-hero-card-shadow, 0 0 12px rgba(0,0,0,0.05))">
         <!-- Avatar row -->
         <div class="flex items-center h-[42px] mb-3">
           <div class="w-10 h-10 rounded-full border mr-3 flex items-center justify-center text-gray-400 flex-shrink-0" style="background-color: var(--mfr-profile-avatar-bg, #dddddd); border-color: var(--mfr-profile-avatar-bg, #dddddd)">
@@ -580,16 +572,16 @@ function renderProfileColumn(): string {
           </div>
           <div>
             ${loggedIn
-      ? `<span class="text-xs" style="color: var(--mfr-profile-text-color, #222222)">Welcome back</span>
+              ? `<span class="text-xs" style="color: var(--mfr-profile-text-color, #222222)">${t('mfr.welcomeBack')}</span>
                  <p class="text-base font-bold leading-6" style="color: var(--mfr-profile-text-color, #222222)">${userName}</p>`
-      : `<span class="text-xs" style="color: var(--mfr-profile-text-color, #222222)">${t('mfr.welcome')}</span>
+              : `<span class="text-xs" style="color: var(--mfr-profile-text-color, #222222)">${t('mfr.welcome')}</span>
                  <p class="text-base font-bold leading-6" style="color: var(--mfr-profile-text-color, #222222)">Guest</p>`
-    }
+            }
           </div>
         </div>
 
         ${loggedIn
-      ? `<!-- Favorites (Logged In) -->
+          ? `<!-- Favorites (Logged In) -->
              <div class="flex items-center justify-center rounded-md p-3 mt-4 mb-4 bg-gray-50 dark:bg-gray-800 border border-transparent">
                <div class="flex-1 text-center border-r border-gray-200 dark:border-gray-700">
                  <div class="flex items-center justify-center gap-1.5">
@@ -604,16 +596,16 @@ function renderProfileColumn(): string {
                  </div>
                </div>
              </div>`
-      : `<!-- Buttons (Logged Out) -->
+          : `<!-- Buttons (Logged Out) -->
              <div class="flex justify-between mt-6 mb-4">
                <a href="/login" class="w-[calc(50%-4px)] flex items-center justify-center rounded-full h-10 text-xs font-bold transition-colors" style="background-color: var(--mfr-profile-btn-bg, #cc9900); color: var(--mfr-profile-btn-text, #ffffff)" onmouseover="this.style.backgroundColor='var(--mfr-profile-btn-hover, #8a6800)'" onmouseout="this.style.backgroundColor='var(--mfr-profile-btn-bg, #cc9900)'" data-spm="button_login">${t('auth.login.submit')}</a>
                <a href="/register" class="w-[calc(50%-4px)] flex items-center justify-center rounded-full h-10 text-xs font-bold transition-colors" style="background-color: var(--mfr-profile-btn-bg, #cc9900); color: var(--mfr-profile-btn-text, #ffffff)" onmouseover="this.style.backgroundColor='var(--mfr-profile-btn-hover, #8a6800)'" onmouseout="this.style.backgroundColor='var(--mfr-profile-btn-bg, #cc9900)'" data-spm="button_register">${t('auth.register.freeSignUp')}</a>
              </div>`
-    }
+        }
 
         <!-- Search history -->
         <div class="mt-auto">
-          <a href="#" class="block text-base font-bold mb-2 leading-6" style="color: var(--mfr-profile-text-color, #222222)">${loggedIn ? 'Your browsing history' : t('mfr.yourSearchHistory')}</a>
+          <a href="#" class="block text-base font-bold mb-2 leading-6" style="color: var(--mfr-profile-text-color, #222222)">${loggedIn ? t('mfr.yourBrowsingHistory') : t('mfr.yourSearchHistory')}</a>
           <div class="grid grid-cols-4 gap-2">
             ${thumbs.map(src => `
               <a href="#" class="aspect-square rounded-md overflow-hidden group">
@@ -622,6 +614,16 @@ function renderProfileColumn(): string {
             `).join('')}
           </div>
         </div>
+  `;
+}
+
+function renderProfileColumn(): string {
+  return `
+    <div class="flex-1 h-[400px] overflow-hidden flex flex-col" style="border-radius: var(--mfr-hero-card-radius, 6px)">
+
+      <!-- Top card: user-info -->
+      <div class="h-[268px] mb-4 py-3 px-4 flex flex-col" id="mfr-profile-card" style="background-color: var(--mfr-hero-card-bg, #ffffff); border-radius: var(--mfr-hero-card-radius, 6px); box-shadow: var(--mfr-hero-card-shadow, 0 0 12px rgba(0,0,0,0.05))">
+        ${renderProfileUserArea(false, 'Guest')}
       </div>
 
       <!-- Bottom card: RFQ -->
@@ -634,6 +636,18 @@ function renderProfileColumn(): string {
 
     </div>
   `;
+}
+
+/** Called after session is loaded — updates profile panel with real user data */
+export function initProfilePanel(): void {
+  const card = document.getElementById('mfr-profile-card');
+  if (!card) return;
+
+  const loggedIn = isLoggedIn();
+  const user = getUser();
+  const userName = user ? user.name : 'Guest';
+
+  card.innerHTML = renderProfileUserArea(loggedIn, userName);
 }
 
 export function initCategoryFlyout(): void {

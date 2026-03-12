@@ -147,7 +147,7 @@ frappe.ui.form.on('Seller Application', {
             __('Are you sure you want to submit this application? You will not be able to edit it after submission.'),
             function() {
                 frappe.call({
-                    method: 'tr_tradehub.tr_tradehub.doctype.seller_application.seller_application.submit_application',
+                    method: 'tradehub_seller.tradehub_seller.tradehub_seller.doctype.seller_application.seller_application.submit_application',
                     args: {
                         application_name: frm.doc.name
                     },
@@ -167,7 +167,7 @@ frappe.ui.form.on('Seller Application', {
 
     start_review: function(frm) {
         frappe.call({
-            method: 'tr_tradehub.tr_tradehub.doctype.seller_application.seller_application.start_review',
+            method: 'tradehub_seller.tradehub_seller.tradehub_seller.doctype.seller_application.seller_application.start_review',
             args: {
                 application_name: frm.doc.name
             },
@@ -210,7 +210,7 @@ frappe.ui.form.on('Seller Application', {
             primary_action_label: __('Approve'),
             primary_action: function(values) {
                 frappe.call({
-                    method: 'tr_tradehub.tr_tradehub.doctype.seller_application.seller_application.approve_application',
+                    method: 'tradehub_seller.tradehub_seller.tradehub_seller.doctype.seller_application.seller_application.approve_application',
                     args: {
                         application_name: frm.doc.name,
                         approved_tier: values.approved_tier,
@@ -260,7 +260,7 @@ frappe.ui.form.on('Seller Application', {
             primary_action_label: __('Reject'),
             primary_action: function(values) {
                 frappe.call({
-                    method: 'tr_tradehub.tr_tradehub.doctype.seller_application.seller_application.reject_application',
+                    method: 'tradehub_seller.tradehub_seller.tradehub_seller.doctype.seller_application.seller_application.reject_application',
                     args: {
                         application_name: frm.doc.name,
                         reason: values.reason,
@@ -298,7 +298,7 @@ frappe.ui.form.on('Seller Application', {
             primary_action_label: __('Request Documents'),
             primary_action: function(values) {
                 frappe.call({
-                    method: 'tr_tradehub.tr_tradehub.doctype.seller_application.seller_application.request_documents',
+                    method: 'tradehub_seller.tradehub_seller.tradehub_seller.doctype.seller_application.seller_application.request_documents',
                     args: {
                         application_name: frm.doc.name,
                         notes: values.notes
@@ -335,7 +335,7 @@ frappe.ui.form.on('Seller Application', {
                     primary_action_label: __('Cancel Application'),
                     primary_action: function(values) {
                         frappe.call({
-                            method: 'tr_tradehub.tr_tradehub.doctype.seller_application.seller_application.cancel_application',
+                            method: 'tradehub_seller.tradehub_seller.tradehub_seller.doctype.seller_application.seller_application.cancel_application',
                             args: {
                                 application_name: frm.doc.name,
                                 reason: values.reason

@@ -51,7 +51,7 @@ from frappe.utils.password import (
 
 # Rate limiting settings (per user/IP)
 RATE_LIMITS = {
-    "register": {"limit": 5, "window": 3600},  # 5 registrations per hour per IP
+    "register": {"limit": 50, "window": 3600},  # 50 registrations per hour per IP (dev-friendly)
     "login": {"limit": 10, "window": 300},  # 10 login attempts per 5 min
     "password_reset": {"limit": 3, "window": 3600},  # 3 reset requests per hour
     "verification": {"limit": 5, "window": 300},  # 5 verification attempts per 5 min
@@ -346,6 +346,7 @@ def register(
 
     # Create user
     try:
+        # mobile_no has a unique constraint in Frappe — do not set it here.
         user = frappe.get_doc(
             {
                 "doctype": "User",
@@ -357,7 +358,6 @@ def register(
                 "new_password": password,
                 "user_type": "Website User",
                 "send_welcome_email": 0,  # We'll handle verification ourselves
-                "mobile_no": phone,
             }
         )
         user.flags.ignore_permissions = True
@@ -499,6 +499,8 @@ def register_user(
 
     # Create user
     try:
+        # mobile_no has a unique constraint in Frappe — do not set it here.
+        # Phone is stored in Seller Application (contact_phone) instead.
         user = frappe.get_doc(
             {
                 "doctype": "User",
@@ -510,7 +512,6 @@ def register_user(
                 "new_password": password,
                 "user_type": "Website User",
                 "send_welcome_email": 0,  # We'll handle verification ourselves
-                "mobile_no": phone,
             }
         )
         user.flags.ignore_permissions = True
@@ -537,6 +538,7 @@ def register_user(
                     }
                 )
                 seller_app.flags.ignore_permissions = True
+                seller_app.flags.ignore_mandatory = True
                 seller_app.insert()
                 seller_application_name = seller_app.name
 
@@ -588,7 +590,7 @@ def register_user(
     except Exception as e:
         # Cleanup on failure: remove user if created
         if frappe.db.exists("User", email):
-            frappe.delete_doc("User", email, force=True)
+            frappe.delete_doc("User", email, force=True, ignore_permissions=True)
         frappe.log_error(f"Registration error (register_user): {str(e)}", "Identity API Error")
         frappe.throw(_("An error occurred during registration. Please try again."))
 

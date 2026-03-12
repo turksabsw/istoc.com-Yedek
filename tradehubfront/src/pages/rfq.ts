@@ -16,7 +16,7 @@ import { startAlpine } from '../alpine'
 import rfqVideoUrl from '../assets/images/rfqvidehero.mp4'
 
 // Header & Footer components
-import { TopBar, MobileSearchTabs, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu } from '../components/header'
+import { TopBar, MobileSearchTabs, initMobileDrawer, SubHeader, initStickyHeaderSearch, MegaMenu, initMegaMenu, initTopBarAuth } from '../components/header'
 import { initLanguageSelector } from '../components/header/TopBar'
 import { FooterLinks } from '../components/footer'
 
@@ -246,6 +246,7 @@ initFlowbite();
 initStickyHeaderSearch();
 initMobileDrawer();
 initLanguageSelector();
+initTopBarAuth();
 initAnimatedPlaceholder('#topbar-compact-search-input');
 
 // Start Alpine.js (must be called AFTER innerHTML is set)
